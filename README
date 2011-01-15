@@ -1,0 +1,4 @@
+
+PDL::PrimaPoly - a PDL::PP interface for Prima::Drawable's polyline method
+
+Author: David Mertens <dcmertens.perl@gmail.com>

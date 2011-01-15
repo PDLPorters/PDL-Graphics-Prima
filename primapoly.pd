@@ -1,0 +1,117 @@
+use strict;
+pp_addpm({At=>'Top'},<<'EOD');
+
+BEGIN { 
+$VERSION = '1.00'; 
+} 
+
+=head1 NAME
+
+PDL::Graphics::Prima - PDL-aware drawing functions for Prima widgets
+
+=head1 SYNOPSIS
+
+ # working here - make a useful synopsis
+
+=head1 DESCRIPTION
+
+working here - write this
+
+=head1 CONSIDERATIONS
+
+The Prima image coordinate origin is located in lower left corner, which is
+where you would expect to find it when creating plots. However, it is different
+from the way that many graphics libraries do their coordinates.
+
+=cut
+
+# working here - any Perl function definitions should go in this space
+
+EOD
+
+pp_addhdr( <<HEADER );
+
+/* apricot is the (strangely named) header file that contains all of the
+ * cross-platform functions.
+ */
+
+#undef WORD
+#include <apricot.h>
+
+HEADER
+
+
+pp_def('prima_polyline',
+	Pars => 'int x(n); int y(n)',
+	OtherPars => 'SV * widget_sv',
+	GenericTypes => ['L'],
+	Code => q{
+		Point * to_plot;
+		int n_size, i;
+		Handle widget_handle;
+		
+		/* Allocate an array of Points outside of the threadloop */
+		n_size = $SIZE(n);
+		Newx(to_plot, n_size, Point);
+		
+		/* Ensure the widget derives from Prima::Drawable */
+		if (! sv_derived_from($COMP(widget_sv), "Prima::Drawable"))
+			barf("Your widget must be derived from Prima::Drawable");
+		
+		/* transform the widget into a handle */
+		widget_handle = gimme_the_mate($COMP(widget_sv));
+		
+		/* All set. Run through the data and draw it. */
+		threadloop %{
+			/* Put the x-y data into the to_plot array */
+			loop (n) %{
+				to_plot[n].x = $x();
+				to_plot[n].y = $y();
+			%}
+			
+			/* Call Prima's polyline function */
+			apc_gp_draw_poly(widget_handle, n_size, to_plot);
+		%}
+		
+		/* Free the memory when done */
+		Safefree(to_plot);
+	},
+
+	# working here - add docs and bad value support
+);
+
+pp_addpm({At=>'Bot'},<<'EOD');
+
+=head1 ERROR MESSAGE
+
+This function may throw the following exception:
+
+=head2 Your widget must be derived from Prima::Drawable
+
+This means that you tried to draw on something that is not a Prima::Drawable
+object, or a class derived from it. I don't know enough about the Prima
+internals to know if that has any hope of working, but why do it in the first
+place?
+
+=head1 AUTHOR
+
+David Mertens, E<lt>dcmertens.perl@gmail.comE<gt>.
+
+=head1 SEE ALSO
+
+The Perl Data Language, L<PDL>
+
+The Prima toolkit, http://www.prima.eu.org/, L<Prima>
+
+Since this amounts to a plotting package, you should check out other plotting
+packages available for PDL. Two notable examples are L<PDL::Graphics::PLplot>
+and L<PDL::Graphics::PGPLOT>.
+
+Another interface between PDL and Prima is <PDL::PrimaImage>. I am indebted to
+Dmitry for that module because it gave me a working template for this module,
+including a working Makefile.PL. Thanks Dmitry!
+
+=cut
+
+EOD
+
