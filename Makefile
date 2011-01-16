@@ -1,4 +1,4 @@
-# This Makefile is for the PDL::PrimaPoly extension to perl.
+# This Makefile is for the PDL::Graphics::Prima extension to perl.
 #
 # It was generated automatically by MakeMaker version
 # 6.55_02 (Revision: 65502) from the contents of
@@ -15,14 +15,14 @@
 #     CCFLAGS => q[-DHAVE_CONFIG_H=1]
 #     INC => q[-I/usr/local/lib/perl/5.10.1/PDL/Core -I/usr/local/lib/perl/5.10.1/Prima/CORE -I/usr/local/lib/perl/5.10.1/Prima/CORE/generic -I/usr/lib/perl/5.10/CORE -I/usr/local/include -I/usr/include/freetype2 -I/usr/include/gtk-2.0 -I/usr/lib/gtk-2.0/include -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/gio-unix-2.0/ -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/directfb -I/usr/include/libpng12]
 #     LIBS => []
-#     MAN3PODS => { PrimaPoly.pm=>q[$(INST_MAN3DIR)/PDL::PrimaPoly.$(MAN3EXT)] }
-#     NAME => q[PDL::PrimaPoly]
-#     OBJECT => q[PrimaPoly$(OBJ_EXT)]
-#     PM => { PrimaPoly.pm=>q[$(INST_LIBDIR)/PrimaPoly.pm] }
+#     MAN3PODS => { Prima.pm=>q[$(INST_MAN3DIR)/PDL::Graphics::Prima.$(MAN3EXT)] }
+#     NAME => q[PDL::Graphics::Prima]
+#     OBJECT => q[Prima$(OBJ_EXT)]
+#     PM => { Prima.pm=>q[$(INST_LIBDIR)/Prima.pm] }
 #     PREREQ_PM => {  }
 #     TYPEMAPS => [q[/usr/local/lib/perl/5.10.1/PDL/Core/typemap.pdl]]
-#     VERSION_FROM => q[lib/PDL/Graphics/primapoly.pd]
-#     clean => { FILES=>q[PrimaPoly.xs PrimaPoly.pm PrimaPoly$(OBJ_EXT) PrimaPoly.c] }
+#     VERSION_FROM => q[pdlprima.pd]
+#     clean => { FILES=>q[Prima.xs Prima.pm Prima$(OBJ_EXT) Prima.c] }
 
 # --- MakeMaker post_initialize section:
 
@@ -59,8 +59,8 @@ VENDORLIBEXP = /usr/share/perl5
 AR_STATIC_ARGS = cr
 DIRFILESEP = /
 DFSEP = $(DIRFILESEP)
-NAME = PDL::PrimaPoly
-NAME_SYM = PDL_PrimaPoly
+NAME = PDL::Graphics::Prima
+NAME_SYM = PDL_Graphics_Prima
 VERSION = 1.00
 VERSION_MACRO = VERSION
 VERSION_SYM = 1_00
@@ -77,44 +77,46 @@ INST_MAN3DIR = blib/man3
 MAN1EXT = 1p
 MAN3EXT = 3pm
 INSTALLDIRS = site
-INSTALL_BASE = /home/mertens/perl5
 DESTDIR = 
-PREFIX = $(INSTALL_BASE)
-INSTALLPRIVLIB = $(INSTALL_BASE)/lib/perl5
+PREFIX = /usr
+PERLPREFIX = $(PREFIX)
+SITEPREFIX = $(PREFIX)/local
+VENDORPREFIX = $(PREFIX)
+INSTALLPRIVLIB = $(PERLPREFIX)/share/perl/5.10
 DESTINSTALLPRIVLIB = $(DESTDIR)$(INSTALLPRIVLIB)
-INSTALLSITELIB = $(INSTALL_BASE)/lib/perl5
+INSTALLSITELIB = $(SITEPREFIX)/share/perl/5.10.1
 DESTINSTALLSITELIB = $(DESTDIR)$(INSTALLSITELIB)
-INSTALLVENDORLIB = $(INSTALL_BASE)/lib/perl5
+INSTALLVENDORLIB = $(VENDORPREFIX)/share/perl5
 DESTINSTALLVENDORLIB = $(DESTDIR)$(INSTALLVENDORLIB)
-INSTALLARCHLIB = $(INSTALL_BASE)/lib/perl5/i486-linux-gnu-thread-multi
+INSTALLARCHLIB = $(PERLPREFIX)/lib/perl/5.10
 DESTINSTALLARCHLIB = $(DESTDIR)$(INSTALLARCHLIB)
-INSTALLSITEARCH = $(INSTALL_BASE)/lib/perl5/i486-linux-gnu-thread-multi
+INSTALLSITEARCH = $(SITEPREFIX)/lib/perl/5.10.1
 DESTINSTALLSITEARCH = $(DESTDIR)$(INSTALLSITEARCH)
-INSTALLVENDORARCH = $(INSTALL_BASE)/lib/perl5/i486-linux-gnu-thread-multi
+INSTALLVENDORARCH = $(VENDORPREFIX)/lib/perl5
 DESTINSTALLVENDORARCH = $(DESTDIR)$(INSTALLVENDORARCH)
-INSTALLBIN = $(INSTALL_BASE)/bin
+INSTALLBIN = $(PERLPREFIX)/bin
 DESTINSTALLBIN = $(DESTDIR)$(INSTALLBIN)
-INSTALLSITEBIN = $(INSTALL_BASE)/bin
+INSTALLSITEBIN = $(SITEPREFIX)/bin
 DESTINSTALLSITEBIN = $(DESTDIR)$(INSTALLSITEBIN)
-INSTALLVENDORBIN = $(INSTALL_BASE)/bin
+INSTALLVENDORBIN = $(VENDORPREFIX)/bin
 DESTINSTALLVENDORBIN = $(DESTDIR)$(INSTALLVENDORBIN)
-INSTALLSCRIPT = $(INSTALL_BASE)/bin
+INSTALLSCRIPT = $(PERLPREFIX)/bin
 DESTINSTALLSCRIPT = $(DESTDIR)$(INSTALLSCRIPT)
-INSTALLSITESCRIPT = $(INSTALL_BASE)/bin
+INSTALLSITESCRIPT = $(SITEPREFIX)/bin
 DESTINSTALLSITESCRIPT = $(DESTDIR)$(INSTALLSITESCRIPT)
-INSTALLVENDORSCRIPT = $(INSTALL_BASE)/bin
+INSTALLVENDORSCRIPT = $(VENDORPREFIX)/bin
 DESTINSTALLVENDORSCRIPT = $(DESTDIR)$(INSTALLVENDORSCRIPT)
-INSTALLMAN1DIR = $(INSTALL_BASE)/man/man1
+INSTALLMAN1DIR = $(PERLPREFIX)/share/man/man1
 DESTINSTALLMAN1DIR = $(DESTDIR)$(INSTALLMAN1DIR)
-INSTALLSITEMAN1DIR = $(INSTALL_BASE)/man/man1
+INSTALLSITEMAN1DIR = $(SITEPREFIX)/man/man1
 DESTINSTALLSITEMAN1DIR = $(DESTDIR)$(INSTALLSITEMAN1DIR)
-INSTALLVENDORMAN1DIR = $(INSTALL_BASE)/man/man1
+INSTALLVENDORMAN1DIR = $(VENDORPREFIX)/share/man/man1
 DESTINSTALLVENDORMAN1DIR = $(DESTDIR)$(INSTALLVENDORMAN1DIR)
-INSTALLMAN3DIR = $(INSTALL_BASE)/man/man3
+INSTALLMAN3DIR = $(PERLPREFIX)/share/man/man3
 DESTINSTALLMAN3DIR = $(DESTDIR)$(INSTALLMAN3DIR)
-INSTALLSITEMAN3DIR = $(INSTALL_BASE)/man/man3
+INSTALLSITEMAN3DIR = $(SITEPREFIX)/man/man3
 DESTINSTALLSITEMAN3DIR = $(DESTDIR)$(INSTALLSITEMAN3DIR)
-INSTALLVENDORMAN3DIR = $(INSTALL_BASE)/man/man3
+INSTALLVENDORMAN3DIR = $(VENDORPREFIX)/share/man/man3
 DESTINSTALLVENDORMAN3DIR = $(DESTDIR)$(INSTALLVENDORMAN3DIR)
 PERL_LIB = /usr/share/perl/5.10
 PERL_ARCHLIB = /usr/lib/perl/5.10
@@ -147,13 +149,13 @@ MM_REVISION = 65502
 # PARENT_NAME = NAME without BASEEXT and no trailing :: (eg Foo::Bar)
 # DLBASE  = Basename part of dynamic library. May be just equal BASEEXT.
 MAKE = make
-FULLEXT = PDL/PrimaPoly
-BASEEXT = PrimaPoly
-PARENT_NAME = PDL
+FULLEXT = PDL/Graphics/Prima
+BASEEXT = Prima
+PARENT_NAME = PDL::Graphics
 DLBASE = $(BASEEXT)
-VERSION_FROM = lib/PDL/Graphics/primapoly.pd
+VERSION_FROM = pdlprima.pd
 INC = -I/usr/local/lib/perl/5.10.1/PDL/Core -I/usr/local/lib/perl/5.10.1/Prima/CORE -I/usr/local/lib/perl/5.10.1/Prima/CORE/generic -I/usr/lib/perl/5.10/CORE -I/usr/local/include -I/usr/include/freetype2 -I/usr/include/gtk-2.0 -I/usr/lib/gtk-2.0/include -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/gio-unix-2.0/ -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/directfb -I/usr/include/libpng12
-OBJECT = PrimaPoly$(OBJ_EXT)
+OBJECT = Prima$(OBJ_EXT)
 LDFROM = $(OBJECT)
 LINKTYPE = dynamic
 BOOTDEP = 
@@ -164,14 +166,14 @@ C_FILES  =
 O_FILES  = 
 H_FILES  = 
 MAN1PODS = 
-MAN3PODS = PrimaPoly.pm
+MAN3PODS = Prima.pm
 
 # Where is the Config information that we are using/depend on
 CONFIGDEP = $(PERL_ARCHLIB)$(DFSEP)Config.pm $(PERL_INC)$(DFSEP)config.h
 
 # Where to build things
-INST_LIBDIR      = $(INST_LIB)/PDL
-INST_ARCHLIBDIR  = $(INST_ARCHLIB)/PDL
+INST_LIBDIR      = $(INST_LIB)/PDL/Graphics
+INST_ARCHLIBDIR  = $(INST_ARCHLIB)/PDL/Graphics
 
 INST_AUTODIR     = $(INST_LIB)/auto/$(FULLEXT)
 INST_ARCHAUTODIR = $(INST_ARCHLIB)/auto/$(FULLEXT)
@@ -186,10 +188,10 @@ PERL_ARCHIVE       =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = PrimaPoly.pm
+TO_INST_PM = Prima.pm
 
-PM_TO_BLIB = PrimaPoly.pm \
-	$(INST_LIBDIR)/PrimaPoly.pm
+PM_TO_BLIB = Prima.pm \
+	$(INST_LIBDIR)/Prima.pm
 
 
 # --- MakeMaker platform_constants section:
@@ -205,7 +207,7 @@ AUTOSPLITFILE = $(ABSPERLRUN)  -e 'use AutoSplit;  autosplit($$ARGV[0], $$ARGV[1
 
 # --- MakeMaker tool_xsubpp section:
 
-XSUBPPDIR = /usr/local/share/perl/5.10.1/ExtUtils
+XSUBPPDIR = /usr/share/perl5/ExtUtils
 XSUBPP = $(XSUBPPDIR)$(DFSEP)xsubpp
 XSUBPPRUN = $(PERLRUN) $(XSUBPP)
 XSPROTOARG = 
@@ -265,8 +267,8 @@ CI = ci -u
 RCS_LABEL = rcs -Nv$(VERSION_SYM): -q
 DIST_CP = best
 DIST_DEFAULT = tardist
-DISTNAME = PDL-PrimaPoly
-DISTVNAME = PDL-PrimaPoly-1.00
+DISTNAME = PDL-Graphics-Prima
+DISTVNAME = PDL-Graphics-Prima-1.00
 
 
 # --- MakeMaker macro section:
@@ -285,7 +287,7 @@ MPOLLUTE =
 
 # --- MakeMaker const_loadlibs section:
 
-# PDL::PrimaPoly might depend on some other libraries:
+# PDL::Graphics::Prima might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
 
@@ -305,7 +307,6 @@ PASTHRU = LIBPERL_A="$(LIBPERL_A)"\
 	LINKTYPE="$(LINKTYPE)"\
 	OPTIMIZE="$(OPTIMIZE)"\
 	PREFIX="$(PREFIX)"\
-	INSTALL_BASE="$(INSTALL_BASE)"\
 	PASTHRU_INC="$(PASTHRU_INC)"
 
 
@@ -500,9 +501,9 @@ POD2MAN = $(POD2MAN_EXE)
 
 
 manifypods : pure_all  \
-	PrimaPoly.pm
+	Prima.pm
 	$(NOECHO) $(POD2MAN) --section=$(MAN3EXT) --perm_rw=$(PERM_RW) \
-	  PrimaPoly.pm $(INST_MAN3DIR)/PDL::PrimaPoly.$(MAN3EXT) 
+	  Prima.pm $(INST_MAN3DIR)/PDL::Graphics::Prima.$(MAN3EXT) 
 
 
 
@@ -545,8 +546,8 @@ clean :: clean_subdirs
 	  perl.exe so_locations \
 	  $(BASEEXT).exp 
 	- $(RM_RF) \
-	  PrimaPoly$(OBJ_EXT) PrimaPoly.pm \
-	  PrimaPoly.c PrimaPoly.xs \
+	  Prima.c Prima.pm \
+	  Prima$(OBJ_EXT) Prima.xs \
 	  blib 
 	- $(MV) $(FIRST_MAKEFILE) $(MAKEFILE_OLD) $(DEV_NULL)
 
@@ -570,7 +571,7 @@ realclean purge ::  clean realclean_subdirs
 metafile : create_distdir
 	$(NOECHO) $(ECHO) Generating META.yml
 	$(NOECHO) $(ECHO) '--- #YAML:1.0' > META_new.yml
-	$(NOECHO) $(ECHO) 'name:               PDL-PrimaPoly' >> META_new.yml
+	$(NOECHO) $(ECHO) 'name:               PDL-Graphics-Prima' >> META_new.yml
 	$(NOECHO) $(ECHO) 'version:            1.00' >> META_new.yml
 	$(NOECHO) $(ECHO) 'abstract:           ~' >> META_new.yml
 	$(NOECHO) $(ECHO) 'author:  []' >> META_new.yml
@@ -922,7 +923,7 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  PrimaPoly.pm $(INST_LIBDIR)/PrimaPoly.pm 
+	  Prima.pm $(INST_LIBDIR)/Prima.pm 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 
@@ -932,15 +933,15 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 # --- MakeMaker postamble section:
 
 
-PrimaPoly.pm: lib/PDL/Graphics/primapoly.pd
-	$(PERL) -I/usr/local/lib/perl/5.10.1 "-MPDL::PP qw/PDL::PrimaPoly PDL::PrimaPoly PrimaPoly/" lib/PDL/Graphics/primapoly.pd
+Prima.pm: pdlprima.pd
+	$(PERL) -I/usr/local/lib/perl/5.10.1 "-MPDL::PP qw/PDL::Graphics::Prima PDL::Graphics::Prima Prima/" pdlprima.pd
 
-PrimaPoly.xs: PrimaPoly.pm
+Prima.xs: Prima.pm
 	$(TOUCH) $@
 
-PrimaPoly.c: PrimaPoly.xs
+Prima.c: Prima.xs
 
-PrimaPoly$(OBJ_EXT): PrimaPoly.c
+Prima$(OBJ_EXT): Prima.c
 
 
 # End.

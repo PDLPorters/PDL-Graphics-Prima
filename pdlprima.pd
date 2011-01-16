@@ -1,4 +1,7 @@
 use strict;
+use warnings;
+use Carp 'croak';
+
 pp_addpm({At=>'Top'},<<'ModuleMaterial');
 
 BEGIN { 
@@ -8,7 +11,8 @@ $VERSION = '1.00';
 use strict;
 use warnings;
 use PDL;
-use Scalar::Util;	# needed for 'blessed'
+use PDL::Char;
+use Scalar::Util 'blessed';
 
 # working here - use Exporter and set as 'EXPORT_OK' the functions
 # pdl_of_patterns_for and pdl_of_handles_for. I need to write them, too.
@@ -94,11 +98,73 @@ functions, you must invoke them with the full PDL package prefix, as:
 
 
 # Builds a piddle of patterns with the appropriate sizes, etc.
-sub pdl_of_patterns_for {
+sub piddle_of_patterns_for {
+	# Make sure they're not being stupid:
+	croak("You must supply at least one pattern to make a pattern piddle")
+		if @_ == 0;
+
+	# First get the longest pattern:
+	my $length = 0;
+	foreach(@_) {
+		$length = length($_) if $length < length($_);
+	}
+	
+	use PDL::NiceSlice;
+	
+	# Create the new byte array with the appropriate dimensions:
+	my $to_return = zeroes(byte, $length, scalar(@_));
+	$to_return .= $to_return->sequence;
+	for (my $i = 0; $i < @_; $i++) {
+		# Get a slice and update it:
+		my $slice = $to_return(:,$i);
+		substr ${$slice->get_dataref}, 0, length($_[$i]), $_[$i];
+		
+		# Make sure the modifications propogate back to the original:
+		$slice->upd_data;
+	}
+	
+	no PDL::NiceSlice;
+	
+	return $to_return;
+}
+
+sub piddle_of_handles_for {
+	# Make sure they're not being stupid:
+	croak("You must supply at least one widget from which to get a handle")
+		if @_ == 0;
+	
+	# Make sure all of the variables are indeed widgets:
+	foreach(@_) {
+		croak("One or more of your widgets does not seem to be descended from Prima::Drawable")
+			unless blessed($_) and $_->isa('Prima::Drawable');
+	}
+	
+	# Make a piddle large enough to hold the handles:
+	my $to_return = zeroes(long, scalar(@_));
+	
+	# put the handles in the piddle:
+	_piddle_of_handles_for(${$to_return->get_dataref}, @_);
+	
+	# Update the piddle and return it:
+	$to_return->upd_data;
+	return $to_return;
 }
 
 ModuleMaterial
 
+pp_addxs('', q{
+void
+_piddle_of_handles_for(SV * piddle_SV, ...)
+	CODE:
+		int i;
+		/* Get at the piddle's actual data array */
+		long * piddle = (long*)SvPVX(piddle_SV);
+		/* Fill the array with the handle values */
+		for (i = 1; i < items; i++) {
+			piddle[i-1] = gimme_the_mate(ST(i));
+		}
+
+});
 =for details
 As far as I can tell, PDL::PP only defines the '_<func>_int' form of a function
 when you specify a PMCode in the pp_def. I can't figure out where this happens
@@ -166,13 +232,16 @@ to draw lines with different colors, I would write the following Pars:
   Pars => 'int x(n); int y(n); int colors()'
 
 So in the hash below, the property C<colors> is associated with the
-arg string C<int colors()>.
+arg string C<int colors()>, and (not-optional, but specially processed)
+C<handles> property is associated with the arg string C<int handles()>.
 
 =end details
 
 =cut
 
-my %pars_args_for = (colors => 'int colors()');
+my %pars_args_for = (colors => 'int colors()'
+	, handles => 'int handles()'
+);
 
 =begin details
 
@@ -195,10 +264,11 @@ Drawable properties defined in one place.
 =begin details
 
 This function creates a string with the low-level PDL function's argument
-list, given a list of properties for the function.This makes it very
-easy to make long parameter lists, and long parameter lists are nicely
-handled by the in-pm function C<get_sorted_args_with_defaults>. To
-expand on the previous example, in this code:
+list, given a list of properties for the function. This makes it very
+easy to manage long parameter lists, and long parameter lists are nicely
+handled by the in-pm function C<get_sorted_args_with_defaults>. It also
+adds handles to the signature, which is mandatory for each of these
+functions. To expand on the previous example, in this code:
 
  pp_def(my_func,
         Pars => 'int x(n); int y(n); ' . generate_pars_args_for( 'colors', 'rops'),
@@ -207,7 +277,7 @@ expand on the previous example, in this code:
 
 pp_def sees a parameter list that looks like this:
 
- 'int x(n); int y(n); int colors(); int rops()'
+ 'int x(n); int y(n); int handles(); int colors(); int rops()'
 
 To use this, I will create a list of properties that the to-be-defined
 function takes, and use that together with generate_pars_args_for like
@@ -220,16 +290,20 @@ so:
         PMCode => ...
  );
 
-It may seem silly to use such an array for only two additional arguments,
-but other parts of the pp_def call will make use of that array, as we
-will see.
+It may seem silly to use such an array for only two additional arguments
+(as shown in this example), but other parts of the pp_def call will make
+use of that array, as we will see, and most of the functions use many
+more properties.
 
 =end details
 
 =cut
 
 sub generate_pars_args_for {
-	return join('; ', @pars_args_for{@_});
+	foreach (@_) {
+		croak("Bad args; should be plural") unless /s$/;
+	}
+	return join('; ', @pars_args_for{'handles', @_});
 }
 
 ######################################
@@ -261,17 +335,15 @@ C<%pars_args_for>, which has the same format.
 my %init_args_for = ();
 
 sub generate_init_args_for {
-	my $to_return = '';
+	my $to_return = "\t\t/* These are declarations needed for the handles
+		 * and some of the optional parameters */
+		 Handle widget_handle;\n";
 	# Build the list:
 	foreach(@_) {
 		$to_return .= "\t\t$init_args_for{$_};\n"
 			if exists $init_args_for{$_};
 	}
 	
-	# Don't say anything unless we're actually adding material:
-	$to_return = "\t\t/* These are declarations needed for some of the optional parameters */\n"
-		. $to_return if $to_return ne '';
-
 	return $to_return;
 }
 
@@ -339,7 +411,7 @@ sub create_boolean_setters_for {
 	my $to_return = "
 		/* The last of the declarations */
 		SV* key;
-		SV* arg_hash_hv;
+		HV* arg_hash_hv;
 		int ";
 	# Create the variable list (is_setting_colors, is_setting_lineWidths...):
 	$to_return .= join(', ', map {"is_setting_$_"} @_) . ";\n";
@@ -348,7 +420,7 @@ sub create_boolean_setters_for {
 	$to_return .= "
 		/* Begin initializing the values */
 		key = sv_newmortal();
-		arg_hash_hv = SvRV(arg_ref_sv);
+		arg_hash_hv = (HV*)SvRV(\$COMP(arg_ref_sv));
 ";
 	foreach(@_) {
 		$to_return .= "\t\tsv_setpv(key, \"$_\");\n"
@@ -377,20 +449,14 @@ sub initialize_for {
 	return '
 		/* BEGIN AUTOGENERATED INITIALIZATION */
 
-		/* In this code, I will have to work with widget Handles, not SVs */
-		Handle widget_handle;
-		
 	' . generate_init_args_for(@properties)
 	  . create_boolean_setters_for(@properties) . '
-
-		/* transform the widget SV pointer into a handle */
-		widget_handle = gimme_the_mate($COMP(widget_sv));
 		
 		/* END AUTOGENERATED INITIZLIATION */
 	';
 }
 
-my $default_other_pars = 'SV * widget_sv; SV * arg_ref_sv';
+my $default_other_pars = 'SV * arg_ref_sv';
 
 #################################
 # Calling the apricot.h setters #
@@ -429,10 +495,10 @@ apricot function for this function is itself called. For example:
 
 my %set_code_for = (
 	colors => q{
-			/* cast the integer as a Colors type (which itself is a
-			 * 32-bit int, so maybe this is unnecessary */
-			apc_gp_set_color(widget_handle, (Color)$colors());
-	},
+				/* cast the integer as a Colors type (which itself is a
+				 * 32-bit int, so maybe this is unnecessary */
+				apc_gp_set_color(widget_handle, (Color)$colors());
+},
 );
 
 sub generate_single_setter_code_for {
@@ -449,18 +515,18 @@ sub generate_single_setter_code_for {
 	}
 	else {
 		# Most other properties are direct sets:
-		$to_return .= "\t\t\t\tapc_gp_set_$apricot(widget_handle, \$$property())\n";
+		$to_return .= "\t\t\t\tapc_gp_set_$apricot(widget_handle, \$$property());\n";
 	}
 	
 	$to_return .= "\t\t\t}";
 }
 
 sub generate_setter_code_for {
-	return join("\n"
-		, "\t\t\t/* BEGIN AUTOGENERATED SETTER CHECKS */\n"
-		, (map {generate_single_setter_code_for($_)} @_)
-		, "\n\t\t\t/* END AUTOGENERATED SETTER CHECKS */\n"
-		); 
+	return "
+			widget_handle = (Handle)\$handles();
+			/* BEGIN AUTOGENERATED SETTER CHECKS */\n"
+			. join("\n", (map {generate_single_setter_code_for($_)} @_)) . "
+			/* END AUTOGENERATED SETTER CHECKS */\n";
 }
 
 ##################################################
@@ -479,19 +545,19 @@ data structures for each of the properties.
 # Background color:
 $pars_args_for{backColors} = 'int backColors()';
 $set_code_for{backColors} = q{
-			/* cast the integer as a Colors type (actually an int) */
-			apc_gp_set_back_color(widget_handle, (Color)$backColors());
+				/* cast the integer as a Colors type (actually an int) */
+				apc_gp_set_back_color(widget_handle, (Color)$backColors());
 };
 
 # Clipping rectangle:
 $pars_args_for{clipRects} = 'int clipLeft(); int clipBottom(); int clipRight(); int clipTop()';
 $init_args_for{clipRects} = 'Rect clip_rect';
 $set_code_for{clipRects} = q{
-			clip_rect.left = $clipLeft();
-			clip_rect.bottom = $clipBottom();
-			clip_rect.right = $clipRight();
-			clip_rect.top = $clipTop();
-			apc_gp_set_clip_rect(widget_handle, clip_rect);
+				clip_rect.left = $clipLeft();
+				clip_rect.bottom = $clipBottom();
+				clip_rect.right = $clipRight();
+				clip_rect.top = $clipTop();
+				apc_gp_set_clip_rect(widget_handle, clip_rect);
 };
 
 # These do no need any special args, and the default generated code will
@@ -507,17 +573,17 @@ $pars_args_for{rop2s} = 'int rop2s()';
 $pars_args_for{linePatterns} = 'byte linePatterns(patlen)';
 $init_args_for{linePatterns} = 'unsigned char * pattern; int pattern_length';
 $set_code_for{linePatterns} = q{
-			pattern = (unsigned char)$P(linePatterns);
-			pattern_length = strlen(pattern);
-			apc_gp_set_line_pattern(widget_handle, pattern, pattern_length);
+				pattern = (unsigned char *)$P(linePatterns);
+				pattern_length = strlen(pattern);
+				apc_gp_set_line_pattern(widget_handle, pattern, pattern_length);
 };
 
 # translation; the apricot function for translate uses a different name
 # and takes two arguments instead of one:
 $pars_args_for{translates} = 'int trans_x(); int trans_y()';
 $set_code_for{translates} = q{
-			/* invoke the apricot function with both x and y */
-			apc_gp_set_transform(widget_handle, $trans_x(), $trans_y());
+				/* invoke the apricot function with both x and y */
+				apc_gp_set_transform(widget_handle, $trans_x(), $trans_y());
 };
 
 # Fill winding works nicely without any alteration:
@@ -563,12 +629,12 @@ of parameters can be automatically constructed from the already-defined
 =cut
 
 pp_addpm (join("\n"
-	, '# This is a list of arguments for each property. It is based on the'
+	, '# This is a list of the number of arguments for each property. It is based on the'
 	, '# pars_args_for hash which is built in the .pd file associated with this module'
-	, '# Note that the tr operator, as used, just counts the number of semi-colons'
-	, '# in the pars args associated with the property.'
-	, '%N_args_for = ('
-	, (map {sprintf "\t%-20s => %d", $_, ($pars_args_for{$_} =~ tr/;//) + 1}
+	, 'my %N_args_for = qw('
+	# Note that the tr operator, as used, just counts the number of semi-colons
+	# in the pars args associated with the property.
+	, (map {sprintf "\t%-20s %d", $_, ($pars_args_for{$_} =~ tr/;//) + 1}
 		(keys %pars_args_for))
 	, ');'
 	)
@@ -596,29 +662,40 @@ order.
 pp_addpm <<'DefaultArgumentHandling';
 
 sub get_sorted_args_with_defaults {
-	my ($arg_names, $given) = @_;
+	my ($self, $arg_names, $given) = @_;
 	
 	# Default to an empty list:
 	$given = {} unless ref($given) eq 'HASH';
+	
+	# Copy the arg_names array, so I can add 'handles' to it without
+	# effecting the original array:
+	my @arg_names = @$arg_names;
+	unshift @arg_names, 'handles';
 	
 	# Check that they supplied only allowed parameters:
 	foreach (keys %$given) {
 		croak("Unknown parameter $_") unless $_ ~~ @$arg_names
 	}
 	
+	# Create a 0-dim piddle with this object's hande in it:
+	my $handle = piddle_of_handles_for($self);
+	
 	# Return the sorted list of supplied or default values
 	my @to_return = ();
-	foreach (@$arg_names) {
+	foreach ('handles', @$arg_names) {
+		# If not specified, return a default property of a zero-dim
+		# piddle. Except for the handles, the value doesn't matter
+		# because it is never used. For handles, the value should revert
+		# to the calling widget's handle:
 		if (not exists $given->{$_}) {
-			# If not supplied, return a null piddle
-			push @to_return, PDL->nullcreate(0);
+			push @to_return, $handle;
 		}
 		elsif (ref ($given->{$_}) eq 'ARRAY') {
 			# If an array ref, dereference it and make sure the number
 			# of arguments agrees with what we expect:
 			if (@{$given->{$_}} != $N_args_for{$_}) {
 				croak("Expected 1 argument for $_") if $N_args_for{$_} == 1;
-				croak("Expected $N_args_for{$_} arguments in the anonymous hash for $_");
+				croak("Expected $N_args_for{$_} arguments for $_");
 			}
 			push @to_return, @{$given->{$_}};
 		}
@@ -626,7 +703,7 @@ sub get_sorted_args_with_defaults {
 			# Otherwise, return it outright, if we only expected one
 			# argument:
 			$N_args_for{$_} == 1
-				or croak("Expected $N_args_for{$_} elements in an anonymous hash for $_");
+				or croak("Expected $N_args_for{$_} arguments for $_");
 			
 			push @to_return, $given->{$_};
 		}
@@ -699,17 +776,26 @@ sub generate_PMCode_for {
 	# Get the a full list of arguments suitable for the internal pp code
 	# in the correct order:
 	my \@args_with_defs
-		= get_sorted_args_with_defaults(\\$props_array_name, \\\%args);
+		= get_sorted_args_with_defaults(\$self, \\$props_array_name, \\\%args);
 
 	# Call the PP'd internal code. Always put self and the args hash
 	# last.
-	PDL::_prima_${func_name}_int(";
+	eval {
+		PDL::_prima_${func_name}_int(";
 	# include all the required arguments:
 	foreach(@arg_names) {
 		$to_return .= '$' . $_ . ', ';
 	}
 	# finish with self and the args list:
-	$to_return .= '@args_with_defs, $self, \%args);' . "\n}\n";
+	$to_return .= '@args_with_defs, \%args);
+	};
+	
+	if ($@) {
+		# die $@;
+		$@ =~ s/at (.*?) line \d+\.\n$//;
+		die "Issues calling pdl_' . $func_name . ': $@";
+	}
+	' . "\n}\n";
 	 
 	return $to_return;
 }
@@ -733,13 +819,330 @@ THIS SCRIPT, and then use that to generate consistent code blocks
 
 =cut
 
-my @polyline_props = qw(colors backColors linePatterns lineWidths lineJoins
-						lineEnds rops rop2s);
-pp_def('prima_polyline',
-	Pars => 'int x(n); int y(n); ' . generate_pars_args_for(@polyline_props),
+my @properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
+pp_def('prima_arcs',
+	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
+			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['D'],
+	PMCode => generate_PMCode_for('arcs', \@properties, qw(x y x_diameter y_diameter start_angle end_angle)),
+	Code => 
+	# I don't need any extra variables for arcs, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's arc function */
+			apc_gp_arc(widget_handle, $x(), $y(), $x_diameter(),
+				$y_diameter(), $start_angle(), $end_angle());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 arcs
+
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+
+=for ref
+
+Draws an arc from C<start_angle> to C<end_angle> along the ellipse
+centered at C<x>, C<y>, each with their specified diameters. The
+difference between this command and L<chords> is that this command does
+not connect the ends of the arcs with straight lines but leaves the
+arcs open
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors backColors fillPatterns rops rop2s);
+pp_def('prima_bars',
+	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
 	GenericTypes => ['L'],
-	PMCode => generate_PMCode_for('polyline', \@polyline_props, qw(x, y)),
+	PMCode => generate_PMCode_for('bars', \@properties, qw(x1 y1 x2 y2)),
+	Code => 
+	# I don't need any extra variables for bars, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's bar function */
+			apc_gp_bar(widget_handle, $x1(), $y1(), $x2(), $y2());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 bars
+
+  Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
+
+=for ref
+
+Draws filled rectangle from corner (x1, y1) to (x2, y2).
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
+pp_def('prima_chords',
+	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
+			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['D'],
+	PMCode => generate_PMCode_for('chords', \@properties, qw(x y x_diameter y_diameter start_angle end_angle)),
+	Code => 
+	# I don't need any extra variables for chords, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's chord function */
+			apc_gp_chord(widget_handle, $x(), $y(), $x_diameter(),
+				$y_diameter(), $start_angle(), $end_angle());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 chords
+
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+
+=for ref
+
+Draws an arc from C<start_angle> to C<end_angle> along the ellipse
+centered at C<x>, C<y>, each with their specified diameters, and connects
+the ends with a straight line. The difference between this command and
+arcs is that it connects the ends.
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+pp_def('prima_ellipses',
+	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();'
+			. generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['L'],
+	PMCode => generate_PMCode_for('ellipses', \@properties, qw(x y x_diameter y_diameter)),
+	Code => 
+	# I don't need any extra variables for ellipses, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's ellipse function */
+			apc_gp_ellipse(widget_handle, $x(), $y(), $x_diameter(),
+				$y_diameter());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 ellipses
+
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+
+=for ref
+
+Draws an arc from C<start_angle> to C<end_angle> along the ellipse
+centered at C<x>, C<y>, each with their specified diameters.
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+pp_def('prima_fill_chords',
+	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
+			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['D'],
+	PMCode => generate_PMCode_for('fill_chords', \@properties, qw(x y x_diameter y_diameter start_angle end_angle)),
+	Code => 
+	# I don't need any extra variables for chords, filled or otherwise,
+	# so I'll just add the auto-generated declaration and initialiation
+	# code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's fill_chord function */
+			apc_gp_fill_chord(widget_handle, $x(), $y(), $x_diameter(),
+				$y_diameter(), $start_angle(), $end_angle());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 fill_chords
+
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+
+=for ref
+
+Draws an arc from C<start_angle> to C<end_angle> along the ellipse
+centered at C<x>, C<y>, each with their specified diameters.
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+
+# working here - get the other functions between fill_chords and
+# lines
+
+
+
+
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+pp_def('prima_lines',
+	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['L'],
+	PMCode => generate_PMCode_for('lines', \@properties, qw(x1 y1 x2 y2)),
+	Code => 
+	# I don't need any extra variables for bars, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's lines function */
+			apc_gp_line(widget_handle, $x1(), $y1(), $x2(), $y2());
+		%}
+	],
+	Doc => <<'EOD'
+
+=head2 lines
+
+  Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
+
+=for ref
+
+Draws a line from (x1, y1) to (x2, y2).
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors);
+pp_def('prima_pixels',
+	Pars => 'int x(); int y(); int [o] color(); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['L'],
+	PMCode => generate_PMCode_for('pixels', \@properties, qw(x y color)),
+	Code => 
+	# I don't need any extra variables for pixels, so I'll just add the
+	# auto-generated declaration and initialiation code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q{
+		threadloop %{
+			/* Unlike usual, I will not use the setter code. Rather,
+			 * the is_setting_colors will determine whether or not I
+			 * set the pixel:
+			 */
+			if (is_setting_colors) {
+				apc_gp_set_pixel(widget_handle, $x(), $y(), (Color)$colors());
+			}
+			
+			/* No matter what, get the previous color. NOTE that the
+			 * retrieved results goes in color (singular), not colors
+			 */
+			$color() = (PDL_Long) apc_gp_get_pixel(widget_handle, $x(), $y());
+		%}
+	},
+	Doc => <<'EOD'
+
+=head2 lines
+
+  Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
+
+=for ref
+
+Draws a line from (x1, y1) to (x2, y2).
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+@properties = qw(colors backColors linePatterns lineWidths lineJoins
+						lineEnds rops rop2s);
+pp_def('prima_polyline',
+	Pars => 'int x(n); int y(n); ' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['L'],
+	PMCode => generate_PMCode_for('polyline', \@properties, qw(x y)),
 	Code => 
 	# Begin by declaring the non-autogenerated the variables I will need
 	q{
@@ -747,7 +1150,7 @@ pp_def('prima_polyline',
 		int n_size, i;
 	}
 	# Add the auto-generated declaration and initialiation code:
-	. initialize_for(@polyline_props)
+	. initialize_for(@properties)
 	# Continue with my initialization code and the threadloop:
 	. q[
 		/* Allocate an array of Points outside of the threadloop */
@@ -764,9 +1167,8 @@ pp_def('prima_polyline',
 		]
 		# Now comes the code that calls the various setters for the various
 		# properties:
-		. conditionally_call_setters_for(@polyline_props)
+		. generate_setter_code_for(@properties)
 		. q[
-			
 			/* Call apricot's polyline function */
 			apc_gp_draw_poly(widget_handle, n_size, to_plot);
 		%}
@@ -776,15 +1178,16 @@ pp_def('prima_polyline',
 	],
 	Doc => <<'EOD'
 
-=head2 polyline
+=head2 polylines
 
+ working here:
   Prima Signature: (widget; x(n); y(n); properties)
 
 =for ref
 
 Draws a multi-segment line on a widget with the given x- and y-coordinates.
 
-This is useful for making quick line-drawings on your 
+This is useful for making line-drawings, such as plotting data.
 
 =for example
 
@@ -798,86 +1201,12 @@ This is useful for making quick line-drawings on your
 EOD
 );
 
-=begin later
-
-This is a bit of Postscript handling code which will eventually need to
-be fleshed out. But that'll have to come later. Perhaps I will put the
-postscript code in its own .pd file since it is fairly different from
-the apricot-based code.
-
-pp_def('prima_ps_polyline_stroke',
-	Pars => 'int x(n); int y(n)',
-	OtherPars => 'SV * stroke_sv',
-	GenericTypes => ['L'],
-	PMCode => q{
-		sub Prima::PS::Drawable::pdl_polyline {
-			my ($self, $x, $y) = @_;
-			
-			# Create the Perl scalar which I will fill with stroke commands
-			my $to_stroke = '';
-			
-			# Construct the stroke:
-			PDL::_prima_ps_polyline_stroke_int($x, $y, $to_stroke);
-			
-			# At this point, $to_stroke has been filled with postscript commands
-			# for drawing the polyline. Finish by calling the stroke:
-			$self->stroke('', $to_stroke, '');
-		}
-	},
-	Code => q{
-		int n_size, i;
-		n_size = $SIZE(n);
-		
-		/* Run through the data and concatenate the PS commands to draw it. */
-		threadloop %{
-			/* Begin by moving to the first point. Prima defines the shorthands
-			 * N for 'newpath' and M for 'move'
-			 */
-			sv_catpvf(stroke_sv, "N %f %f M ", $x(n=>0), $y(n=>0));
-			
-			/* Put the rest of the x-y data into the stroke string. Prima
-			 * defines the shorthand l for 'lineto'
-			 */
-			for (i = 1; i < n_size; i++) {
-				sv_catvfg(stroke_sv, "%f %f l ", $x(n=>i), $y(n=>i));
-			}
-			
-			/* Finish the command by appending a capital O, which Prima defines
-			 * as a shorthand for 'stroke'
-			 */
-			sv_catpv(stroke_sv, "O\n");
-		%}
-	},
-	Doc => <<'EOD'
 
 
-=head2 polyline
 
-  Prima Signature: (widget; x(n); y(n))
-  PDL Signatue: (x(n); y(n); widget)
 
-=for ref
 
-Draws a multi-segment line on a widget with the given x- and y-coordinates.
 
-This is useful for making quick line-drawings on your 
-
-=for example
-
- # Draw a sine curve on the widget:
- my $x = sequence(200);
- my $y = ( sin($x / 20) + 1 ) * 50;
- $widget->pdl_polyline($x, $y);
-
- =cut
-
-EOD
-
-);
-
-=end later
-
-=cut
 
 pp_addpm({At=>'Bot'},<<'EOD');
 
@@ -946,3 +1275,5 @@ including a working Makefile.PL. Thanks Dmitry!
 
 EOD
 
+pp_export_nothing();
+pp_done();
