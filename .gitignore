@@ -1,1 +1,8 @@
 Makefile
+Prima.bs
+Prima.c
+Prima.o
+Prima.pm
+Prima.xs
+blib/
+pm_to_blib
