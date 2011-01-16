@@ -5,10 +5,10 @@ use PDL::Core::Dev;
 use ExtUtils::MakeMaker;
 use Prima::Config;
 
-my $pack = [qw(primapoly.pd PrimaPoly PDL::PrimaPoly)];
+my $pack = [qw(pdlprima.pd Prima PDL::Graphics::Prima)];
 %hash = pdlpp_stdargs($pack);
 
-$hash{VERSION_FROM}="primapoly.pd";
+$hash{VERSION_FROM}="pdlprima.pd";
 $hash{INC} .= join( ' ' , map { $Prima::Config::Config{cincflag}.$_} @{$Prima::Config::Config{incpaths}});
 my %DEFINES=map { my @z = split('=', $_, 2); scalar(@z)?(@z):($_ => 1)} @{$Prima::Config::Config{cdefs}};
 $hash{CCFLAGS} .= join( ' ' , map { $Prima::Config::Config{cdefflag}.$_.'='.$DEFINES{$_}} keys %DEFINES);
