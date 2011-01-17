@@ -49,9 +49,438 @@ The Prima image coordinate origin is located in lower left corner, which is
 where you would expect to find it when creating plots. However, it is different
 from the way that many graphics libraries do their coordinates.
 
+=head1 GRAPHING
+
+This module installs the C<graph> method into the Prima::Drawable
+namespace, enabling all widgets to draw graphs. The arguments to
+C<graph> are (1) anonymous arrays with the data you want to plot
+together with their polylines arguments and (2) an anonymous hash with
+the plot options. Plot options include:
+
+=over
+
+=item scaling
+
+One of 'linear', 'logx', 'logy', or 'logxy'. This sets the scaling of
+your plots.
+
+=item xmin, xmax, ymin, ymax
+
+The x- and y- clipping of your plot.
+
+=item xlabel, ylabel
+
+The x- and y- label for your plot.
+
+=item viewport
+
+The relative size of the plotting box of your graph. Four-element
+anonymous array with values between 0 and 1, corresponding to left,
+bottom, right, top. Default values are 0.1, 0.1, 0.9, and 0.9.
+
+=back
+
 =cut
 
-# working here - any Perl function definitions should go in this space
+sub rescale_to_pixels {
+	my ($data, $data_min, $data_max, $pixel_extent, $pixel_offset) = @_;
+	return (($data - $data_min) / ($data_max - $data_min)
+			* $pixel_extent + $pixel_offset);
+}
+
+my $offset_penalty = 0.3;
+
+sub _adjusted_position {
+	my ($value, $interval, $offset, $direction) = @_;
+	# Find the first copy of $interval that's less than $value:
+	my $to_return = int($value / $interval) * $interval;
+	# include the offset:
+	$to_return += $offset;
+	while(1) {
+		return $to_return if $value == $to_return;
+		return $to_return if (($to_return <=> $value) == $direction);
+		$to_return += $direction * $interval;
+	}
+	# Return the final, adjusted position:
+	return $to_return;
+}
+
+sub compute_linear_ticks {
+	my ($min, $max) = @_;
+	
+	# This algorithm was designed with the following major tick layout
+	# examples in mind:
+	#	min  	max		ticks at
+	#	2		4		2, 2.5, 3, 3.5, 4
+	#	2.2		4.3		2.25, 2.75, 3.25, 3.75, 4.25 (maybe)
+	#					2.4, 2.8, 3.2, 3.6, 4.0 (maybe)
+	#	0		20		0, 5, 10, 15, 20
+	#	30.5	37.5	31, 33, 35, 37
+	#	0		112		0, 25, 50, 75, 100
+	
+	# Determine the order of magnitude of the min/max range:
+	my $full_range = $max - $min;
+	# Start by assuming that the order of magnitude will be a good
+	# step size:
+	my $order_of_magnitude = 10**(int (log($max - $min) / log(10)));
+	
+	# Score each potential interval and take the lowest one:
+	my $best_score = 100;
+	my $best_Ticks;
+	my $best_interval;
+	my $best_scaled_interval;
+	my $best_offset;
+	
+	my %intervals # interval	# handicap
+		= qw(		0.25		0
+					0.3			0.5
+					0.4			0.25
+					0.5			0
+					0.6			0.5
+					0.8			0.25
+					1			0
+					2			0.25
+					2.5			0
+					3			0.5
+					4			0.25
+		);
+	
+	while (my ($scaled_interval, $handicap) = each %intervals) {
+		my $interval = $order_of_magnitude * $scaled_interval;
+		for my $offset (0, $interval/2) {
+			# The ticks will start at either a multiple of the interval,
+			# or a multiple of the interval plus the offset. So,
+			# recompute the range in light of the tick size:
+			my $min_Tick = _adjusted_position($min, $interval, $offset, 1);
+			my $max_Tick = _adjusted_position($max, $interval, $offset, -1);
+			
+			# Obviously, max tick and min tick must not overlap:
+			next if $max_Tick <= $min_Tick;
+			
+			# Count the number of ticks between min_Tick and max_Tick
+			# and compute the score:
+			my $N_Ticks = ($max_Tick - $min_Tick) / $interval + 1;
+			$handicap += $offset_penalty if $offset != 0;
+			my $score = (abs($N_Ticks - 5) + $handicap)**2;
+			
+			# If it's the best score, use it:
+			if ($score < $best_score) {
+				$best_score = $score;
+				# Add 0.1 to N_Ticks to avoid rounding dilemas:
+				$best_Ticks = zeroes($N_Ticks + 0.1)->xlinvals($min_Tick, $max_Tick);
+				$best_interval = $interval;
+				$best_scaled_interval = $scaled_interval;
+				$best_offset = $offset;
+			}
+		}
+	}
+	
+	# Construct the minor tick marks:
+	my $tick_interval;
+	if ($best_scaled_interval eq '0.3'
+			or $best_scaled_interval eq '3'
+			or $best_scaled_interval eq '0.6'
+	) {
+		$tick_interval = $best_interval / 6;
+	}
+	elsif (($best_scaled_interval eq '0.25'
+			or $best_scaled_interval eq '0.5'
+			or $best_scaled_interval eq '2.5'
+			) and $best_offset == 0
+	) {
+		$tick_interval = $best_interval / 5;
+	}
+	else {
+		$tick_interval = $best_interval / 4;
+	}
+	my $min_tick = _adjusted_position($min, $tick_interval, $best_offset, 1);
+	my $max_tick = _adjusted_position($max, $tick_interval, $best_offset, -1);
+	my $N_ticks = ($max_tick - $min_tick) / $tick_interval + 1.1;
+	# Add 0.1 to escape rounding trouble.
+	my $ticks = zeroes($N_ticks)->xlinvals($min_tick, $max_tick);
+
+	# finally, set up zero values that make sense:
+	$best_Ticks->where(abs($best_Ticks) * 1e10 < ($max - $min)) .= 0;
+	$ticks->where(abs($ticks) * 1e10 < ($max - $min)) .= 0;
+	return ($best_Ticks, $ticks);
+}
+
+# This algorithm was based almost entirely off the linear ticks
+# algorithm, with a few special tweaks.
+sub compute_log_ticks {
+	# These are the LOGARITHMS of the actual data's min and max:
+	my ($min, $max) = @_;
+	
+	die "Not yet implemented";
+
+=pod	
+
+	# Determine the order of magnitude of the min/max range:
+	my $full_range = $max - $min;
+	# Start by assuming that the order of magnitude will be a good
+	# step size:
+	my $order_of_magnitude = 10**(int (log($max - $min) / log(10)));
+	
+	# Score each potential interval and take the lowest one:
+	my $best_score = 100;
+	my $best_Ticks;
+	my $best_interval;
+	my $best_scaled_interval;
+	
+	my %intervals # interval	# handicap
+		= qw(		0.25		0
+					0.3			0
+					0.5			0
+					1			0
+					2			0.25
+					2.5			0
+					3			0.5
+					4			0.25
+		);
+	
+	while (my ($scaled_interval, $handicap) = each %intervals) {
+		my $interval = $order_of_magnitude * $scaled_interval;
+		# The ticks will start at either a multiple of the interval,
+		# or a multiple of the interval plus the offset. So,
+		# recompute the range in light of the tick size:
+		my $min_Tick = _adjusted_log_position($min, $interval, 1);
+		my $max_Tick = _adjusted_log_position($max, $interval, -1);
+		
+		# Obviously, max tick and min tick must not overlap:
+		next if $max_Tick <= $min_Tick;
+		
+		# Count the number of ticks between min_Tick and max_Tick
+		# and compute the score:
+		my $N_Ticks = ($max_Tick - $min_Tick) / $interval + 1;
+		$handicap += $offset_penalty if $offset != 0;
+		my $score = (abs($N_Ticks - 5) + $handicap)**2;
+		
+		# If it's the best score, use it:
+		if ($score < $best_score) {
+			$best_score = $score;
+			# Add 0.1 to N_Ticks to avoid rounding dilemas:
+			$best_Ticks = zeroes($N_Ticks + 0.1)->xlinvals($min_Tick, $max_Tick);
+			$best_interval = $interval;
+			$best_scaled_interval = $scaled_interval;
+		}
+	}
+	
+	# Construct the minor tick marks:
+	my $tick_interval;
+	if ($best_scaled_interval eq '0.3'
+			or $best_scaled_interval eq '3'
+			or $best_scaled_interval eq '0.6'
+	) {
+		$tick_interval = $best_interval / 6;
+	}
+	elsif (($best_scaled_interval eq '0.25'
+			or $best_scaled_interval eq '0.5'
+			or $best_scaled_interval eq '2.5'
+			) and $best_offset == 0
+	) {
+		$tick_interval = $best_interval / 5;
+	}
+	else {
+		$tick_interval = $best_interval / 4;
+	}
+	my $min_tick = _adjusted_position($min, $tick_interval, $best_offset, 1);
+	my $max_tick = _adjusted_position($max, $tick_interval, $best_offset, -1);
+	my $N_ticks = ($max_tick - $min_tick) / $tick_interval + 1.1;
+	# Add 0.1 to escape rounding trouble.
+	my $ticks = zeroes($N_ticks)->xlinvals($min_tick, $max_tick);
+
+	# finally, set up zero values that make sense:
+	$best_Ticks->where(abs($best_Ticks) * 1e10 < ($max - $min)) .= 0;
+	$ticks->where(abs($ticks) * 1e10 < ($max - $min)) .= 0;
+	return ($best_Ticks, $ticks);
+
+=cut
+
+}
+
+sub Prima::Drawable::graph {
+	my ($canvas, @args) = @_;
+	my %options = ();
+	if (ref($args[-1]) eq 'HASH') {
+		%options = %{pop @args};
+	}
+	
+	# Get the scaling parameter:
+	my $scaling = 'linear';
+	$scaling = $options{scaling} if exists $options{scaling};
+
+	# The rest of @args are the datasets, together with their arguments
+	# that go to polyline.
+	
+	# Process the min/max specifications:
+	my ($xmin, $ymin, $xmax, $ymax) = @options{qw(xmin ymin xmax ymax)};
+	
+	# Get the min/max from the data if it's not already specified
+	if (not defined $xmin or not defined $ymin or not defined $xmax
+			or not defined $ymax) {
+		foreach(@args) {
+			if (not $options{xmin}) {
+				$xmin = $_->[0]->min if (not defined $xmin or $_->[0]->min < $xmin);
+			}
+			if (not $options{ymin}) {
+				$ymin = $_->[1]->min if (not defined $ymin or $_->[1]->min < $ymin);
+			}
+			if (not $options{xmax}) {
+				$xmax = $_->[0]->max if (not defined $xmax or $_->[0]->max > $xmax);
+			}
+			if (not $options{ymax}) {
+				$ymax = $_->[1]->max if (not defined $ymax or $_->[1]->max > $ymax);
+			}
+		}
+	}
+	
+	if ($scaling =~ /logx/) {
+		croak("Minimum and maximum values must be strictly positive for logarithmic scaling")
+			unless ($xmin > 0 and $xmax > 0);
+		# Rescale the min/max
+		$xmin = log($xmin) / log(10);
+		$xmax = log($xmax) / log(10);
+		
+		# Rescale the data:
+		foreach (@args) {
+			$_->[0] = log($_->[0]) / log 10;
+		}
+	}
+	if ($scaling =~ /logx?y/) {
+		croak("Minimum and maximum values must be strictly positive for logarithmic scaling")
+			unless ($ymin > 0 and $ymax > 0);
+		# Rescale the min/max
+		$ymin = log($ymin) / log(10);
+		$ymax = log($ymax) / log(10);
+		
+		# Rescale the data:
+		foreach (@args) {
+			$_->[1] = log($_->[1]) / log 10;
+		}
+	}
+	
+	# Get the viewport
+	my @viewport = (0.1, 0.1, 0.9, 0.9);
+	if (exists $options{viewport}) {
+		croak("Viewport must be a four-element anonymous array")
+			unless (ref($options{viewport})
+					and ref($options{viewport}) eq 'ARRAY'
+					and @{$options{viewport}} == 4);
+		foreach (@{$options{viewport}}) {
+			croak("Viewport boundaries must be between 0 and 1")
+				unless $_ >= 0 and $_ <= 1;
+		}
+		croak("Viewport's bottom must be lower than the top")
+			if $options{viewport}->[1] >= $options{viewport}->[3];
+		croak("Viewport's left edge must be to the left of the right edge")
+			if $options{viewport}->[0] >= $options{viewport}->[2];
+	
+		# If we're here, then all is well.
+		@viewport = @{$options{viewport}};
+	}
+	# Conver the viewport to pixels and apply it:
+	my ($x_size, $y_size) = $canvas->size;
+	$viewport[0] *= $x_size;
+	$viewport[1] *= $y_size;
+	$viewport[2] *= $x_size;
+	$viewport[3] *= $y_size;
+	$canvas->clipRect(@viewport);
+	
+	# Compute the extent of the viewport in pixels:
+	my $x_extent = $viewport[2] - $viewport[0];
+	my $y_extent = $viewport[3] - $viewport[1];
+	
+	# Save the canvas's current properties that may be overwritten
+	# by the polylines calls:
+	my @to_backup = qw(color backColor linePattern lineWidth lineJoin
+			lineEnd rop rop2);
+	my %backups = map {$_ => $canvas->$_} (@to_backup);
+	
+	# Draw the data
+	foreach(@args) {
+		# Unpack the drawing specs:
+		my ($xs, $ys, %props) = @$_;
+		# Rescale x and y to pixel values:
+		my $x_to_plot = rescale_to_pixels($xs, $xmin, $xmax, $x_extent, $viewport[0]);
+		my $y_to_plot = rescale_to_pixels($ys, $ymin, $ymax, $y_extent, $viewport[1]);
+		# Call the plotting routine:
+		$canvas->pdl_polylines($x_to_plot, $y_to_plot, %props);
+		# Reset the parameters in case they were changed:
+		$canvas->set(%backups);
+	}
+	
+	# Reset the clipping rectangle to the full canvas and draw a box
+	# around the data:
+	$canvas->clipRect(0, 0, $x_size, $y_size);
+	$canvas->rectangle(@viewport);
+	
+	# Draw the tick marks:
+	my ($xTicks, $xticks, $yTicks, $yticks);
+#	if ($scaling =~ /logx/) {
+#		($xTicks, $xticks) = compute_log_ticks($xmin, $xmax);
+#	}
+#	else {
+		($xTicks, $xticks) = compute_linear_ticks($xmin, $xmax);
+#	}
+#	if ($scaling =~ /logx?y/) {
+#		($yTicks, $yticks) = compute_log_ticks($ymin, $ymax);
+#	}
+#	else {
+		($yTicks, $yticks) = compute_linear_ticks($ymin, $ymax);
+#	}
+
+	my $xticks_pixels = rescale_to_pixels($xticks, $xmin, $xmax, $x_extent, $viewport[0]);
+	my $xTicks_pixels = rescale_to_pixels($xTicks, $xmin, $xmax, $x_extent, $viewport[0]);
+	my $yticks_pixels = rescale_to_pixels($yticks, $ymin, $ymax, $y_extent, $viewport[1]);
+	my $yTicks_pixels = rescale_to_pixels($yTicks, $ymin, $ymax, $y_extent, $viewport[1]);
+
+	# Draw the tick marks:
+	my $top_bottom = pdl($viewport[1], $viewport[3])->transpose;
+	my $left_right = pdl($viewport[0], $viewport[2])->transpose;
+	my $tick_length = sqrt($x_size);
+	$tick_length = sqrt($y_size) if sqrt($y_size) < $tick_length;
+	$tick_length *= 0.8;
+	my $Tick_size = pdl($tick_length, -$tick_length)->transpose;
+	my $tick_size = $Tick_size / 2;
+	$canvas->pdl_lines($xticks_pixels, $top_bottom, $xticks_pixels, $top_bottom + $tick_size);
+	$canvas->pdl_lines($xTicks_pixels, $top_bottom, $xTicks_pixels, $top_bottom + $Tick_size);
+	$canvas->pdl_lines($left_right, $yticks_pixels, $left_right + $tick_size, $yticks_pixels);
+	$canvas->pdl_lines($left_right, $yTicks_pixels, $left_right + $Tick_size, $yTicks_pixels);
+	
+	# Draw the tick labels
+	for (my $i = 0; $i < $xTicks->nelem; $i++) {
+		my $x = $xTicks_pixels->at($i);
+		my $string = sprintf("%1.8g", $xTicks->at($i));
+		$canvas->draw_text($string
+			, $x-80, 0, $x+80, $viewport[1] - 2*log($y_size)
+			, dt::Top | dt::Center
+			);
+	}
+	for (my $i = 0; $i < $yTicks->nelem; $i++) {
+		my $y = $yTicks_pixels->at($i);
+		my $string = sprintf("%1.8g", $yTicks->at($i));
+		$canvas->draw_text($string
+			, 0, $y-80, $viewport[0] - 2*log($x_size), $y+80
+			, dt::Right | dt::VCenter
+			);
+	}
+	
+	# Position the labels
+	if ($options{xlabel}) {
+		$canvas->draw_text($options{xlabel}
+			, 0, 0, $x_size, $viewport[1]/2
+			, dt::Center | dt::Top
+			);
+	}
+	if ($options{ylabel}) {
+		$canvas->font(direction => 90);
+		$canvas->draw_text($options{ylabel}
+			, 0, 0, $viewport[0]/2, $y_size
+			, dt::VCenter | dt::Right
+		);
+		$canvas->font(direction => 0);
+	}
+}
 
 =head1 METHODS
 
@@ -183,6 +612,7 @@ pp_addhdr( <<HEADER );
 
 #undef WORD
 #include <apricot.h>
+#define ONE_MILLION 1000000
 
 HEADER
 
@@ -806,10 +1236,6 @@ sub generate_PMCode_for {
 #                              Functions                              #
 #######################################################################
 
-##################
-# prima_polyline #
-##################
-
 =begin details
 
 At last I begin the declaration of PP code. The idea behind all of this
@@ -819,6 +1245,10 @@ THIS SCRIPT, and then use that to generate consistent code blocks
 =end details
 
 =cut
+
+##############
+# prima_arcs #
+##############
 
 my @properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
 pp_def('prima_arcs',
@@ -867,6 +1297,10 @@ arcs open
 EOD
 );
 
+##############
+# prima_bars #
+##############
+
 @properties = qw(colors backColors fillPatterns rops rop2s);
 pp_def('prima_bars',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
@@ -907,6 +1341,10 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
 EOD
 );
+
+################
+# prima_chords #
+################
 
 @properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
 pp_def('prima_chords',
@@ -954,6 +1392,10 @@ arcs is that it connects the ends.
 EOD
 );
 
+##################
+# prima_ellipses #
+##################
+
 @properties = qw(colors backColors linePatterns lineWidths rops rop2s);
 pp_def('prima_ellipses',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();'
@@ -997,6 +1439,10 @@ centered at C<x>, C<y>, each with their specified diameters.
 
 EOD
 );
+
+#####################
+# prima_fill_chords #
+#####################
 
 @properties = qw(colors backColors linePatterns lineWidths rops rop2s);
 pp_def('prima_fill_chords',
@@ -1042,6 +1488,10 @@ centered at C<x>, C<y>, each with their specified diameters.
 
 EOD
 );
+
+#######################
+# prima_fill_ellipses #
+#######################
 
 @properties = qw(colors backColors linePatterns lineWidths rops rop2s);
 pp_def('prima_fill_ellipses',
@@ -1093,6 +1543,10 @@ EOD
 
 
 
+###############
+# prima_lines #
+###############
+
 @properties = qw(colors backColors linePatterns lineWidths rops rop2s);
 pp_def('prima_lines',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
@@ -1133,6 +1587,10 @@ Draws a line from (x1, y1) to (x2, y2).
 
 EOD
 );
+
+################
+# prima_pixels #
+################
 
 @properties = qw(colors);
 pp_def('prima_pixels',
@@ -1180,18 +1638,23 @@ Draws a line from (x1, y1) to (x2, y2).
 EOD
 );
 
+###################
+# prima_polylines #
+###################
+
 @properties = qw(colors backColors linePatterns lineWidths lineJoins
 						lineEnds rops rop2s);
-pp_def('prima_polyline',
-	Pars => 'int x(n); int y(n); ' . generate_pars_args_for(@properties),
+pp_def('prima_polylines',
+	Pars => 'x(n); y(n); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
-	GenericTypes => ['L'],
-	PMCode => generate_PMCode_for('polyline', \@properties, qw(x y)),
+	GenericTypes => ['D'],
+	PMCode => generate_PMCode_for('polylines', \@properties, qw(x y)),
 	Code => 
 	# Begin by declaring the non-autogenerated the variables I will need
 	q{
 		Point * to_plot;
-		int n_size, i;
+		int n_size, i, n_to_plot;
+		double xval, yval;
 	}
 	# Add the auto-generated declaration and initialiation code:
 	. initialize_for(@properties)
@@ -1201,20 +1664,128 @@ pp_def('prima_polyline',
 		n_size = $SIZE(n);
 		Newx(to_plot, n_size, Point);
 		
-		/* All set. Run through the data and draw it. */
+		/* All set. Start the threadloop with the setters. */
 		threadloop %{
-			/* Put the x-y data into the to_plot array */
-			loop (n) %{
-				to_plot[n].x = $x();
-				to_plot[n].y = $y();
-			%}
 		]
-		# Now comes the code that calls the various setters for the various
-		# properties:
 		. generate_setter_code_for(@properties)
 		. q[
-			/* Call apricot's polyline function */
-			apc_gp_draw_poly(widget_handle, n_size, to_plot);
+			/* Put the x-y data into the to_plot array. I am attempting
+			 * to handle infs and nans gracefully by treating the same
+			 * way as I would bad values.
+			 */
+			for(i = 0; i < n_size; /* no action */) {
+				for(n_to_plot = 0; n_to_plot + i < n_size; n_to_plot++) {
+					int total_offset = n_to_plot + i;
+					xval = $x(n => total_offset);
+					yval = $y(n => total_offset);
+					
+					/* Finish this segment if we encounte nan */
+					if (xval != xval || yval != yval) {		/* nan check */
+						/* increment i so that it skips this value on
+						 * the next round
+						 */
+						i++;
+						break;
+					}
+					else {
+						/* handle infinities */
+						if (xval == xval + 1) {
+							if (xval < 0)
+								xval = -ONE_MILLION;
+							else
+								xval = ONE_MILLION;
+						}
+						if (yval == yval + 1) {
+							if (yval < 0)
+								yval = -ONE_MILLION;
+							else
+								yval = ONE_MILLION;
+						}
+						
+						to_plot[n_to_plot].x = xval;
+						to_plot[n_to_plot].y = yval;
+					}
+				}
+				/* Call apricot's polyline function */
+				if (n_to_plot > 1)
+					apc_gp_draw_poly(widget_handle, n_to_plot, to_plot);
+				
+				/* Keep track of the starting position */
+				i += n_to_plot;
+			}
+		%}
+		
+		/* Free the memory when done */
+		Safefree(to_plot);
+	],
+	HandleBad => 1,
+	BadCode => 
+	# Begin by declaring the non-autogenerated the variables I will need
+	q{
+		Point * to_plot;
+		int n_size, i, n_to_plot;
+		double xval, yval;
+	}
+	# Add the auto-generated declaration and initialiation code:
+	. initialize_for(@properties)
+	# Continue with my initialization code and the threadloop:
+	. q[
+		/* Allocate an array of Points outside of the threadloop */
+		n_size = $SIZE(n);
+		Newx(to_plot, n_size, Point);
+		
+		/* All set. Start the threadloop with the setters. */
+		threadloop %{
+		]
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Put the x-y data into the to_plot array. I am attempting
+			 * to handle infs and nans gracefully by treating the same
+			 * way as I would bad values.
+			 */
+			for(i = 0; i < n_size; /* no action */) {
+				for(n_to_plot = 0; n_to_plot + i < n_size; n_to_plot++) {
+					/* Get the values from the array */
+					int total_offset = n_to_plot + i;
+					xval = $x(n => total_offset);
+					yval = $y(n => total_offset);
+					
+					/* finish this segment if we encounter nan or a bad value */
+					if (xval != xval || yval != yval		/* nan check */
+						|| $ISBAD(x(n => total_offset))		/* bad value */
+						|| $ISBAD(y(n => total_offset))) {	/* checks    */
+						/* increment i so that it skips this value on
+						 * the next round
+						 */
+						i++;
+						break;
+					}
+					else {
+						/* handle infinities */
+						if (xval == xval + 1) {
+							if (xval < 0)
+								xval = -ONE_MILLION;
+							else
+								xval = ONE_MILLION;
+						}
+						if (yval == yval + 1) {
+							if (yval < 0)
+								yval = -ONE_MILLION;
+							else
+								yval = ONE_MILLION;
+						}
+						
+						to_plot[n_to_plot].x = xval;
+						to_plot[n_to_plot].y = yval;
+					}
+				}
+				/* Call apricot's polyline function */
+				if (n_to_plot > 1)
+					apc_gp_draw_poly(widget_handle, n_to_plot, to_plot);
+				
+				/* Keep track of the starting position */
+				i += n_to_plot;
+			}
 		%}
 		
 		/* Free the memory when done */
@@ -1233,6 +1804,9 @@ Draws a multi-segment line on a widget with the given x- and y-coordinates.
 
 This is useful for making line-drawings, such as plotting data.
 
+Applicable properties include colors backColors linePatterns lineWidths
+lineJoins lineEnds rops rop2s
+
 =for example
 
  # Draw a sine curve on the widget:
@@ -1244,8 +1818,6 @@ This is useful for making line-drawings, such as plotting data.
 
 EOD
 );
-
-
 
 
 

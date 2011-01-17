@@ -27,17 +27,27 @@ sub paint
 
 	# Draw three sin curves:
 	my $x = sequence(200, 3) + 100;
+	my $bad_data = pdl(-1)->log;
+	$x(30:40) .= $bad_data;
 	my $y = sin($x / 20) * 100 + 100;
+	my $infty = -pdl(0)->log;
+	$y(50) .= $infty;
 	$y(:,1) += 50;
 	$y(:,2) += 100;
+	
+	$x(51) .= -100;
+	$x = $x->setbadif($x < 0);
+	
 	# with different colors:
 	my $colors = pdl(cl::Black, cl::Blue, cl::Green);
 	my $patterns = PDL::Char->new([lp::Solid, lp::Dash, lp::DashDot]);
-	$p->pdl_polyline($x, $y, colors => $colors, linePatterns => $patterns
+	$p->pdl_polylines($x, $y, colors => $colors, linePatterns => $patterns
 			, lineWidths => sequence(3)*2);
 	
 	# Reset to a solid line style:
 	$p->linePattern(lp::Solid);
+
+=pod
 	
 	# Draw random arcs:
 	my $xs = random(30) * $size[0];
@@ -75,6 +85,7 @@ sub paint
 	$p->pdl_ellipses($xs, $ys, $dxs, $dys,
 		colors => random(30) * 2**24);
 	
+=cut
 	
 }
 
