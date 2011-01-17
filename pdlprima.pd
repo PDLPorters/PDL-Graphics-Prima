@@ -13,6 +13,7 @@ use warnings;
 use PDL;
 use PDL::Char;
 use Scalar::Util 'blessed';
+use Carp 'croak';
 
 # working here - use Exporter and set as 'EXPORT_OK' the functions
 # pdl_of_patterns_for and pdl_of_handles_for. I need to write them, too.
@@ -1042,8 +1043,51 @@ centered at C<x>, C<y>, each with their specified diameters.
 EOD
 );
 
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+pp_def('prima_fill_ellipses',
+	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();' . generate_pars_args_for(@properties),
+	OtherPars => $default_other_pars,
+	GenericTypes => ['L'],
+	PMCode => generate_PMCode_for('fill_ellipses', \@properties, qw(x y x_diameter y_diameter)),
+	Code => 
+	# I don't need any extra variables for ellipses, filled or otherwise,
+	# so I'll just add the auto-generated declaration and initialiation
+	# code:
+	  initialize_for(@properties)
+	# Continue with the threadloop:
+	. q[
+		threadloop %{
+		]
+		# Now comes the code that calls the various setters for the various
+		# properties:
+		. generate_setter_code_for(@properties)
+		. q[
+			/* Call apricot's fill_ellipse function */
+			apc_gp_fill_ellipse(widget_handle, $x(), $y(), $x_diameter(), $y_diameter());
+		%}
+	],
+	Doc => <<'EOD'
 
-# working here - get the other functions between fill_chords and
+=head2 fill_ellipses
+
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); properties)
+
+=for ref
+
+Draws a filled ellipse centered at C<x>, C<y>, each with their specified
+diameters.
+
+=for example
+
+ working here
+
+=cut
+
+EOD
+);
+
+
+# working here - get the other functions between fill_ellipses and
 # lines
 
 
