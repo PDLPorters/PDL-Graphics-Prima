@@ -38,7 +38,6 @@ my $main_window = Prima::MainWindow-> create(
 		my $ys = sin($thetas) * $radius + $y_max/2;
 
 		# Update the canvas:
-		$self->begin_paint;
 		$self->backColor(cl::White);
 		$self->clear;
 		
@@ -53,10 +52,6 @@ my $main_window = Prima::MainWindow-> create(
 		# Give the latest coupling:
 		$self->color(cl::Black);
 		$self->text_out("K = $K; $timing_status", 0, 0);
-		
-		# All done:
-		$self->end_paint;
-	
 	}
 );
 

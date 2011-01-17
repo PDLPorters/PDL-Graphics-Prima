@@ -14,6 +14,7 @@ use PDL;
 use PDL::Char;
 use Scalar::Util 'blessed';
 use Carp 'croak';
+use Prima;
 
 # working here - use Exporter and set as 'EXPORT_OK' the functions
 # pdl_of_patterns_for and pdl_of_handles_for. I need to write them, too.
@@ -88,7 +89,7 @@ sub rescale_to_pixels {
 			* $pixel_extent + $pixel_offset);
 }
 
-my $offset_penalty = 0.3;
+our $offset_penalty = 2;
 
 sub _adjusted_position {
 	my ($value, $interval, $offset, $direction) = @_;
@@ -122,8 +123,10 @@ sub compute_linear_ticks {
 	my $full_range = $max - $min;
 	# Start by assuming that the order of magnitude will be a good
 	# step size:
-	my $order_of_magnitude = 10**(int (log($max - $min) / log(10)));
-	
+	my $exponent = log($max - $min) / log(10);
+	# Correct for tracation of negative numbers:
+	$exponent-- if $exponent < 0;
+	my $order_of_magnitude = 10**(int $exponent);
 	# Score each potential interval and take the lowest one:
 	my $best_score = 100;
 	my $best_Ticks;
@@ -154,12 +157,13 @@ sub compute_linear_ticks {
 			my $min_Tick = _adjusted_position($min, $interval, $offset, 1);
 			my $max_Tick = _adjusted_position($max, $interval, $offset, -1);
 			
-			# Obviously, max tick and min tick must not overlap:
-			next if $max_Tick <= $min_Tick;
-			
 			# Count the number of ticks between min_Tick and max_Tick
-			# and compute the score:
 			my $N_Ticks = ($max_Tick - $min_Tick) / $interval + 1;
+			
+			# Obviously, max tick and min tick must not overlap:
+			next if $N_Ticks < 2;
+			
+			# compute the score:
 			$handicap += $offset_penalty if $offset != 0;
 			my $score = (abs($N_Ticks - 5) + $handicap)**2;
 			
