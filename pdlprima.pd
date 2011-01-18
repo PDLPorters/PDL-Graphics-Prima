@@ -29,7 +29,38 @@ PDL::Graphics::Prima - PDL-aware drawing functions for Prima widgets
 
 =head1 SYNOPSIS
 
- # working here - make a useful synopsis
+Each of the methods comes with a small sample snippet. To see how it
+looks, copy this synopsis and replace the code with in the
+C<Example code goes here> block with the example code.
+
+ use strict;
+ use warnings;
+ use PDL;
+ use PDL::Graphics::Prima;
+ use Prima qw(Application);
+ 
+ my $window = Prima::MainWindow->create(
+     text    => 'PDL::Graphics::Prima Test',
+     onPaint => sub {
+         my ( $self, $canvas) = @_;
+ 
+         # wipe the canvas:
+         $canvas->clear;
+         
+         ### Example code goes here ###
+         
+         # Draw a sine curve on the widget:
+         my ($width, $height) = $canvas->size;
+         my $x = sequence($width);
+         my $y = ( sin($x / 20) + 1 ) * $height/2;
+         $canvas->pdl_polylines($x, $y, lineWidths => 2);
+         
+         ### Example code ends here ###
+     },
+     backColor => cl::White,
+ );
+ 
+ run Prima;
 
 =head1 DESCRIPTION
 
@@ -61,7 +92,7 @@ implementation. The high-level implementation is installed under
 Prima::Drawable::pdl_<func> and is meant to be invoked as an object
 method:
 
- $widget->pdl_polyline($x, $y);
+ $widget->pdl_polylines($x, $y);
 
 
 
@@ -199,7 +230,7 @@ provide as many or as few tweaks to their drawing as they wish, so if
 they want to draw three different polylines with three different line
 styles, they should be able to do this:
 
- $widget->pdl_polyline($xs, $ys, {linePatterns => $patterns});
+ $widget->pdl_polylines($xs, $ys, {linePatterns => $patterns});
 
 and it will DWIM. That means that the PP functions have to (1) get all
 the possible preferences in as parameters (preferably piddles), (2) the
@@ -822,7 +853,7 @@ with the on-machine library.
 # prima_arcs #
 ##############
 
-my @properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
+my @properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s translates);
 pp_def('prima_arcs',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -848,23 +879,54 @@ pp_def('prima_arcs',
 	],
 	Doc => q{
 
-=head2 arcs
+=head2 pdl_arcs
 
 =for sig
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter();
+                     start_angle(); end_angle(); properties)
 
 =for ref
 
-Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, each with their specified diameters. The
-difference between this command and L<chords> is that this command does
-not connect the ends of the arcs with straight lines but leaves the
-arcs open
+Draws arcs, i.e. incomplete ellipses.
+
+The arcs go from the C<start_angle>s to the C<end_angle>s along the
+ellipses centered at the C<x>s and C<y>s, with the specified x- and
+y-diameters. The angles are measured in degrees, not radians.
+The difference between this command and L</chords> or L</sectors> is that
+C<arcs> does not connect the dangling ends.
+
+Here's a simple example:
 
 =for example
 
- working here
+ # Draw a bunch of random arcs on $canvas:
+ my $N_arcs = 20;
+ my ($x_max, $y_max) = $canvas->size;
+ my $xs = zeroes($N_arcs)->random * $x_max;
+ my $ys = $xs->random * $y_max;
+ my $dxs = $xs->random * $x_max / 4;
+ my $dys = $xs->random * $y_max / 4;
+ my $th_starts = $xs->random * 360;
+ my $th_stops = $xs->random * 360;
+ 
+ # Now that we've generated the data, call the command:
+ $canvas->pdl_arcs($xs, $ys, $dxs
+                , $dys, $th_starts, $th_stops);
+
+If you put that snippet of code in the onPaint method, as
+suggested in the synopsis, a completely new set of arcs will get
+redrawn whenever you resize your window.
+
+
+Compare to the Prima method L<Prima::Drawable/arc>. Closely related
+routines include L</pdl_chords> and L</pdl_sectors>. See also
+L</pdl_fill_chords>, and L</pdl_fill_sectors>, L</pdl_ellipses>, and
+L</pdl_fill_ellipses>.
+
+Spline drawing provides a similar functionality, though more complex and
+more powerful. There are no PDL bindings for the spline functions yet.
+See L<Prima::Drawable/spline> for more information.
 
 =cut
 
@@ -879,7 +941,7 @@ arcs open
 
 Applicable properties are likely to include handles, colors, backColors,
 lineEnds, linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -890,7 +952,7 @@ properties, in their correct order.
 # prima_bars #
 ##############
 
-@properties = qw(colors backColors fillPatterns rops rop2s);
+@properties = qw(colors backColors fillPatterns rops rop2s translates);
 pp_def('prima_bars',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -914,7 +976,7 @@ pp_def('prima_bars',
 	],
 	Doc => q{
 
-=head2 bars
+=head2 pdl_bars
 
   Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
 
@@ -924,7 +986,28 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
 =for example
 
- working here
+ # Draw 20 random filled rectangles on $canvas:
+ my $N_bars = 20;
+ my ($x_max, $y_max) = $canvas->size;
+ my $x1s = zeroes($N_bars)->random * $x_max;
+ my $y1s = $x1s->random * $y_max;
+ my $x2s = $x1s + $x1s->random * ($x_max - $x1s);
+ my $y2s = $y1s + $x1s->random * ($y_max - $y1s);
+ my $colors = $x1s->random * 2**24;
+ 
+ # Now that we've generated the data, call the command:
+ $canvas->pdl_bars($x1s, $y1s, $x2s, $y2s
+         , colors => $colors, backColors => $colors);
+
+If you put that snippet of code in the onPaint method, as
+suggested in the synopsis, a completely new set of filled rectangles
+will get redrawn whenever you resize your window.
+
+Compare to the Prima method L<Prima::Drawable/bar>. See also
+L</pdl_rectangles>, which is the unfilled equivalent, and L</pdl_clears>,
+which is sorta the opposite of this.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -935,7 +1018,7 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -946,7 +1029,7 @@ properties, in their correct order.
 ################
 # prima_chords #
 ################
-@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
+@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s translates);
 pp_def('prima_chords',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -972,20 +1055,61 @@ pp_def('prima_chords',
 	],
 	Doc => q{
 
-=head2 chords
+=head2 pdl_chords
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter();
+                           start_angle(); end_angle(); properties)
 
 =for ref
 
-Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, each with their specified diameters, and connects
-the ends with a straight line. The difference between this command and
-arcs is that it connects the ends.
+Draws arcs (i.e. incomplete ellipses) whose ends are connected by a line.
+
+The chord starts at C<start_angle> and runs to C<end_angle> along the ellipse
+centered at C<x>, C<y>, with their specified diameters C<x_diameter>,
+C<y_diameter>. Unlike L</arcs> or L</sectors>, it connects
+the ends of the arc with a straight line. The angles are
+measured in degrees, not radians.
 
 =for example
 
- working here
+ # For this example, you will need:
+ use PDL::Char;
+ 
+ # Draw a bunch of random arcs on $canvas:
+ my $N_chords = 20;
+ my ($x_max, $y_max) = $canvas->size;
+ my $xs = zeroes($N_chords)->random * $x_max;
+ my $ys = $xs->random * $y_max;
+ my $dxs = $xs->random * $x_max / 4;
+ my $dys = $xs->random * $y_max / 4;
+ my $th_starts = $xs->random * 360;
+ my $th_stops = $xs->random * 360;
+ 
+ # make a small list of patterns:
+ my $patterns_list = PDL::Char->new(
+          [lp::Solid, lp::Dash, lp::DashDot]);
+ 
+ # Randomly select 20 of those patterns:
+ my $rand_selections = ($xs->random * 3)->byte;
+ use PDL::NiceSlice;
+ my $patterns = $patterns_list($rand_selections)->transpose;
+ 
+ # Now that we've generated the data, call the command:
+ $canvas->pdl_chords($xs, $ys, $dxs
+                , $dys, $th_starts, $th_stops
+                , linePatterns => $patterns);
+
+If you put that snippet of code in the onPaint method, as
+suggested in the synopsis, a completely new set of chords
+will get redrawn whenever you resize your window.
+
+Compare to the Prima method L<Prima::Drawable/chord>. The filled
+equivalent is L</pdl_fill_chords>. Closely related routines are
+L</pdl_arcs> and L</pdl_sectors>. See also L</pdl_fill_sectors>,
+L</pdl_ellipses>, and L</pdl_fill_ellipses>, as well as
+L<Prima::Drawable/spline>.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -996,7 +1120,7 @@ arcs is that it connects the ends.
 
 Applicable properties are likely to include handles, colors, backColors,
 lineEnds, linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1007,7 +1131,7 @@ properties, in their correct order.
 # prima_clears #
 ################
 
-@properties = qw(backColors rop2s);
+@properties = qw(backColors rop2s clears);
 pp_def('prima_clears',
 	Pars => 'int x1(); int y1(); int x2(); int y2();'
 			. generate_pars_args_for(@properties),
@@ -1032,18 +1156,38 @@ pp_def('prima_clears',
 	],
 	Doc => q{
 
-=head2 clears
+=head2 pdl_clears
 
   Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
 
 =for ref
 
-Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, each with their specified diameters.
+Clears the specified rectangle(s).
 
 =for example
 
- working here
+ my ($width, $height) = $canvas->size;
+ # Begin by drawing a filled rectangle:
+ $canvas->color(cl::Blue);
+ $canvas->bar(0, 0, $width, $height);
+ 
+ # Now cut random rectangles out of it:
+ my $N_chunks = 20;
+ my $x1 = random($N_chunks) * $width;
+ my $x2 = random($N_chunks) * $width;
+ my $y1 = random($N_chunks) * $width;
+ my $y2 = random($N_chunks) * $width;
+ $canvas->pdl_clears($x1, $y1, $x2, $y2);
+
+Like the other examples, this will give you something new whenever you
+resize the window if you put the code in the onPaint method, as the
+Synopsis suggests.
+
+Compare to the Prima method L<Prima::Drawable/clear>. In practice I
+suppose this might be considered the opposite of L</pdl_bars>, though
+technically this is meant for erasing, not drawing.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1052,8 +1196,8 @@ centered at C<x>, C<y>, each with their specified diameters.
 
 =pod
 
-Applicable properties are likely to include handles, backColors, and
-rop2s. However, this list could be
+Applicable properties are likely to include handles, backColors, rop2s,
+and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1070,7 +1214,7 @@ properties, in their correct order.
 # prima_ellipses #
 ##################
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
 pp_def('prima_ellipses',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();'
 			. generate_pars_args_for(@properties),
@@ -1096,18 +1240,29 @@ pp_def('prima_ellipses',
 	],
 	Doc => q{
 
-=head2 ellipses
+=head2 pdl_ellipses
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter();
+                          y_diameter(); properties)
 
 =for ref
 
-Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, each with their specified diameters.
+Draws an ellipse centered at C<x>, C<y> with diameters C<x_diameter> and
+C<y_diameter>. To draw circles, just use the same x- and y-diameter.
 
 =for example
 
  working here
+
+Compare to the Prima method L<Prima::Drawable/ellipse>. The filled
+equivalent is L</pdl_fill_ellipses>. See also L</pdl_arcs>, L</pdl_chords>,
+and L</pdl_sectors> as well as L</pdl_fill_chords> and
+L</pdl_fill_sectors>. You may also be interested in L<Prima::Drawable/spline>,
+which does not yet have a PDL interface.
+
+=cut
+
+
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1118,7 +1273,7 @@ centered at C<x>, C<y>, each with their specified diameters.
 
 Applicable properties are likely to include handles, colors, backColors,
 linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1129,7 +1284,7 @@ properties, in their correct order.
 # prima_fill_chords #
 #####################
 
-@properties = qw(colors backColors fillPatterns rops rop2s);
+@properties = qw(colors backColors fillPatterns rops rop2s translates);
 pp_def('prima_fill_chords',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1156,18 +1311,29 @@ pp_def('prima_fill_chords',
 	],
 	Doc => q{
 
-=head2 fill_chords
+=head2 pdl_fill_chords
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter();
+                          start_angle(); end_angle(); properties)
 
 =for ref
 
 Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, each with their specified diameters.
+centered at C<x>, C<y>, each with their specified diameters. The ends
+are connected with a line and the interior is filled. Use this to draw
+the open-mouth part of a smiley face.
 
 =for example
 
- working here
+ # working here:
+ $canvas->pdl_fill_chords($x, $y, $xd, $yd, $ti, $tf);
+
+Compare to the Prima method L<Prima::Drawable/fill_chord>. The unfilled
+equivalent is L</pdl_chords>. Closely related to L</pdl_fill_ellipses>
+and L</pdl_fill_sectors>. See also L</pdl_arcs>, L</pdl_ellipses>,
+and L</pdl_sectors>.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1178,7 +1344,7 @@ centered at C<x>, C<y>, each with their specified diameters.
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1189,7 +1355,7 @@ properties, in their correct order.
 # prima_fill_ellipses #
 #######################
 
-@properties = qw(colors backColors fillPatterns rops rop2s);
+@properties = qw(colors backColors fillPatterns rops rop2s translates);
 pp_def('prima_fill_ellipses',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1214,18 +1380,30 @@ pp_def('prima_fill_ellipses',
 	],
 	Doc => q{
 
-=head2 fill_ellipses
+=head2 pdl_fill_ellipses
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter();
+                          y_diameter(); properties)
 
 =for ref
 
-Draws a filled ellipse centered at C<x>, C<y>, each with their specified
-diameters.
+Draws a filled ellipse centered at C<x>, C<y>, with diameters
+C<x_diameter> and C<y_diameter>. To draw filled circles, use the same
+value for both diameters.
 
 =for example
 
- working here
+ # working here
+ $canvas->pdl_fill_ellipses($x, $y, $xd, $yd);
+
+Compare to the Prima method L<Prima::Drawable/fill_ellipse>. The unfilled
+equivalent is L</pdl_ellipses>. Closely related to L</pdl_fill_chords> and
+L</pdl_fill_ellipses>, and L</pdl_fill_sectors>.
+See also L</pdl_arcs>, L</pdl_ellipses>, and L</pdl_sectors>. Also,
+check out L<Prima::Drawable/fill_spline>, which does not yet have
+PDL bindings.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1236,7 +1414,7 @@ diameters.
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1246,7 +1424,7 @@ properties, in their correct order.
 ####################
 # prima_fillpolys #
 ####################
-@properties = qw(colors backColors fillPatterns fillWindings rops rop2s);
+@properties = qw(colors backColors fillPatterns fillWindings rops rop2s translates);
 pp_def('prima_fillpolys',
 	Pars => 'x(n); y(n); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1385,26 +1563,43 @@ pp_def('prima_fillpolys',
 	],
 	Doc => q{
 
-=head2 polylines
+=head2 pdl_fillpolys
 
- working here:
   Prima Signature: (widget; x(n); y(n); properties)
 
 =for ref
 
-Draws a multi-segment line on a widget with the given x- and y-coordinates.
+Draws and fills a polygon with arbitrary edge vertices.
 
-This is useful for making line-drawings, such as plotting data.
+NOTE: there is B<no> underscore between C<fill> and C<poly>, which is
+different from the other C<fill> methods!
 
-Applicable properties include colors backColors linePatterns lineWidths
-lineJoins lineEnds rops rop2s
+This is most useful for drawing line drawing of crystals and rocks, and
+for visualizing integrals. Splines would be the better choice if you
+want to draw curves, but a PDL interface to splines is not (yet)
+implemented.
+
+Unlike most of the other methods, this one actually makes an effort to
+process bad values. In addition to the IEEE bad values of C<nan> and
+C<inf>, PDL has support for bad values. All of these should be handled
+reasonably well by C<pdl_fillpolys>. If you give it 
+
+Because this skips bad data altogether, if you have too much bad data
+(i.e. fewer than three good points), the routine will simply not draw
+anything. I'm debating if this should croak, or at least give a warning.
+(Of course, a warning to STDOUT is rather silly for a GUI toolkit.)
+
+For example:
 
 =for example
 
- # Draw a sine curve on the widget:
- my $x = sequence(200);
- my $y = ( sin($x / 20) + 1 ) * 50;
- $widget->pdl_polyline($x, $y);
+ # working here
+ $canvas->pdl_fillpolys($x, $y);
+
+Compare to the Prima method L<Prima::Drawable/fillpoly>. See also
+L</pdl_bars> and L<pdl_polylines>.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1415,7 +1610,7 @@ lineJoins lineEnds rops rop2s
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns, fillWindings,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1426,7 +1621,7 @@ properties, in their correct order.
 # prima_fill_sectors #
 ######################
 
-@properties = qw(colors backColors fillPatterns rops rop2s);
+@properties = qw(colors backColors fillPatterns rops rop2s translates);
 pp_def('prima_fill_sectors',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1452,21 +1647,31 @@ pp_def('prima_fill_sectors',
 	],
 	Doc => q{
 
-=head2 fill_sectors
+=head2 pdl_fill_sectors
 
-  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter();start_angle(); end_angle(); properties)
+  Prima Signature: (widget; x(); y(); x_diameter(); y_diameter();
+                          start_angle(); end_angle(); properties)
 
 =for ref
 
 Draws an arc from C<start_angle> to C<end_angle> along the ellipse
-centered at C<x>, C<y>, with specified x- and y-diameters. The
-difference between this command and L<chords> is that this command does
-not connect the ends of the arcs with straight lines but leaves the
-arcs open
+centered at C<x>, C<y>, with specified x- and y-diameters. Like
+L</fill_chords>, this command connects the end points of the arc, but
+unlike L</fill_chords>, it does so by drawing two lines, both of which
+also connect to the ellipse's center. This results in shapes that look
+like pie pieces.
 
 =for example
 
- working here
+ # working here
+ $canvas->pdl_fill_sectors($x, $y, $xd, $yd, $th1, $th2);
+
+Compare to the Prima method L<Prima::Drawable/fill_sector>. The unfilled
+equivalent is L</pdl_sectors>. This is closely related to C</pdl_fill_chords>
+and C</pdl_fill_ellipses>. See also L</pdl_arcs>, L</pdl_chords>, and
+L</pdl_ellipses>.
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1477,7 +1682,7 @@ arcs open
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1494,7 +1699,7 @@ properties, in their correct order.
 # prima_flood_fills #
 #####################
 
-@properties = qw(colors backColors fillPatterns rops rop2s);
+@properties = qw(colors backColors fillPatterns rops rop2s translates);
 pp_def('prima_flood_fills',
 	Pars => 'int x(); int y(); int color(); int singleborder(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1518,17 +1723,22 @@ pp_def('prima_flood_fills',
 	],
 	Doc => q{
 
-=head2 lines
+=head2 pdl_flood_fills
 
-  Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
+  Prima Signature: (widget; x(); y(); color();
+                   singleborder(); properties)
 
 =for ref
 
-Draws a line from (x1, y1) to (x2, y2).
+# working here:
+
+Fills an area of the canvas...
 
 =for example
 
  working here
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1539,7 +1749,7 @@ Draws a line from (x1, y1) to (x2, y2).
 
 Applicable properties are likely to include handles, colors, backColors,
 fillPatterns,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1550,7 +1760,7 @@ properties, in their correct order.
 # prima_lines #
 ###############
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
 pp_def('prima_lines',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1574,7 +1784,7 @@ pp_def('prima_lines',
 	],
 	Doc => q{
 
-=head2 lines
+=head2 pdl_lines
 
   Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
 
@@ -1582,9 +1792,14 @@ pp_def('prima_lines',
 
 Draws a line from (x1, y1) to (x2, y2).
 
+In contrast to polylines, which are supposed to be connected, these
+lines are meant to be independent.
+
 =for example
 
  working here
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1595,7 +1810,7 @@ Draws a line from (x1, y1) to (x2, y2).
 
 Applicable properties are likely to include handles, colors, backColors,
 linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1606,7 +1821,7 @@ properties, in their correct order.
 # prima_pixels #
 ################
 
-@properties = qw(colors);
+@properties = qw(colors translates);
 pp_def('prima_pixels',
 	Pars => 'int x(); int y(); int [o] color(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1635,7 +1850,7 @@ pp_def('prima_pixels',
 	},
 	Doc => q{
 
-=head2 pixels
+=head2 pdl_pixels
 
   Prima Signature: (widget; x(); y(); properties)
 
@@ -1648,6 +1863,8 @@ in the C<color> property.
 
  working here
 
+=cut
+
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
 
@@ -1655,8 +1872,8 @@ in the C<color> property.
 
 =pod
 
-Applicable properties are likely to include handles, colors. However,
-this list could be
+Applicable properties are likely to include handles, colors, and
+translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1668,7 +1885,7 @@ properties, in their correct order.
 ###################
 
 @properties = qw(colors backColors lineEnds lineJoins linePatterns
-					lineWidths rops rop2s);
+					lineWidths rops rop2s translates);
 pp_def('prima_polylines',
 	Pars => 'x(n); y(n); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1818,7 +2035,7 @@ pp_def('prima_polylines',
 	],
 	Doc => q{
 
-=head2 polylines
+=head2 pdl_polylines
 
  working here:
   Prima Signature: (widget; x(n); y(n); properties)
@@ -1837,7 +2054,9 @@ lineJoins lineEnds rops rop2s
  # Draw a sine curve on the widget:
  my $x = sequence(200);
  my $y = ( sin($x / 20) + 1 ) * 50;
- $widget->pdl_polyline($x, $y);
+ $canvas->pdl_polylines($x, $y);
+
+=cut
 
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
@@ -1848,7 +2067,7 @@ lineJoins lineEnds rops rop2s
 
 Applicable properties are likely to include handles, colors, backColors,
 lineEnds, lineJoins, linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1890,7 +2109,7 @@ properties, in their correct order.
 # prima_rectangles #
 ####################
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s);
+@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
 pp_def('prima_rectangles',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1914,7 +2133,7 @@ pp_def('prima_rectangles',
 	],
 	Doc => q{
 
-=head2 bars
+=head2 pdl_bars
 
   Prima Signature: (widget; x1(); y1(); x2(); y2(); properties)
 
@@ -1926,6 +2145,8 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
  working here
 
+=cut
+
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
 
@@ -1935,7 +2156,7 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
 Applicable properties are likely to include handles, colors, backColors,
 linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -1946,7 +2167,7 @@ properties, in their correct order.
 # prima_sectors #
 #################
 
-@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s);
+@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s translates);
 pp_def('prima_sectors',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1972,7 +2193,7 @@ pp_def('prima_sectors',
 	],
 	Doc => q{
 
-=head2 arcs
+=head2 pdl_sectors
 
   Prima Signature: (widget; x(); y(); x_diameter(); y_diameter(); start_angle(); end_angle(); properties)
 
@@ -1988,6 +2209,8 @@ arcs open
 
  working here
 
+=cut
+
 }. "=pod\n\nApplicable properties include " . join(', ', 'handles', @properties) . "
 \n=cut
 
@@ -1997,7 +2220,7 @@ arcs open
 
 Applicable properties are likely to include handles, colors, backColors,
 lineEnds, linePatterns, lineWidths,
-rops, and rop2s. However, this list could be
+rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
 properties, in their correct order.
@@ -2075,9 +2298,9 @@ David Mertens, E<lt>dcmertens.perl@gmail.comE<gt>.
 
 =head1 SEE ALSO
 
-The Perl Data Language, L<PDL>
+This is built as an extension for the Prima toolkit, http://www.prima.eu.org/, L<Prima>.
 
-The Prima toolkit, http://www.prima.eu.org/, L<Prima>
+This is built using (and targeted at users of) the Perl Data Language, L<PDL>.
 
 Since this amounts to a plotting package, you should check out other plotting
 packages available for PDL. Two notable examples are L<PDL::Graphics::PLplot>
