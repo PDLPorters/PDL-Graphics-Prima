@@ -651,9 +651,8 @@ sub endow {
 	my ($xmin, $xmax) = $x->minmax;
 	my ($ymin, $ymax) = $y->minmax;
 	my ($clickx, $clicky);
-	$style //= 'graph';
+	$style //= 'graph'; #/
 	my @previous_click = (0,0);
-	my $op = \&print_coords;
 	# working here - change the scaling with a pop-up menu
 	my $scaling = 'linear';
 	my $drag_button = 0;
@@ -702,6 +701,8 @@ sub endow {
 			# Draw a zoom rectangle:
 			$self->rectangle($clickx, $clicky, @right_button_xy);
 		}
+		
+		$self->notify("PostMessage", 'redraw');
 	});
 	$self->backColor(cl::White);
 	$self->onMouseWheel( sub {
@@ -730,6 +731,7 @@ sub endow {
 			}
 		}
 		$self->notify("Paint");
+		$self->notify("PostMessage", 'new-range')
 	});
 	$self->onMouseDown( sub {
 		(undef, $drag_button, undef, $clickx, $clicky) = @_;
@@ -756,6 +758,7 @@ sub endow {
 			$xmin -= $dx;
 			$ymin -= $dy;
 			$ymax -= $dy;
+			$self->notify("PostMessage", 'new-range')
 		}
 		else {
 			@right_button_xy = ($x, $y);
@@ -770,10 +773,12 @@ sub endow {
 			if ($mouse_x < $x_max_pixel / 10) {
 				($ymin, $ymax) = $y->where(($xmin < $x) & ($x < $xmax))->minmax;
 				$self->notify("Paint");
+				$self->notify("PostMessage", 'new-range')
 			}
 			elsif ($mouse_y < $y_max_pixel / 10) {
 				($xmin, $xmax) = $x->minmax;
 				$self->notify("Paint");
+				$self->notify("PostMessage", 'new-range')
 			}
 			else {
 				# print location, and position relative to previous location
@@ -813,6 +818,7 @@ sub endow {
 				
 				# Redraw it
 				$self->notify("Paint");
+				$self->notify("PostMessage", 'new-range')
 			}
 		}
 		
@@ -825,6 +831,7 @@ sub endow {
 	$self->{new_data} = sub {
 		($x, $y, $title) = @_;
 		$self->notify("Paint");
+		$self->notify("PostMessage", 'new-range')
 	};
 	$self->{get_current_ys} = sub {
 		return where($y, ($xmin < $x) & ($x < $xmax) & ($ymin < $y)
