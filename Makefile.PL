@@ -12,6 +12,13 @@ $hash{VERSION_FROM}="pdlprima.pd";
 $hash{INC} .= join( ' ' , map { $Prima::Config::Config{cincflag}.$_} @{$Prima::Config::Config{incpaths}});
 my %DEFINES=map { my @z = split('=', $_, 2); scalar(@z)?(@z):($_ => 1)} @{$Prima::Config::Config{cdefs}};
 $hash{CCFLAGS} .= join( ' ' , map { $Prima::Config::Config{cdefflag}.$_.'='.$DEFINES{$_}} keys %DEFINES);
+
+# Make it install my module files:
+$hash{PM} = {
+	  'Simple.pm' => 'blib/lib/Prima/Graph/Simple.pm'
+	, 'Prima.pm'  => 'blib/lib/PDL/Graphics/Prima.pm'
+};
+
 WriteMakefile(%hash);
 
 sub MY::postamble {

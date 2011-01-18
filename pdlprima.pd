@@ -719,7 +719,7 @@ sub get_sorted_args_with_defaults {
 		# because it is never used. For handles, the value should revert
 		# to the calling widget's handle:
 		if (not exists $given->{$_}) {
-			push @to_return, $handle;
+			push @to_return, ($handle) for (1..$N_args_for{$_});
 		}
 		elsif (ref ($given->{$_}) eq 'ARRAY') {
 			# If an array ref, dereference it and make sure the number
@@ -800,7 +800,7 @@ sub generate_PMCode_for {
 	$to_return .= "
 	# Check for an even number of remaining arguments (key-value pairs):
 	croak('pdl_$func_name expects optional parameters ans key => value pairs')
-		unless \@_ % 2 == 0;	# *strictly* greater accounts for \$self
+		unless \@_ % 2 == 0;
 	
 	my \%args = \@_;
 	
@@ -809,8 +809,7 @@ sub generate_PMCode_for {
 	my \@args_with_defs
 		= get_sorted_args_with_defaults(\$self, \\$props_array_name, \\\%args);
 
-	# Call the PP'd internal code. Always put self and the args hash
-	# last.
+	# Call the PP'd internal code. Always put the args hash last.
 	eval {
 		PDL::_prima_${func_name}_int(";
 	# include all the required arguments:
@@ -824,7 +823,7 @@ sub generate_PMCode_for {
 	if ($@) {
 		# die $@;
 		$@ =~ s/at (.*?) line \d+\.\n$//;
-		die "Issues calling pdl_' . $func_name . ': $@";
+		croak "Issues calling pdl_' . $func_name . ': $@";
 	}
 	' . "\n}\n";
 	 
@@ -1131,7 +1130,7 @@ properties, in their correct order.
 # prima_clears #
 ################
 
-@properties = qw(backColors rop2s clears);
+@properties = qw(backColors rop2s translates);
 pp_def('prima_clears',
 	Pars => 'int x1(); int y1(); int x2(); int y2();'
 			. generate_pars_args_for(@properties),

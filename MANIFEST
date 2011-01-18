@@ -1,6 +1,6 @@
 Makefile.PL
 pdlprima.pd
-Graph.pm
+Simple.pm
 README
 MANIFEST
 test.pl

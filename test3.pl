@@ -1,11 +1,16 @@
 use strict;
 use warnings;
 use PDL;
+use blib;
 use PDL::Graphics::Prima;
 use Prima qw(Application);
+use Prima::Graph::Simple;
 
 my $t = sequence(300) / 25;
 my $y = sin($t);
+
+#my $data = grandom(300);
+#($t, $y) = hist $data;
 
 my $wDisplay = Prima::MainWindow->create(
 	text    => 'Graph Test',
@@ -14,6 +19,7 @@ my $wDisplay = Prima::MainWindow->create(
 
 		# wipe and replot:
 		$self->clear;
+#		$self->bin([$t, $y], {
 		$self->graph([$t, $y], {
 			xmin => $self->{xmin},
 			xmax => $self->{xmax},
