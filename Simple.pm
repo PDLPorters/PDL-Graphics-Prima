@@ -8,6 +8,7 @@ use Carp 'croak';
 use Prima;
 use PDL;
 use PDL::NiceSlice;
+use PDL::Graphics::Prima;
 
 =head1 NAME
 
@@ -658,6 +659,16 @@ sub endow {
 	my $drag_button = 0;
 	my @right_button_xy = ();
 	my $previous_click_time = [gettimeofday];
+	
+	# Install a time to replot the spectrum after enough movement has passed:
+	my $timer = Prima::Timer-> create(
+		timeout => 50, # milliseconds
+		onTick  => sub {
+			my $me = shift;
+			$me->stop;
+			$self->notify("Paint");
+		},
+	);
 
 	$self->onPaint(sub {
 		# wipe and replot:
@@ -666,19 +677,19 @@ sub endow {
 		my $y_to_plot = $y;
 		# For performance, try to only work with the data that is
 		# within the window if the dataset is huge:
-		if ($x->nelem > 10_000) {
-			($x_to_plot, $y_to_plot)
-				= where($x_to_plot, $y_to_plot, ($xmin < $x_to_plot)
-					& ($x_to_plot < $xmax));
-		}
+#		if ($x->nelem > 10_000) {
+#			($x_to_plot, $y_to_plot)
+#				= where($x_to_plot, $y_to_plot, ($xmin < $x_to_plot)
+#					& ($x_to_plot < $xmax));
+#		}
 		# If the dataset is still huge, downsample it:
-		my $starting_x = $x_to_plot;
-		my $starting_y = $y_to_plot;
-		for (my $i = 2; $x_to_plot->nelem > 5_000; $i++) {
-			$x_to_plot = $starting_x(0:-1:$i);
-			$y_to_plot = $starting_y(0:-1:$i);
-		}
-#		while ($x_to_plot->nelem > 5_000) {
+#		my $starting_x = $x_to_plot;
+#		my $starting_y = $y_to_plot;
+#		for (my $i = 2; $x_to_plot->nelem > 5_000; $i++) {
+#			$x_to_plot = $starting_x(0:-1:$i);
+#			$y_to_plot = $starting_y(0:-1:$i);
+#		}
+#		while ($x_to_plot->nelem > 10_000) {
 #			$x_to_plot = $x_to_plot(0:-1:2);
 #			$y_to_plot = $y_to_plot(0:-1:2);
 #		}
@@ -730,7 +741,7 @@ sub endow {
 				$ymax += $yrange/10;
 			}
 		}
-		$self->notify("Paint");
+		$timer->start unless $timer->get_active;
 		$self->notify("PostMessage", 'new-range')
 	});
 	$self->onMouseDown( sub {
@@ -763,7 +774,7 @@ sub endow {
 		else {
 			@right_button_xy = ($x, $y);
 		}
-		$self->notify("Paint");
+		$timer->start unless $timer->get_active;
 	});
 	$self->onMouseClick( sub {
 		my (undef, $button, undef, $mouse_x, $mouse_y, $double_click) = @_;
@@ -839,6 +850,11 @@ sub endow {
 	};
 	$self->{get_x_bounds} = sub {
 		return ($xmin, $xmax);
+	};
+	$self->{set_x_bounds} = sub {
+		($xmin, $xmax) = @_;
+		$self->notify("Paint");
+		$self->notify("PostMessage", 'new-range');
 	};
 }
 

@@ -212,7 +212,7 @@ pp_addhdr( <<HEADER );
 
 #undef WORD
 #include <apricot.h>
-#define ONE_MILLION 1000000
+#define MY_BIG_NUMBER 1000000
 
 HEADER
 
@@ -369,6 +369,7 @@ sub generate_init_args_for {
 	my $to_return = "\t\t/* These are declarations needed for the handles
 		 * and some of the optional parameters */
 		 Handle widget_handle;\n";
+		 
 	# Build the list:
 	foreach(@_) {
 		$to_return .= "\t\t$init_args_for{$_};\n"
@@ -384,10 +385,10 @@ sub generate_init_args_for {
 
 =begin details
 
-The default argument for all of the properties is the null piddle. This
-is very handy for the function definitions, but there's no way (that I
-know of) to determine from PP code whether the supplied piddle was
-originally null. However, I can examine the original hash passed in as
+The only way to determine from within PP code whether an optional
+parameter was passed in or not is to pass an additional structure to
+the PP code with that information. The structure I use for this is
+the original hash passed in as
 an argument to the Perl-level function. If the user specified a value
 for a property, it will be present in the hash. If they did not, it will
 not be there.
@@ -498,7 +499,7 @@ my $default_other_pars = 'SV * arg_ref_sv';
 Each of the setters needs to first check if its call is even necessary
 (using the boolean variables set-up in the previous section),
 and then it needs to call the appropriate setter from apricot.h. This is
-easy by repetitive code, so once again I generate it from the same
+easy but repetitive code, so once again I generate it from the same
 list of arguments as everything else. In what follows, I create a
 function that generates these code fragments for me, or looks them up
 in a hash if they're complicated. Note that the function wraps the
@@ -951,7 +952,7 @@ properties, in their correct order.
 # prima_bars #
 ##############
 
-@properties = qw(colors backColors fillPatterns rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns rops rop2s translates);
 pp_def('prima_bars',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1015,7 +1016,7 @@ which is sorta the opposite of this.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1028,7 +1029,7 @@ properties, in their correct order.
 ################
 # prima_chords #
 ################
-@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s translates);
+@properties = qw(colors backColors clipRects lineEnds linePatterns lineWidths rops rop2s translates);
 pp_def('prima_chords',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1117,7 +1118,7 @@ L<Prima::Drawable/spline>.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 lineEnds, linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1213,7 +1214,7 @@ properties, in their correct order.
 # prima_ellipses #
 ##################
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
+@properties = qw(colors backColors clipRects linePatterns lineWidths rops rop2s translates);
 pp_def('prima_ellipses',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();'
 			. generate_pars_args_for(@properties),
@@ -1270,7 +1271,7 @@ which does not yet have a PDL interface.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1283,7 +1284,7 @@ properties, in their correct order.
 # prima_fill_chords #
 #####################
 
-@properties = qw(colors backColors fillPatterns rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns rops rop2s translates);
 pp_def('prima_fill_chords',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1341,7 +1342,7 @@ and L</pdl_sectors>.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1354,7 +1355,7 @@ properties, in their correct order.
 # prima_fill_ellipses #
 #######################
 
-@properties = qw(colors backColors fillPatterns rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns rops rop2s translates);
 pp_def('prima_fill_ellipses',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1411,7 +1412,7 @@ PDL bindings.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1423,7 +1424,7 @@ properties, in their correct order.
 ####################
 # prima_fillpolys #
 ####################
-@properties = qw(colors backColors fillPatterns fillWindings rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns fillWindings rops rop2s translates);
 pp_def('prima_fillpolys',
 	Pars => 'x(n); y(n); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1468,16 +1469,21 @@ pp_def('prima_fillpolys',
 				/* handle infinities */
 				if (xval == xval + 1) {
 					if (xval < 0)
-						xval = -ONE_MILLION;
+						xval = -MY_BIG_NUMBER;
 					else
-						xval = ONE_MILLION;
+						xval = MY_BIG_NUMBER;
 				}
 				if (yval == yval + 1) {
 					if (yval < 0)
-						yval = -ONE_MILLION;
+						yval = -MY_BIG_NUMBER;
 					else
-						yval = ONE_MILLION;
+						yval = MY_BIG_NUMBER;
 				}
+				/* Handle very large values */
+				if (yval > MY_BIG_NUMBER) yval = MY_BIG_NUMBER;
+				if (xval > MY_BIG_NUMBER) xval = MY_BIG_NUMBER;
+				if (yval < -MY_BIG_NUMBER) yval = -MY_BIG_NUMBER;
+				if (xval < -MY_BIG_NUMBER) xval = -MY_BIG_NUMBER;
 				
 				to_plot[n_to_plot].x = xval;
 				to_plot[n_to_plot].y = yval;
@@ -1535,16 +1541,21 @@ pp_def('prima_fillpolys',
 				/* handle infinities */
 				if (xval == xval + 1) {
 					if (xval < 0)
-						xval = -ONE_MILLION;
+						xval = -MY_BIG_NUMBER;
 					else
-						xval = ONE_MILLION;
+						xval = MY_BIG_NUMBER;
 				}
 				if (yval == yval + 1) {
 					if (yval < 0)
-						yval = -ONE_MILLION;
+						yval = -MY_BIG_NUMBER;
 					else
-						yval = ONE_MILLION;
+						yval = MY_BIG_NUMBER;
 				}
+				/* Handle very large values */
+				if (yval > MY_BIG_NUMBER) yval = MY_BIG_NUMBER;
+				if (xval > MY_BIG_NUMBER) xval = MY_BIG_NUMBER;
+				if (yval < -MY_BIG_NUMBER) yval = -MY_BIG_NUMBER;
+				if (xval < -MY_BIG_NUMBER) xval = -MY_BIG_NUMBER;
 				
 				to_plot[n_to_plot].x = xval;
 				to_plot[n_to_plot].y = yval;
@@ -1607,7 +1618,7 @@ L</pdl_bars> and L<pdl_polylines>.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns, fillWindings,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1620,7 +1631,7 @@ properties, in their correct order.
 # prima_fill_sectors #
 ######################
 
-@properties = qw(colors backColors fillPatterns rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns rops rop2s translates);
 pp_def('prima_fill_sectors',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -1679,7 +1690,7 @@ L</pdl_ellipses>.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1698,7 +1709,7 @@ properties, in their correct order.
 # prima_flood_fills #
 #####################
 
-@properties = qw(colors backColors fillPatterns rops rop2s translates);
+@properties = qw(colors backColors clipRects fillPatterns rops rop2s translates);
 pp_def('prima_flood_fills',
 	Pars => 'int x(); int y(); int color(); int singleborder(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1746,7 +1757,7 @@ Fills an area of the canvas...
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 fillPatterns,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1759,7 +1770,7 @@ properties, in their correct order.
 # prima_lines #
 ###############
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
+@properties = qw(colors backColors clipRects linePatterns lineWidths rops rop2s translates);
 pp_def('prima_lines',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1807,7 +1818,7 @@ lines are meant to be independent.
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -1820,7 +1831,7 @@ properties, in their correct order.
 # prima_pixels #
 ################
 
-@properties = qw(colors translates);
+@properties = qw(colors clipRects translates);
 pp_def('prima_pixels',
 	Pars => 'int x(); int y(); int [o] color(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -1871,7 +1882,7 @@ in the C<color> property.
 
 =pod
 
-Applicable properties are likely to include handles, colors, and
+Applicable properties are likely to include handles, colors, clipRects, and
 translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
 machine, the documentation is guaranteed to describe the applicable
@@ -1883,7 +1894,7 @@ properties, in their correct order.
 # prima_polylines #
 ###################
 
-@properties = qw(colors backColors lineEnds lineJoins linePatterns
+@properties = qw(colors backColors clipRects lineEnds lineJoins linePatterns
 					lineWidths rops rop2s translates);
 pp_def('prima_polylines',
 	Pars => 'x(n); y(n); ' . generate_pars_args_for(@properties),
@@ -1896,6 +1907,10 @@ pp_def('prima_polylines',
 		Point * to_plot;
 		int n_size, i, n_to_plot;
 		double xval, yval;
+		/* Need these to do reasonable cutting-out of data outside the
+		 * plotting window
+		 */
+		int x_min, x_max, y_min, y_max;
 	}
 	# Add the auto-generated declaration and initialization code:
 	. initialize_for(@properties)
@@ -1910,6 +1925,25 @@ pp_def('prima_polylines',
 		]
 		. generate_setter_code_for(@properties)
 		. q[
+			/* Get the min/max data */
+			if (is_setting_clipRects) {
+				/* If they specified a clipping rectangle, just use
+				 * those bounds */
+				x_min = $clipLeft();
+				y_min = $clipBottom();
+				x_max = $clipRight();
+				y_max = $clipTop();
+			}
+			else {
+				/* Otherwise, get the clip rectangle for the widget
+				 * and use its bounds */
+				 clip_rect = apc_gp_get_clip_rect(widget_handle);
+				 x_min = clip_rect.left;
+				 y_min = clip_rect.bottom;
+				 x_max = clip_rect.right;
+				 y_max = clip_rect.top;
+			}
+			
 			/* Put the x-y data into the to_plot array. I am attempting
 			 * to handle infs and nans gracefully by treating the same
 			 * way as I would bad values.
@@ -1928,23 +1962,116 @@ pp_def('prima_polylines',
 						i++;
 						break;
 					}
-					else {
-						/* handle infinities */
-						if (xval == xval + 1) {
-							if (xval < 0)
-								xval = -ONE_MILLION;
-							else
-								xval = ONE_MILLION;
+					
+					/* handle infinities */
+					if (xval == xval + 1) {
+						if (xval < 0)
+							xval = -MY_BIG_NUMBER;
+						else
+							xval = MY_BIG_NUMBER;
+					}
+					if (yval == yval + 1) {
+						if (yval < 0)
+							yval = -MY_BIG_NUMBER;
+						else
+							yval = MY_BIG_NUMBER;
+					}
+					
+					/* Handle very large values */
+					if (yval > MY_BIG_NUMBER) yval = MY_BIG_NUMBER;
+					if (xval > MY_BIG_NUMBER) xval = MY_BIG_NUMBER;
+					if (yval < -MY_BIG_NUMBER) yval = -MY_BIG_NUMBER;
+					if (xval < -MY_BIG_NUMBER) xval = -MY_BIG_NUMBER;
+					
+					to_plot[n_to_plot].x = xval;
+					to_plot[n_to_plot].y = yval;
+
+					/* Handle values that are outside the plotting range
+					 * by comparing them to the previous point. This
+					 * clearly requires that there was a previous point:
+					 */
+					if (n_to_plot > 0							/* a previous point exists	*/
+						 && ( xval < x_min || xval > x_max		/* and current point is		*/
+							|| yval < y_min || yval > y_max)	/* outside range			*/
+						 && ( to_plot[n_to_plot-1].x < x_min	/* and previous				*/
+							|| to_plot[n_to_plot-1].x > x_max	/* point					*/
+							|| to_plot[n_to_plot-1].y < y_min	/* is outside				*/
+							|| to_plot[n_to_plot-1].y > y_max)	/* range					*/
+					) {
+						/* If any point on a line from the previous to
+						 * this point falls within the plotting window,
+						 * then it should be included. This is determined
+						 * by computing the y-intercepts of the line
+						 * connecting the two points in question at
+						 * xmin and xmax, and the x-intercepts at the
+						 * ymin and ymax. If their y-values are within
+						 * the y-range, or their x-values are with the
+						 * x-range, it should be
+						 * plotted. Otherwise, we should break out of
+						 * the current for-loop.
+						 */
+						 Point prev;
+						 double slope;
+						 double y_intercept_x_min, y_intercept_x_max;
+						 double x_intercept_y_min, x_intercept_y_max;
+						 int identical_y_values, identical_x_values;
+						 /* Initialize the previous point */
+						 prev = to_plot[n_to_plot];
+						 
+						/* Both x values or both y-values are outside
+						 * the clipping rectange on the same side means
+						 * we can break since there's no way for their
+						 * intercepts to cross the clipping rectangle */
+						if (	(xval < x_min && prev.x < x_min)
+							||	(xval > x_max && prev.x > x_max)
+							||	(yval < y_min && prev.y < y_min)
+							||	(yval > y_max && prev.y > y_max)
+						)
+							break;
+						 
+						/* For identical x-values within the x-range,
+						 * we should set the x-intercepts, and set the
+						 * the y-intercepts to failing values
+						 */
+						if ((int)xval == prev.x) {
+							x_intercept_y_min = xval;
+							x_intercept_y_max = xval;
+							y_intercept_x_min = y_min - 1;
+							y_intercept_x_max = y_max + 1;
 						}
-						if (yval == yval + 1) {
-							if (yval < 0)
-								yval = -ONE_MILLION;
-							else
-								yval = ONE_MILLION;
+						/* For identical y-values within the y-range,
+						 * we should set the y-intercepts, and set the
+						 * x-intercepts to failing values
+						 */
+						else if ((int)yval == prev.y) {
+							x_intercept_y_min = x_min - 1;
+							x_intercept_y_max = x_max + 1;
+							y_intercept_x_min = yval;
+							y_intercept_x_max = yval;
+						}
+						/* distinct y- and x-values; compute slopes */
+						else {
+							/* First compute the y-intercepts */
+							slope = ((double)(yval - prev.y)) / ((double)(xval - prev.x));
+							y_intercept_x_min = prev.y + slope * (x_min - prev.x);
+							y_intercept_x_max = prev.y + slope * (x_max - prev.x);
+							/* Then compute the x-intercepts */
+							x_intercept_y_min = prev.x + (y_min - prev.y) / slope;
+							x_intercept_y_max = prev.x + (y_max - prev.y) / slope;
 						}
 						
-						to_plot[n_to_plot].x = xval;
-						to_plot[n_to_plot].y = yval;
+						 /* Now check if all the intercepts fall outside
+						  * the clipping window */
+						 if (	(	y_intercept_x_min < y_min
+								||	y_intercept_x_min > y_max)
+							&&	(	y_intercept_x_max < y_min
+								||	y_intercept_x_max > y_max)
+							&&	(	x_intercept_y_min < x_min
+								||	x_intercept_y_min > x_max)
+							&&	(	x_intercept_y_max < x_min
+								||	x_intercept_y_max > x_max)
+						)
+							break;
 					}
 				}
 				/* Call apricot's polyline function */
@@ -2005,16 +2132,21 @@ pp_def('prima_polylines',
 						/* handle infinities */
 						if (xval == xval + 1) {
 							if (xval < 0)
-								xval = -ONE_MILLION;
+								xval = -MY_BIG_NUMBER;
 							else
-								xval = ONE_MILLION;
+								xval = MY_BIG_NUMBER;
 						}
 						if (yval == yval + 1) {
 							if (yval < 0)
-								yval = -ONE_MILLION;
+								yval = -MY_BIG_NUMBER;
 							else
-								yval = ONE_MILLION;
+								yval = MY_BIG_NUMBER;
 						}
+						/* Handle very large values */
+						if (yval > MY_BIG_NUMBER) yval = MY_BIG_NUMBER;
+						if (xval > MY_BIG_NUMBER) xval = MY_BIG_NUMBER;
+						if (yval < -MY_BIG_NUMBER) yval = -MY_BIG_NUMBER;
+						if (xval < -MY_BIG_NUMBER) xval = -MY_BIG_NUMBER;
 						
 						to_plot[n_to_plot].x = xval;
 						to_plot[n_to_plot].y = yval;
@@ -2064,7 +2196,7 @@ lineJoins lineEnds rops rop2s
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 lineEnds, lineJoins, linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -2108,7 +2240,7 @@ properties, in their correct order.
 # prima_rectangles #
 ####################
 
-@properties = qw(colors backColors linePatterns lineWidths rops rop2s translates);
+@properties = qw(colors backColors clipRects linePatterns lineWidths rops rop2s translates);
 pp_def('prima_rectangles',
 	Pars => 'int x1(); int y1(); int x2(); int y2(); ' . generate_pars_args_for(@properties),
 	OtherPars => $default_other_pars,
@@ -2153,7 +2285,7 @@ Draws filled rectangle from corner (x1, y1) to (x2, y2).
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own
@@ -2166,7 +2298,7 @@ properties, in their correct order.
 # prima_sectors #
 #################
 
-@properties = qw(colors backColors lineEnds linePatterns lineWidths rops rop2s translates);
+@properties = qw(colors backColors clipRects lineEnds linePatterns lineWidths rops rop2s translates);
 pp_def('prima_sectors',
 	Pars => 'int x(); int y(); int x_diameter(); int y_diameter();
 			start_angle(); end_angle(); ' . generate_pars_args_for(@properties),
@@ -2217,7 +2349,7 @@ arcs open
 
 =pod
 
-Applicable properties are likely to include handles, colors, backColors,
+Applicable properties are likely to include handles, colors, backColors, clipRects,
 lineEnds, linePatterns, lineWidths,
 rops, rop2s, and translates. However, this list could be
 out of date or out of order. If you've installed this module on your own

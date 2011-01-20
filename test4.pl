@@ -15,7 +15,7 @@ use blib;
          
          ### Example code goes here ###
  
- $canvas->fill_poly([0, 0, 49, 200, 943, 123, 92, 3]);
+ $canvas->fillpoly([0, 0, 49, 200, 943, 123, 92, 3]);
  
 # my ($x_max, $y_max) = $canvas->size;
 # 
