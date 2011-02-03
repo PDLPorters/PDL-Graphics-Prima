@@ -9,18 +9,26 @@ use PDL::Graphics::Prima;
 my $N_osc = 150;
 my $twopi = atan2(1,1) * 8;
 my $thetas = random($N_osc);
-my $omegas = grandom($N_osc) + 1;
-my $speed_colors = 2**9 * ($omegas - $omegas->min) / ($omegas->max - $omegas->min);
+my $omegas = grandom($N_osc) + 0.01;
+my $speed_colors = (2**8-1) * ($omegas - $omegas->min) / ($omegas->max - $omegas->min);
 my $dt = 2**-5;
-my $K = 1.8;
+my $K = 1.75;
 my $timer;
 my $timing_status = '';
 
 my $main_window = Prima::MainWindow-> create(
 	text    => 'Kuramoto Simulator',
 	accelItems => [
-		  ['', '', kb::Up, sub {$K += 0.1}]
-		, ['', '', kb::Down, sub {$K -= 0.1}]
+		  ['', '', kb::Up, sub {
+			my $self = shift;
+			$K += 0.125;
+			$self->notify('Paint') unless($timer->get_active);
+		  }]
+		, ['', '', kb::Down, sub {
+			my $self = shift;
+			$K -= 0.125;
+			$self->notify('Paint') unless($timer->get_active);
+		}]
 		, ['', '', kb::PageUp, sub {$dt *= 2}]
 		, ['', '', kb::PageDown, sub {$dt /= 2}]
 		, ['', '', 'q', sub {$_[0]->close}]
@@ -31,7 +39,7 @@ my $main_window = Prima::MainWindow-> create(
 		# Calculate the coordinates of the center and the size of the radius
 		my ($x_max, $y_max) = $self->size;
 		my $radius = 0.4 * $x_max;
-		$radius = 0.4 * $y_max if $y_max < $x_max;
+		$radius = 0.4* $y_max if $y_max < $x_max;
 		
 		# Compute the theta positions:
 		my $xs = cos($thetas) * $radius + $x_max/2;
@@ -46,12 +54,12 @@ my $main_window = Prima::MainWindow-> create(
 		$self->ellipse($x_max/2, $y_max/2, 2*$radius, 2*$radius);
 		
 		# Draw all the oscillators:
-		$self->pdl_fill_ellipses($xs, $ys, 15, 15, colors => $speed_colors
+		$self->pdl_fill_ellipses($xs, $ys, 10, 10, colors => $speed_colors
 											, backColors => $speed_colors);
 		
 		# Give the latest coupling:
 		$self->color(cl::Black);
-		$self->text_out("K = $K; $timing_status", 0, 0);
+		$self->text_out("K = $K", 0, 0); #; $timing_status", 0, 0);
 	}
 );
 
