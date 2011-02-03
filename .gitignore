@@ -7,3 +7,6 @@ Prima.pm
 Prima.xs
 blib/
 pm_to_blib
+install.sh
+script.pl
+
