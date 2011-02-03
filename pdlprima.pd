@@ -781,8 +781,8 @@ sub generate_PMCode_for {
 	# that this function uses, as well as the names of the arguments.
 	# It needs these lists in the actual Perl module file so it can
 	# check the passed arguments and provide meaningful error messages:
-	my $to_return = "my $props_array_name = qw(@$props);\n"
-				. "my $args_array_name = qw(@arg_names);\n";
+	my $to_return = "our $props_array_name = qw(@$props);\n"
+				. "our $args_array_name = qw(@arg_names);\n";
 	
 	# Define the drawable function in the Prima::Drawable namespace
 	# and check for arguments:
@@ -1985,94 +1985,6 @@ pp_def('prima_polylines',
 					
 					to_plot[n_to_plot].x = xval;
 					to_plot[n_to_plot].y = yval;
-
-					/* Handle values that are outside the plotting range
-					 * by comparing them to the previous point. This
-					 * clearly requires that there was a previous point:
-					 */
-					if (n_to_plot > 0							/* a previous point exists	*/
-						 && ( xval < x_min || xval > x_max		/* and current point is		*/
-							|| yval < y_min || yval > y_max)	/* outside range			*/
-						 && ( to_plot[n_to_plot-1].x < x_min	/* and previous				*/
-							|| to_plot[n_to_plot-1].x > x_max	/* point					*/
-							|| to_plot[n_to_plot-1].y < y_min	/* is outside				*/
-							|| to_plot[n_to_plot-1].y > y_max)	/* range					*/
-					) {
-						/* If any point on a line from the previous to
-						 * this point falls within the plotting window,
-						 * then it should be included. This is determined
-						 * by computing the y-intercepts of the line
-						 * connecting the two points in question at
-						 * xmin and xmax, and the x-intercepts at the
-						 * ymin and ymax. If their y-values are within
-						 * the y-range, or their x-values are with the
-						 * x-range, it should be
-						 * plotted. Otherwise, we should break out of
-						 * the current for-loop.
-						 */
-						 Point prev;
-						 double slope;
-						 double y_intercept_x_min, y_intercept_x_max;
-						 double x_intercept_y_min, x_intercept_y_max;
-						 int identical_y_values, identical_x_values;
-						 /* Initialize the previous point */
-						 prev = to_plot[n_to_plot];
-						 
-						/* Both x values or both y-values are outside
-						 * the clipping rectange on the same side means
-						 * we can break since there's no way for their
-						 * intercepts to cross the clipping rectangle */
-						if (	(xval < x_min && prev.x < x_min)
-							||	(xval > x_max && prev.x > x_max)
-							||	(yval < y_min && prev.y < y_min)
-							||	(yval > y_max && prev.y > y_max)
-						)
-							break;
-						 
-						/* For identical x-values within the x-range,
-						 * we should set the x-intercepts, and set the
-						 * the y-intercepts to failing values
-						 */
-						if ((int)xval == prev.x) {
-							x_intercept_y_min = xval;
-							x_intercept_y_max = xval;
-							y_intercept_x_min = y_min - 1;
-							y_intercept_x_max = y_max + 1;
-						}
-						/* For identical y-values within the y-range,
-						 * we should set the y-intercepts, and set the
-						 * x-intercepts to failing values
-						 */
-						else if ((int)yval == prev.y) {
-							x_intercept_y_min = x_min - 1;
-							x_intercept_y_max = x_max + 1;
-							y_intercept_x_min = yval;
-							y_intercept_x_max = yval;
-						}
-						/* distinct y- and x-values; compute slopes */
-						else {
-							/* First compute the y-intercepts */
-							slope = ((double)(yval - prev.y)) / ((double)(xval - prev.x));
-							y_intercept_x_min = prev.y + slope * (x_min - prev.x);
-							y_intercept_x_max = prev.y + slope * (x_max - prev.x);
-							/* Then compute the x-intercepts */
-							x_intercept_y_min = prev.x + (y_min - prev.y) / slope;
-							x_intercept_y_max = prev.x + (y_max - prev.y) / slope;
-						}
-						
-						 /* Now check if all the intercepts fall outside
-						  * the clipping window */
-						 if (	(	y_intercept_x_min < y_min
-								||	y_intercept_x_min > y_max)
-							&&	(	y_intercept_x_max < y_min
-								||	y_intercept_x_max > y_max)
-							&&	(	x_intercept_y_min < x_min
-								||	x_intercept_y_min > x_max)
-							&&	(	x_intercept_y_max < x_min
-								||	x_intercept_y_max > x_max)
-						)
-							break;
-					}
 				}
 				/* Call apricot's polyline function */
 				if (n_to_plot > 1)

@@ -15,8 +15,13 @@ $hash{CCFLAGS} .= join( ' ' , map { $Prima::Config::Config{cdefflag}.$_.'='.$DEF
 
 # Make it install my module files:
 $hash{PM} = {
-	  'Simple.pm' => 'blib/lib/Prima/Graph/Simple.pm'
-	, 'Prima.pm'  => 'blib/lib/PDL/Graphics/Prima.pm'
+	  'Prima.pm'	=> 'blib/lib/PDL/Graphics/Prima.pm'
+	, 'Graph.pm'	=> 'blib/lib/Prima/Ex/Graph.pm'
+	, 'DataSet.pm'	=> 'blib/lib/Prima/Ex/Graph/DataSet.pm'
+	, 'Limits.pm'	=> 'blib/lib/Prima/Ex/Graph/Limits.pm'
+	, 'Scaling.pm'	=> 'blib/lib/Prima/Ex/Graph/Scaling.pm'
+	, 'Axis.pm'		=> 'blib/lib/Prima/Ex/Graph/Axis.pm'
+	, 'PlotType.pm'	=> 'blib/lib/Prima/Ex/Graph/PlotType.pm'
 };
 
 WriteMakefile(%hash);
