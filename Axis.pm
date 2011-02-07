@@ -66,7 +66,7 @@ sub init {
 	# Process the minima and maxima.
 	if ($profile{min} == lm::Auto) {
 		$self->{minAuto} = 1;
-		$self->{minValue} = 0;
+		$self->{minValue} = 1;
 	}
 	else {
 		$self->{minValue} = $profile{min};
@@ -74,7 +74,7 @@ sub init {
 	}
 	if ($profile{max} == lm::Auto) {
 		$self->{maxAuto} = 1;
-		$self->{maxValue} = 1;
+		$self->{maxValue} = 2;
 	}
 	else {
 		$self->{maxAuto} = 0;

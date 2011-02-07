@@ -5,7 +5,7 @@ use blib;
 use Prima qw(Application);
 use Prima::Ex::Graph;
 
-my $t = sequence(300) / 25;
+my $t = sequence(300) / 25 + 1;
 my $y = exp($t);
 
 my $wDisplay = Prima::MainWindow->create(
@@ -16,7 +16,7 @@ my $wDisplay = Prima::MainWindow->create(
 $wDisplay->insert('Prima::Ex::Graph', 
 	dataSet => [\&PDL::exp],
 	pack => { fill => 'both', expand => 1},
-	x => {scaling => sc::Log},
+	y => {scaling => sc::Log},
 );
 
 run Prima;

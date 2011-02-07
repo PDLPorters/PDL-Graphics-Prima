@@ -235,7 +235,9 @@ You can send notifications and tie callbacks for the following events:
 	# such).
 	my %notifications = (
 		%{Prima::Widget-> notification_types()},
-		map { ("Change$_" => nt::Default) } qw(Title XLabel YLabel Data Replot)
+		# working here - choose a better signal type
+		'Replot' => nt::Default,
+		map { ("Change$_" => nt::Default) } qw(Title XLabel YLabel Data),
 	);
 	
 	sub notification_types { return \%notifications }
