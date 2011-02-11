@@ -303,7 +303,7 @@ sub on_paint {
 		);
 		$self->font(direction => 0);
 	}
-	warn("No title, yet");
+#	warn("No title, yet");
 }
 
 # For mousewheel events, we zoom in or out. However, if they're over the axes,

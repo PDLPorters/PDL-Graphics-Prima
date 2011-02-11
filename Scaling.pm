@@ -367,7 +367,7 @@ sub medium_dynamic_ticks {
 	my $max_Tick = _largest_previous_number($max, $N_decades_per_tick);
 	for(my $current_value = _smallest_next_number($min*1.01, $N_decades_per_tick)
 		; $current_value < $max_Tick
-		; $current_value = smallest_next_number($current_value*1.01, $N_decades_per_tick)) {
+		; $current_value = _smallest_next_number($current_value*1.01, $N_decades_per_tick)) {
 		push @Ticks, $current_value;
 	}
 	push @Ticks, $max_Tick;
@@ -395,7 +395,7 @@ sub medium_dynamic_ticks {
 # wanted to work with triples of decades, i.e. 1, 1e3, 1e6, 1e9, etc. For any
 # value less than 1000, the smallest next number is 1000. For any number greater
 # than 1000 and less than a million, the smallest next number is a million.
-sub smallest_next_number {
+sub _smallest_next_number {
 	my ($value, $N_decades_per_tick) = @_;
 	# Compute the exponent (see order_of_magnitude)
 	my $exponent = log($value) / log(10);
@@ -410,7 +410,7 @@ sub smallest_next_number {
 
 # Determines the previous number smaller than the given value for the given
 # number of decades per tick. See the previous function for details.
-sub largest_previous_number {
+sub _largest_previous_number {
 	my ($value, $N_decades_per_tick) = @_;
 	# Compute the exponent (see order_of_magnitude)
 	my $exponent = log($value) / log(10);
