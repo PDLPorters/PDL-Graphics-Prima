@@ -3,3 +3,4 @@ colors do not appear to be threading (11-03-08/plot-dists.pl)
 legends
 axis labels and graph titles
 logarithmic scaling for high-dynamic-range data
+criss-crossing lines for high zoom levels
