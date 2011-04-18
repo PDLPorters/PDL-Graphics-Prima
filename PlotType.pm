@@ -50,7 +50,7 @@ custom arguments, you should overload the C<initialize> function like so:
 
 You could shove all of that construction functionality into C<pt::FooBars>, but
 then other classes would not be able to derive functionality from your 
-(undoubtedly elligant) class without resorting to rather inelligant code.
+(undoubtedly elegant) class without resorting to rather inelegant code.
 
 Which brings me to writing plotTypes that are derived from other plotTypes.
 That is allowed, of course, in which case you can override whichever class
@@ -150,25 +150,35 @@ sub xmin {
 	# Return the minimum of the data with a padding of 1 pixel. Note that this
 	# assumes that if the data at $dataset->[0] a piddle if it is not a code
 	# reference. The validation for this assumption was handled in the
-	# initialize function:
-	return ($dataset->get_xs($widget)->min, 1);
+	# initialize function.
+	
+	# This logic is made complicated by the fact that a bad value in x or y
+	# should invalidate the pair. So, I resort to using the minmaxforpair
+	# function, written specifically to solve this very problem.
+	my ($xs, $ys) = $dataset->get_data;
+	my ($xmins) = PDL::minmaxforpair($xs, $ys);
+	return ($xmins->min, 1);
 }
 
 sub xmax {
 	# Get the dataset object, the second argument to this function:
 	my ($dataset, $widget) = @_[1..2];
-	return ($dataset->get_xs($widget)->max, 1);
+	# Get both x and y and get the xmax:
+	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data);
+	return ($xmaxes->max, 1);
 }
 
 sub ymin {
 	my ($dataset, $widget) = @_[1..2];
-	# Get the y-data:
-	return ($dataset->get_ys($widget)->min, 1);
+	# Get both x and y and get the ymin:
+	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data);
+	return ($ymins->min, 1);
 }
 sub ymax {
 	my ($dataset, $widget) = @_[1..2];
-	# Get the y-data:
-	return ($dataset->get_ys($widget)->max, 1);
+	# Get both x and y and get the ymin:
+	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data);
+	return ($ymaxes->max, 1);
 }
 
 sub draw {
@@ -253,26 +263,30 @@ sub xmin {
 	# Get the dataset object:
 	my ($self, $dataset, $widget) = @_;
 	# Return the data's min and the max blob horizontal radius:
-	return ($dataset->get_xs($widget)->min, $self->{xRadius}->max);
+	my ($xmin) = $self->SUPER::xmin($dataset, $widget);
+	return ($xmin, $self->{xRadius}->max);
 }
 sub xmax {
 	# Get the dataset object:
 	my ($self, $dataset, $widget) = @_;
 	# Return the data's max and the max blob horizontal radius:
-	return ($dataset->get_xs($widget)->max, $self->{xRadius}->max);
+	my ($xmax) = $self->SUPER::xmax($dataset, $widget);
+	return ($xmax, $self->{xRadius}->max);
 }
 
 sub ymin {
 	# Get the dataset object:
 	my ($self, $dataset, $widget) = @_;
 	# Return the data's min and the max blob vertical radius:
-	return ($dataset->get_ys($widget)->min, $self->{yRadius}->max);
+	my ($ymin) = $self->SUPER::ymin($dataset, $widget);
+	return ($ymin, $self->{yRadius}->max);
 }
 sub ymax {
 	# Get the dataset object:
 	my ($self, $dataset, $widget) = @_;
 	# Return the data's max and the max blob horizontal radius:
-	return ($dataset->get_ys($widget)->max, $self->{yRadius}->max);
+	my ($ymax) = $self->SUPER::ymax($dataset, $widget);
+	return ($ymax, $self->{yRadius}->max);
 }
 
 sub draw {
@@ -330,6 +344,7 @@ use PDL::NiceSlice;
 
 # Returns user-supplied or computed bin-edge data.
 # working here - apply a caching strategy?
+# working here - use SUPER::xmin, et al.?
 sub get_bin_edges {
 	# Return the bin-edges if we have an internal copy of them:
 	return $_[0]->{binEdges} if exists $_[0]->{binEdges};

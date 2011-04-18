@@ -2357,5 +2357,104 @@ including a working Makefile.PL. Thanks Dmitry!
 
 EOD
 
+pp_def('minmaxforpair',
+	Pars => 'x(n); y(n); [o] min_x(); [o] min_y(); [o] max_x(); [o] max_y()',
+	# Good code.
+	Code => q{
+		// Set the initial values for the min/max. Since I know that these will
+		// be good, I can assume that the first value is a good starting guess.
+		$min_x() = $x(n => 0);
+		$max_x() = $x(n => 0);
+		$min_y() = $y(n => 0);
+		$max_y() = $y(n => 0);
+		
+		loop(n) %{
+			if ($x() < $min_x()) $min_x() = $x();
+			if ($max_x() < $x()) $max_x() = $x();
+			if ($y() < $min_y()) $min_y() = $y();
+			if ($max_y() < $y()) $max_y() = $y();
+		%}
+	},
+	# Bad code
+	HandleBad => 1,
+	BadCode => q{
+		// For bad code, I can't set initial values for min/max as the first
+		// elements of x/y. In fact, I need to assume that possibly all the data
+		// could be bad, so start with that:
+		$SETBAD(min_x());
+		$SETBAD(max_x());
+		$SETBAD(min_y());
+		$SETBAD(max_y());
+		
+		loop(n) %{
+			// Only check (and possibly change) if both x and y are good:
+			if ($ISGOOD(x()) && $ISGOOD(y())) {
+				// It could be that this is the first good value. If so, just
+				// assign the value. Note that either all min/max value are bad,
+				// or they are good, so I only need to check one of them (min_x
+				// in this case):
+				if ($ISBAD(min_x())) {
+					$min_x() = $x();
+					$max_x() = $x();
+					$min_y() = $y();
+					$max_y() = $y();
+				}
+				// If the min/max values are good, then I need to perform a
+				// bona-fide comparison:
+				else {
+					if ($x() < $min_x()) $min_x() = $x();
+					if ($max_x() < $x()) $max_x() = $x();
+					if ($y() < $min_y()) $min_y() = $y();
+					if ($max_y() < $y()) $max_y() = $y();
+				}
+			}
+		%}
+	},
+	Doc => q{
+
+=pod
+
+=for ref
+
+Returns the min/max values for the pairs of coordinates x and y.
+
+This function is only really useful in one very specific context: when the
+number of dimensions for x and y do not agree, and when you have bad data in
+x, y, or both.
+
+Suppose that you know that x and y are good. Then you could get the min/max
+data using the C<minmax> function:
+
+ my ($xmin, $xmax) = $x->minmax;
+ my ($ymin, $ymax) = $y->minmax;
+
+On the other hand, if you have data but you know that the dimensions of x and
+y match, you could modify the above like so:
+
+ my ($xmin, $xmax) = $x->where($x->isgood & $y->isgood)->minmax;
+ my ($ymin, $ymax) = $y->where($x->isgood & $y->isgood)->minmax;
+
+However, what if you have only one-dimensional x-data but two-dimensional
+y-data? For example, you want to plot mutliple y datasets against the same
+x-coordinates. In that case, if some of the x-data is bad, you could probably
+hack something, but if some of the y-data is bad you you will have a hard time
+picking out the good pairs, and getting the min/max from them. That is the
+purpose of this function.
+
+=cut
+
+	},
+	BadDoc => q{
+
+=pod
+
+Output is set bad if no pair of x/y data is good.
+
+=cut
+
+	},
+);
+
+
 pp_export_nothing();
 pp_done();
