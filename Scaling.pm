@@ -168,6 +168,7 @@ package Prima::Ex::Graph::Scaling::Log;
 #our @ISA = qw(Prima::Ex::Graph::Scaling::Linear);
 
 use PDL;
+use Carp;
 
 # For data between 0.5 and 15, I would want tick marks at
 # 0.5, 1, 1.5, 2.5, 5, 10, 15
@@ -190,13 +191,13 @@ sub compute_ticks {
 	return low_dynamic_ticks($min, $max, $dynamic_range) if ($dynamic_range < 7);
 	
 	# If the data show an medium dynamic range, return the scaling for that:
-	return medium_dynamic_ticks($min, $max, $dynamic_range) if ($dynamic_range < 12);
+	return medium_dynamic_ticks($min, $max, $dynamic_range) if ($dynamic_range < 13);
 	
 	# If the data show a high dynamic range (from, say 10**-6 to 10**15), use
-	# the high-dynamic range algorithm. This is a stripped-down version of the
-	# linear tick algorithm.
-
-	die "High dynamic range not yet implemented";
+	# the high-dynamic range algorithm, which simply wraps the linear tick
+	# algorithm:
+	my ($Ticks, $ticks) = Prima::Ex::Graph::Scaling::Linear::compute_ticks(undef, log($min)/log(1000), log($max) / log(1000));
+	return (1000**$Ticks, 1000**$ticks);
 
 =pod
 	
@@ -436,6 +437,8 @@ sub transform {
 sub inv_transform {
 	# working here - make sure this works
 	my ($class, $min, $max, $data) = @_;
+	confess ('Unable to process data with bad min/max')
+		if $min eq 'BAD' or $max eq 'BAD';
 	my ($log_min, $log_max) = (log($min), log($max));
 	my $range = $log_max - $log_min;
 	return exp($range * $data + $log_min);
