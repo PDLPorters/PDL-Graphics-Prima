@@ -6,7 +6,7 @@ package Prima::Ex::Graph::Axis;
 
 use Prima::Ex::Graph::Limits;
 use Prima::Ex::Graph::Scaling;
-use Carp qw(croak cluck);
+use Carp;
 
 use PDL;
 use Prima;
@@ -69,6 +69,8 @@ sub init {
 		$self->{minValue} = 1;
 	}
 	else {
+		croak ("min value must be a real number, lm::Auto, or lm::Hold")
+			if $profile{min} != $profile{min};
 		$self->{minValue} = $profile{min};
 		$self->{minAuto} = 0;
 	}
@@ -77,6 +79,8 @@ sub init {
 		$self->{maxValue} = 2;
 	}
 	else {
+		croak ("max value must be a real number, lm::Auto, or lm::Hold")
+			if $profile{max} != $profile{max};
 		$self->{maxAuto} = 0;
 		$self->{maxValue} = $profile{max};
 	}
@@ -122,12 +126,22 @@ sub recompute_min_auto {
 	# Only change things if a defined value was returned for the minimum.
 	# (Undefined minima can be returned if there is no data, for example.)
 	if (defined $min) {
+		# Make sure we don't have defined but useless values:
+		{
+			no warnings 'numeric';
+			confess("Min calculated as nan") if $min != $min;
+			if ($min+1 == $min) {
+				confess("Min calculated as inf") if $min > 0;
+				confess("Min calculated as -inf");
+			}
+		}
 		my $max = $self->{maxValue};
 		# call the scaling object's methods for computing the real min/max, with
 		# the padding taken into account:
 		($min, $max) = $self->min_max_with_padding($min, $max
 			, min_padding => $padding
 			, max_padding => 0);
+		die "Bad min calculation" if $min != $min;
 		$self->{minValue} = $min;
 	}
 }
@@ -142,12 +156,22 @@ sub recompute_max_auto {
 	# Only change things if a defined value was returned for the maximum.
 	# (Undefined maxima can be returned if there is no data, for example.)
 	if (defined $max) {
+		# Make sure we don't have defined but useless values:
+		{
+			no warnings 'numeric';
+			confess("Max calculated as nan") if $max != $max;
+			if ($max+1 == $max) {
+				confess("Max calculated as inf") if $max > 0;
+				confess("Max calculated as -inf");
+			}
+		}
 		my $min = $self->{minValue};
 		# call the scaling object's methods for computing the real max/max, with
 		# the padding taken into account:
 		($min, $max) = $self->min_max_with_padding($min, $max
 			, max_padding => $padding
 			, min_padding => 0);
+		die "Bad max calculation" if $max != $max;
 		$self->{maxValue} = $max;
 	}
 }
@@ -278,6 +302,12 @@ and you will get a two-element list if you call it as a getter. For example:
 sub min_max_with_padding {
 	# Unpack the arguments:
 	my ($self, $min, $max, %args) = @_;
+	{
+		no warnings 'numeric';
+									# nan check         inf check
+		confess("Min must be real") if ($min != $min or $min+1 == $min);
+		confess("Max must be real") if ($max != $max or $max+1 == $max);
+	}
 	my ($min_padding, $max_padding) = @args{qw(min_padding max_padding)};
 	
 	# Determine the pixel extent (width or height) of the data as if the pixel
@@ -296,6 +326,13 @@ sub min_max_with_padding {
 	my $new_min = $self->scaling->inv_transform($min, $max, $relative_padding_min);
 	my $new_max = $self->scaling->inv_transform($min, $max, $relative_padding_max);
 	
+	die "Bad new min from inv_transform"
+		#          nan check             inf check
+		if ($new_min != $new_min or $new_min+1 == $new_min);
+	die "Bad new max from inv_transform"
+		#          nan check             inf check
+		if ($new_max != $new_max or $new_max+1 == $new_max);
+	
 	# Return those real numbers:
 	return ($new_min, $new_max);
 }
@@ -304,6 +341,8 @@ sub min_max_with_padding {
 
 sub scaling {
 	return $_[0]->{scaling} unless $#_;
+	# working here - what if the old limits are invalid with the new scaling,
+	# such as negative limits with logarithmic scaling?
 	$_[0]->{scaling} = $_[1];
 	$_[0]->notify('ChangeScaling');
 }

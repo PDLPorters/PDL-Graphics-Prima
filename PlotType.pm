@@ -156,6 +156,7 @@ sub xmin {
 	# should invalidate the pair. So, I resort to using the minmaxforpair
 	# function, written specifically to solve this very problem.
 	my ($xs, $ys) = $dataset->get_data;
+	
 	my ($xmins) = PDL::minmaxforpair($xs, $ys);
 	return ($xmins->min, 1);
 }

@@ -10,6 +10,7 @@ use constant Log => 'Prima::Ex::Graph::Scaling::Log';
 package Prima::Ex::Graph::Scaling::Linear;
 
 use PDL;
+use Carp;
 
 sub order_of_magnitude {
 	my $number = shift;
@@ -21,6 +22,15 @@ sub order_of_magnitude {
 
 sub _adjusted_position {
 	my ($value, $interval, $offset, $direction) = @_;
+	
+	{
+		no warnings 'numeric';
+		# check for nan and croak since I can't continue with nans:
+		confess("_adjusted_position got \$value of nan!") if ($value != $value);
+		confess("_adjusted_position got \$interval of nan!")
+			if ($interval != $interval);
+	}
+	
 	# Find the first copy of $interval that's less than $value:
 	my $to_return = int($value / $interval) * $interval;
 	# include the offset:
@@ -162,7 +172,25 @@ sub sample_evenly {
 	return zeroes($N_values)->xlinvals($min, $max);
 }
 
-sub is_valid_extremum { return 1 }
+# This should ONLY be called on real numbers, numbers that you actually intend
+# to use in plotting. In other words, inf will return 0!
+# Usage:
+# On success, it returns 1. On failure, it returns zero and modifies $@ with
+# an explanation (which is used in capturing error messages).
+sub is_valid_extremum {
+	no warnings 'numeric';
+	
+	# Allow anything except infinity or nan:
+	if ($_[1] != $_[1]) {	# nan
+		$@ = 'nan is not allowed; value must be real';
+		return 0;
+	}
+	elsif ($_[1] + 1 == $_[1]) {	# inf
+		$@ = 'value must be finite';
+		return 0;
+	}
+	return 1;
+}
 
 package Prima::Ex::Graph::Scaling::Log;
 #our @ISA = qw(Prima::Ex::Graph::Scaling::Linear);
@@ -453,10 +481,23 @@ sub sample_evenly {
 
 sub is_valid_extremum {
 	my ($class, $extremum) = @_;
-	return 1 if $extremum > 0;
-	# Set the error message:
-	$@ = 'must be positive for logarithmic scaling';
-	# Return a false value:
-	return 0;
+	no warnings 'numeric';
+	if ($extremum < 0) {
+		# no negative values:
+		$@ = 'must be positive for logarithmic scaling';
+		return 0;
+	}
+	elsif ($extremum != $extremum) {
+		# nans not allowed:
+		$@ = 'nan is not allowed';
+		return 0;
+	}
+	elsif ($extremum + 1 != $extremum) {
+		# inf is bad:
+		$@ = 'must be finite';
+		return 0;
+	}
+	# otherwise we're good:
+	return 1;
 }
 1;

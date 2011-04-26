@@ -165,6 +165,9 @@ simply ensures that the data stored in the object are piddles. In other words,
 if you pass in a scalar value, it will be converted to a piddle internally, to
 simplify the internal routines.
 
+Note that part of the initialization (at the moment) is to set infinite and nan
+values to bad in place, which modifies the underlying piddle.
+
 =cut
 
 sub initialize {
@@ -177,6 +180,9 @@ sub initialize {
 	eval {
 		$xs = pdl($xs) unless ref($xs) eq 'PDL';
 		$ys = pdl($ys) unless ref($ys) eq 'PDL';
+		# Set infinity and nan to bad values:
+		$xs->inplace->setnantobad;
+		$ys->inplace->setnantobad;
 		$dataset->{xs} = $xs;
 		$dataset->{ys} = $ys;
 	};
