@@ -1,4 +1,7 @@
+PDL::Graphics::Prima - a PDL interface to the Prima drawing commands.
 
-PDL::PrimaPoly - a PDL::PP interface for Prima::Drawable's polyline method
 
-Author: David Mertens <dcmertens.perl@gmail.com>
+Author: David Mertens <dcmertens.perl.csharp@gmail.com>
+
+Note that my email is intentionally obfuscated. Knowing that I am a
+Perl programmer, you can probably remove the part that does not belong.
