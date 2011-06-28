@@ -14,7 +14,8 @@ my $wDisplay = Prima::MainWindow->create(
 );
 
 $wDisplay->insert('Prima::Ex::Graph', 
-	dataSet => [$t, \&PDL::exp],
+	# dataSet => [$t, \&PDL::exp],
+	dataSet => [$t, $y],
 	pack => { fill => 'both', expand => 1},
 	y => {scaling => sc::Log},
 );
