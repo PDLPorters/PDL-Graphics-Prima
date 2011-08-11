@@ -2,10 +2,10 @@ use strict;
 use warnings;
 
 # Here's a package to handle the axes for me:
-package Prima::Ex::Graph::Axis;
+package PDL::Graphics::Prima::Axis;
 
-use Prima::Ex::Graph::Limits;
-use Prima::Ex::Graph::Scaling;
+use PDL::Graphics::Prima::Limits;
+use PDL::Graphics::Prima::Scaling;
 use Carp;
 
 use PDL;

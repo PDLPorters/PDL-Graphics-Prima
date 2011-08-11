@@ -4,10 +4,10 @@ use warnings;
 # Defines the scaling classes.
 
 package sc;
-use constant Linear => 'Prima::Ex::Graph::Scaling::Linear';
-use constant Log => 'Prima::Ex::Graph::Scaling::Log';
+use constant Linear => 'PDL::Graphics::Prima::Scaling::Linear';
+use constant Log => 'PDL::Graphics::Prima::Scaling::Log';
 
-package Prima::Ex::Graph::Scaling::Linear;
+package PDL::Graphics::Prima::Scaling::Linear;
 
 use PDL;
 use Carp;
@@ -192,8 +192,8 @@ sub is_valid_extremum {
 	return 1;
 }
 
-package Prima::Ex::Graph::Scaling::Log;
-#our @ISA = qw(Prima::Ex::Graph::Scaling::Linear);
+package PDL::Graphics::Prima::Scaling::Log;
+#our @ISA = qw(PDL::Graphics::Prima::Scaling::Linear);
 
 use PDL;
 use Carp;
@@ -212,7 +212,7 @@ sub compute_ticks {
 	
 	# First thing's first: if the data show a minimal dynamic range, just use
 	# the linear tick algorithm:
-	return Prima::Ex::Graph::Scaling::Linear::compute_ticks(undef, $min, $max)
+	return PDL::Graphics::Prima::Scaling::Linear::compute_ticks(undef, $min, $max)
 		if ($dynamic_range < 1.5);
 	
 	# If the data show low dynamic range, return the scaling for that:
@@ -224,7 +224,7 @@ sub compute_ticks {
 	# If the data show a high dynamic range (from, say 10**-6 to 10**15), use
 	# the high-dynamic range algorithm, which simply wraps the linear tick
 	# algorithm:
-	my ($Ticks, $ticks) = Prima::Ex::Graph::Scaling::Linear::compute_ticks(undef, log($min)/log(1000), log($max) / log(1000));
+	my ($Ticks, $ticks) = PDL::Graphics::Prima::Scaling::Linear::compute_ticks(undef, log($min)/log(1000), log($max) / log(1000));
 	return (1000**$Ticks, 1000**$ticks);
 
 =pod
@@ -235,9 +235,9 @@ print "got min/max of $lin_min, $lin_max\n";
 	
 	# Start by determining the order of magnitude of the max, min, and log range:
 	my $max_order_of_magnitude
-		= Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($max);
+		= PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($max);
 	my $min_order_of_magnitude
-		= Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($min);
+		= PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($min);
 	# ... and the log range?
 	# working here... really?
 	
@@ -320,8 +320,8 @@ sub low_dynamic_ticks {
 	push @Ticks, $max_Tick;
 	
 	# Determine the minimum and maximum tick marks (notice the lower case):
-	my $min_order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($min);
-	my $max_order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($max);
+	my $min_order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($min);
+	my $max_order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($max);
 	
 	# Add a tick for all 10 values in each decade:
 	my $ticks = (sequence(10) * $min_order);
@@ -349,7 +349,7 @@ sub _smallest_next_low_number {
 	my ($value, $N_ticks_per_order) = @_;
 	
 	# First get the order of magnitude of this value:
-	my $order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($value);
+	my $order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($value);
 	
 	# The order of magnitude is guaranteed to be less than the actual value.
 	# Now determine which value to return.
@@ -372,7 +372,7 @@ sub _largest_previous_low_number {
 	my ($value, $N_ticks_per_order) = @_;
 
 	# First get the order of magnitude of this value:
-	my $order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($value);
+	my $order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($value);
 
 	# The order of magnitude is guaranteed to be less than the actual value.
 	# Now determine which value to return.
@@ -402,8 +402,8 @@ sub medium_dynamic_ticks {
 	push @Ticks, $max_Tick;
 	
 	# Determine the minimum and maximum tick marks:
-	my $min_order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($min);
-	my $max_order = Prima::Ex::Graph::Scaling::Linear::order_of_magnitude($max);
+	my $min_order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($min);
+	my $max_order = PDL::Graphics::Prima::Scaling::Linear::order_of_magnitude($max);
 	
 	my @ticks;
 	for (my $current_order = $min_order; $current_order < $max; $current_order *= 10) {

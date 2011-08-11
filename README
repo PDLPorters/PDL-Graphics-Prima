@@ -1,5 +1,10 @@
-PDL::Graphics::Prima - a PDL interface to the Prima drawing commands.
+PDL::Graphics::Prima - a graphing widget using the Prima toolkit.
 
+At this point I have split the PDL-Prima bindings into a seperate distribution
+called PDL::Drawing::Prima. This distribution provides the graphing widget, which
+is a whole complicated collection of modules. The development of these
+modules was stagnating the development of the drawing distribution, which is
+why I pulled them into their own seperate distribution.
 
 Author: David Mertens <dcmertens.perl.csharp@gmail.com>
 

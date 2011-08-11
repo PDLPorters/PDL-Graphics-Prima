@@ -1,20 +1,20 @@
 use strict;
 use warnings;
 
-package Prima::Ex::Graph::PlotType;
+package PDL::Graphics::Prima::PlotType;
 
 use Carp 'croak';
 
 =pod
 
 To write your own plot type, you must create a class that is derived from
-C<Prima::Ex::Graph::PlotType>. (To make the discussion a bit more concrete, I
+C<PDL::Graphics::Prima::PlotType>. (To make the discussion a bit more concrete, I
 am going to use the ficticious FooBars plotType, which I suppose would plot some
 fancy error bars.) Such a derived class would probably start out with these
 lines of code:
 
- package Prima::Ex::Graph::PlotType::FooBars;
- use base 'Prima::Ex::Graph::PlotType';
+ package PDL::Graphics::Prima::PlotType::FooBars;
+ use base 'PDL::Graphics::Prima::PlotType';
 
 You must then write a custom C<draw> function, and you can optionally overload
 the following functions: C<xmin>, C<xmax>, C<ymin>, C<ymax>, C<initialize>.
@@ -23,14 +23,14 @@ You should also install a constructor under C<pt::FooBars> that looks like
 this:
 
  sub pt::FooBars {
-     Prima::Ex::Graph::PlotType::FooBars->new(@_);
+     PDL::Graphics::Prima::PlotType::FooBars->new(@_);
  }
 
-That uses the inherited C<Prima::Ex::Graph::PlotType::new> function, which will
+That uses the inherited C<PDL::Graphics::Prima::PlotType::new> function, which will
 eventually call your class's C<initialize> function. If your initializer expects
 custom arguments, you should overload the C<initialize> function like so:
 
- # still in the Prima::Ex::Graph::PlotType::FooBars package
+ # still in the PDL::Graphics::Prima::PlotType::FooBars package
  sub initialize {
      my ($self, @args) = @_;
      
@@ -189,12 +189,12 @@ sub draw {
 		. 'report this bug to the author');
 }
 
-package Prima::Ex::Graph::PlotType::Lines;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::Lines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 # Install the short name constructor:
 sub pt::Lines {
-	Prima::Ex::Graph::PlotType::Lines->new(@_);
+	PDL::Graphics::Prima::PlotType::Lines->new(@_);
 }
 
 # I don't have any special initialization to do, so I won't override it here
@@ -225,15 +225,15 @@ sub draw {
 	$widget->pdl_polylines($xs, $ys, %properties);
 }
 
-package Prima::Ex::Graph::PlotType::Blobs;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::Blobs;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 use Carp 'croak';
 use PDL;
 
 # Install the short name constructor:
 sub pt::Blobs {
-	Prima::Ex::Graph::PlotType::Blobs->new(@_);
+	PDL::Graphics::Prima::PlotType::Blobs->new(@_);
 }
 
 # The blobs initializer defaults to a radius of 5 pixels
@@ -312,11 +312,11 @@ sub draw {
 		, %properties);
 }
 
-package Prima::Ex::Graph::PlotType::Points;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::Points;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
-package Prima::Ex::Graph::PlotType::Histogram;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::Histogram;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 use Carp 'croak';
 use PDL;
@@ -326,7 +326,7 @@ use PDL;
 
 # Install the short name constructor:
 sub pt::Histogram {
-	Prima::Ex::Graph::PlotType::Histogram->new(@_);
+	PDL::Graphics::Prima::PlotType::Histogram->new(@_);
 }
 
 # The histogram initializer ensures that the top padding is set to a reasonable
@@ -442,13 +442,13 @@ sub draw {
 
 
 
-package Prima::Ex::Graph::PlotType::BoxAndWhisker;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::BoxAndWhisker;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
-package Prima::Ex::Graph::PlotType::ErrorBars;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::ErrorBars;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
-package Prima::Ex::Graph::PlotType::Bands;
-our @ISA = qw(Prima::Ex::Graph::PlotType);
+package PDL::Graphics::Prima::PlotType::Bands;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 1;
