@@ -4,7 +4,7 @@ use warnings;
 # Codifies the different kinds of dataset plotting that you can do, and defines
 # the class for the tied dataset array.
 
-package PDL::Graphics::Prima::DataSetHash;
+package PDL::Graphics::Prima::DataSet::Collection;
 # This package implements the tied array functionality needed for automatic
 # data validation for the array setting operations.
 

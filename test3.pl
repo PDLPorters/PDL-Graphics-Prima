@@ -13,7 +13,7 @@ my $wDisplay = Prima::MainWindow->create(
 	size	=> [300, 300],
 );
 
-$wDisplay->insert('Graphics',
+$wDisplay->insert('Plot',
 	-function => [\&PDL::exp, color => cl::Blue],
 	-data => [$t_data, $y_data, color => cl::Red],
 	pack => { fill => 'both', expand => 1},
