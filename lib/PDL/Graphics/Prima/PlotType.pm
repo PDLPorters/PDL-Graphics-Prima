@@ -155,7 +155,7 @@ sub xmin {
 	# This logic is made complicated by the fact that a bad value in x or y
 	# should invalidate the pair. So, I resort to using the minmaxforpair
 	# function, written specifically to solve this very problem.
-	my ($xs, $ys) = $dataset->get_data;
+	my ($xs, $ys) = $dataset->get_data($widget);
 	
 	my ($xmins) = PDL::minmaxforpair($xs, $ys);
 	return ($xmins->min, 1);
@@ -165,20 +165,20 @@ sub xmax {
 	# Get the dataset object, the second argument to this function:
 	my ($dataset, $widget) = @_[1..2];
 	# Get both x and y and get the xmax:
-	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data);
+	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data($widget));
 	return ($xmaxes->max, 1);
 }
 
 sub ymin {
 	my ($dataset, $widget) = @_[1..2];
 	# Get both x and y and get the ymin:
-	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data);
+	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data($widget));
 	return ($ymins->min, 1);
 }
 sub ymax {
 	my ($dataset, $widget) = @_[1..2];
 	# Get both x and y and get the ymin:
-	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data);
+	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data($widget));
 	return ($ymaxes->max, 1);
 }
 

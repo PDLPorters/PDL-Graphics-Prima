@@ -224,6 +224,7 @@ sub compute_ticks {
 	# If the data show a high dynamic range (from, say 10**-6 to 10**15), use
 	# the high-dynamic range algorithm, which simply wraps the linear tick
 	# algorithm:
+	# working here - this doesn't always work!
 	my ($Ticks, $ticks) = PDL::Graphics::Prima::Scaling::Linear::compute_ticks(undef, log($min)/log(1000), log($max) / log(1000));
 	return (1000**$Ticks, 1000**$ticks);
 

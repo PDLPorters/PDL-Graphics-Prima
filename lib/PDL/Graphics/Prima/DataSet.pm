@@ -4,61 +4,26 @@ use warnings;
 # Codifies the different kinds of dataset plotting that you can do, and defines
 # the class for the tied dataset array.
 
-package Prima::Ex::Graph::DataSetArray;
+package PDL::Graphics::Prima::DataSetHash;
 # This package implements the tied array functionality needed for automatic
 # data validation for the array setting operations.
 
-use base 'Tie::Array';
-
-# Required. Stores the widget where I can retrieve it:
-sub TIEARRAY {
-	my ($class, $widget) = @_;
-	my $self = {widget => $widget, N_elem => 0};
-	return bless $self, $class;
-}
-
-# Fetch simply uses the index as a hash key:
-sub FETCH {
-	my ($self, $index) = @_;
-	return $self->{$index};
-}
-
-# Returns N_elem:
-sub FETCHSIZE {
-	return $_[0]->{N_elem};
-}
-
-# Sets N_elem and removes unwanted entries:
-sub STORESIZE {
-	my ($self, $N_elem) = @_;
-	# Remove unwanted entries:
-	if ($N_elem < $self->{N_elem}) {
-		for ($N_elem .. $self->{N_elem}-1) {
-			delete $self->{$_};
-		}
-	}
-	# Store the final number:
-	$self->{N_elem} = $N_elem;
-}
-
-# Does nothing:
-sub EXTEND {}
-
-sub EXISTS {
-	my ($self, $index) = @_;
-	return exists $self->{$index};
-}
-
-sub DELETE {
-	my ($self, $index) = @_;
-	delete $self->{$index};
-}
+use Tie::Hash;
+use parent -norequire, 'Tie::StdHash';
 
 # Validate and convert the data, and set the graph's min/max values if they are
 # on auto mode.
 use Carp 'croak';
+
+sub TIEHASH {
+	my ($class, $widget) = @_;
+	my $self = {widget => $widget};
+	return bless $self, $class;
+}
+
+
 sub STORE {
-	my ($self, $index, $value) = @_;
+	my ($self, $key, $value) = @_;
 	# The value needs to be an anonymous array with arguments suitable for
 	# data sets. Optional arguments are passed in hash references, and one of
 	# the options is a plotType key. That is actually a class name that is used
@@ -66,26 +31,27 @@ sub STORE {
 	# data, of course).
 	croak('You can only add anonymous arrays or dataSet objects to dataSets')
 		unless ref($value) and (UNIVERSAL::isa($value, 'ARRAY')
-						or UNIVERSAL::isa($value, 'Prima::Ex::Graph::DataSet'));
+						or UNIVERSAL::isa($value, 'PDL::Graphics::Prima::DataSet'));
 	
 	# Create a dataset if it's not a blessed object:
 	my $dataset;
 	if (ref($value) eq 'ARRAY') {
+		# If the first argument is a code reference, then the user simply wants
+		# to plot a function.
 		if (ref($value->[0]) and ref($value->[0]) eq 'CODE') {
-			$dataset = Prima::Ex::Graph::DataSet::Func->new($value);
+			$dataset = PDL::Graphics::Prima::DataSet::Func->new($value);
 		}
+		# Otherwise, the user must specify both the x- and y- data sets.
 		else {
-			$dataset = Prima::Ex::Graph::DataSet->new($value);
+			$dataset = PDL::Graphics::Prima::DataSet->new($value);
 		}
 	}
 	else {
 		$dataset = $value;
 	}
 	
-	$self->{N_elem} = $index+1 if ($self->{N_elem} <= $index);
-	
 	# Store it:
-	$self->{$index} = $dataset;
+	$self->{$key} = $dataset;
 
 	# Call data initialization for all of the plot types:
 	# working here - still do this? I think that histograms will want this,
@@ -94,7 +60,7 @@ sub STORE {
 	
 	# Recompute the auto min/max values:
 	$self->{widget}->x->recompute_auto;
-	$self->{widget}->y->recompute_auto;
+	$self->{widget}->y->recompute_auto;  # (ignore; for text highlighting in gedit) --
 }
 
 =pod
@@ -109,22 +75,71 @@ to implement a C<sample_evenly> function to support function-based datasets.
 =cut
 
 
-package Prima::Ex::Graph::DataSet;
+package PDL::Graphics::Prima::DataSet;
 
-use Prima::Ex::Graph::PlotType;
+use PDL::Graphics::Prima::PlotType;
 
 use Carp 'croak';
 
-=head2 Prima::Ex::Graph::DataSet::new
+=head2 PDL::Graphics::Prima::DataSet::new
 
 This creates a new dataset. It is written to handle subclasses correctly, and
 as such should not generally be overridden. Override the C<initialize> function
 instead.
 
+There are at least three ways to indicate the x/y coordinates for a dataset.
+
+=over
+
+=item explicit x, y
+
+You can provide explicit x- and y- piddles for your data.
+
+=item explicit x, function for y
+
+You can provide a set of x values and a function that the plotter evaluates
+for you at those x values.
+
+=item no x, function for y
+
+You can simply provide a function for y which is evaluated based upon the bounds
+of the plot. This can lead to problems if you simply try to plot a function without
+specifying those bounds. It will try to compute the bounds automatically and
+then fail.
+
+=back
+
+The new function takes a class name and an anonymous array. The anonymous array
+has either one or two x/y arguments (as just explained) followed by key => value
+pairs. All key => value pairs are stored in the underlying hash that constitutes
+the DataSet object.
+
+The keys associated with arguments to the polylines command are used during the
+drawing commands. In particular, color, backColor, linePattern, lineWidth,
+lineJoin, lineEnd, rop, and rop2 can be used to specify each of these properties
+for the drawing of the function. Furthermore, their plurals can be used to
+specify piddles for these properties if you want to PDL-thread different
+properties for different curves. That is particularly useful if you are drawing
+(say) 30 lines for which the line color indicates a parameter that describes the
+line.
+
+For example, this draws a red curve:
+
+  [ $x, $y, color => cl::Red ]
+
+This draws ideally multiple curves in which the curve colors are specified in
+C<$colors_piddle>:
+
+  [ $xs, $ys, colors => $colors_piddle ]
+
+=for details
+See the drawing function.
+
 =cut
 
 # Takes an array ref and creates a new dataset object. This works for both the
-# base class and for derived classes.
+# base class and for derived classes. To change behavior at creation time,
+# derived classes should override the initialize function.
 sub new {
 	my ($class, $array_ref) = @_;
 	my @array = @$array_ref;
@@ -168,6 +183,10 @@ simplify the internal routines.
 Note that part of the initialization (at the moment) is to set infinite and nan
 values to bad in place, which modifies the underlying piddle.
 
+In the base class, the initialize function converst scalars to piddles. These
+can be constants, or they can be array refs, since the pdl function knows how to
+convert array refs to piddles.
+
 =cut
 
 sub initialize {
@@ -188,7 +207,7 @@ sub initialize {
 	};
 	return unless $@;
 	
-	croak('For standard datasets, the arguments must be piddles, code references, '
+	croak('For standard datasets, the arguments must be piddles '
 		. 'or scalars that pdl() knows how to process');
 }
 
@@ -228,17 +247,33 @@ sub draw {
 
 # Returns the data values from the dataset. The widget is required for the
 # function-based datasets:
+
+=head2 get_xs, get_ys, get_data
+
+Returns piddles with the x, y, or x-y data. The last function returns two
+piddles.
+
+=cut
+
 sub get_xs { $_[0]->{xs} }
 sub get_ys { $_[0]->{ys} }
 sub get_data {
 	my ($dataset, $widget) = @_;
 	return ($dataset->get_xs($widget), $dataset->get_ys($widget));
 }
+
+=head2 get_data_as_pixels
+
+Uses the reals_to_pixels functions for the x- and y- axes to convert the
+values of the x- and y- data to actual pixel positions in the widget.
+
+=cut
+
 sub get_data_as_pixels {
 	my ($dataset, $widget) = @_;
 	
 	my ($xs, $ys) = $dataset->get_data($widget);
-	return ($widget->x->reals_to_pixels($xs), $widget->y->reals_to_pixels($ys));
+	return ($widget->x->reals_to_pixels($xs), $widget->y->reals_to_pixels($ys)); #--
 }
 
 =head2 extremum
@@ -259,9 +294,12 @@ computing a minimum in the previous example, I could rewrite it as
 
 =cut
 
+# working here - undoubtedly this is slow. I need to benchmark things and figure
+# out what is slow and needs to be fixed.
+
 sub extremum {
 	# This is the object method. It should only be called on objects blessed as
-	# Prima::Ex::Graph::Dataset. We need to call the given extremum functions
+	# PDL::Graphics::Prima::Dataset. We need to call the given extremum functions
 	# for all of the plotTypes:
 	my ($self, $func_name, $widget, $comperator) = @_;
 	
@@ -291,8 +329,22 @@ sub extremum {
 	return ($most_extreme, $biggest_padding);
 }
 
-package Prima::Ex::Graph::DataSet::Func;
-our @ISA = qw(Prima::Ex::Graph::DataSet);
+=head2 PDL::Graphics::Prima::DataSet::Func
+
+This dataset only takes a function reference and computes the values it needs
+from the min/max bounds of the plotting. You can specify the number of data
+points by supplying
+
+ N_points => value
+
+in the list of key-value pairs that initialize the dataset.
+
+working here - clarify and expand
+
+=cut
+
+package PDL::Graphics::Prima::DataSet::Func;
+our @ISA = qw(PDL::Graphics::Prima::DataSet);
 
 use Carp 'croak';
 
