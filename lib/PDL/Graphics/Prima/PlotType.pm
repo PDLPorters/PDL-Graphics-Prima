@@ -209,7 +209,7 @@ sub draw {
 	my %properties;
 	# Add all of the specified polyline properties to a local collection that
 	# gets passed to the polyline routine:
-	foreach (@PDL::Graphics::Prima::polylines_props) {
+	foreach (@PDL::Drawing::Prima::polylines_props) {
 		if (exists $self->{$_}) {
 			$properties{$_} = $dataset->{$_};
 		}
@@ -224,6 +224,45 @@ sub draw {
 	# Draw the lines:
 	$widget->pdl_polylines($xs, $ys, %properties);
 }
+
+package PDL::Graphics::Prima::PlotType::Spikes;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+# Install the short name constructor:
+sub pt::Spikes {
+	PDL::Graphics::Prima::PlotType::Spikes->new(@_);
+}
+
+# I don't have any special initialization to do, so I won't override it here
+#sub initialize {
+#	
+#}
+
+# The min/max functions work just fine for spikes but I need to define a drawing
+# method:
+sub draw {
+	my ($self, $dataset, $widget) = @_;
+	my %properties;
+	# Add all of the specified line properties to a local collection that
+	# gets passed to the line routine:
+	foreach (@PDL::Drawing::Prima::lines_props) {
+		if (exists $self->{$_}) {
+			$properties{$_} = $dataset->{$_};
+		}
+		elsif (exists $dataset->{$_}) {
+			$properties{$_} = $dataset->{$_};
+		}
+	}
+
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+	my $zeroes = $widget->y->reals_to_pixels($ys->zeroes); #-
+
+	# Draw the lines:
+	$widget->pdl_lines($xs, $ys, $xs, $zeroes, %properties);
+}
+
+
 
 package PDL::Graphics::Prima::PlotType::Blobs;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
@@ -295,7 +334,7 @@ sub draw {
 	my %properties;
 	# Add all of the specified fill_ellipses properties to a local collection
 	# that gets passed to the routine:
-	foreach (@PDL::Graphics::Prima::fill_ellipses_props) {
+	foreach (@PDL::Drawing::Prima::fill_ellipses_props) {
 		if (exists $self->{$_}) {
 			$properties{$_} = $dataset->{$_};
 		}
@@ -421,7 +460,7 @@ sub draw {
 	my %properties;
 	# Add all of the specified rectangle properties to a local collection
 	# that gets passed to the routine:
-	foreach (@PDL::Graphics::Prima::rectangles_props) {
+	foreach (@PDL::Drawing::Prima::rectangles_props) {
 		if (exists $self->{$_}) {
 			$properties{$_} = $dataset->{$_};
 		}
