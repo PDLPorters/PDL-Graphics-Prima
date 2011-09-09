@@ -21,6 +21,18 @@ sub TIEHASH {
 	return bless $self, $class;
 }
 
+# Override delete to prevent removing the widget key:
+sub DELETE {
+	my ($this, $key) = @_;
+	return if $key eq 'widget';
+	delete $this->{$key};
+}
+
+# Clear the contents of the hash while preserving the widget:
+sub CLEAR {
+	my ($this) = @_;
+	%{$this} = (widget => $this->{widget}); 
+}
 
 sub STORE {
 	my ($self, $key, $value) = @_;
@@ -32,6 +44,9 @@ sub STORE {
 	croak('You can only add anonymous arrays or dataSet objects to dataSets')
 		unless ref($value) and (UNIVERSAL::isa($value, 'ARRAY')
 						or UNIVERSAL::isa($value, 'PDL::Graphics::Prima::DataSet'));
+	
+	# Silently do nothing if they try to change the widget:
+	return if $key eq 'widget';
 	
 	# Create a dataset if it's not a blessed object:
 	my $dataset;
@@ -365,6 +380,10 @@ sub get_xs {
 	
 	# working here - implement caching as an option in $self, like this:
 	#if ($self->{cacheData}) ...
+	# However, note that caching will not work if a single dataset is allowed
+	# to be plotted by multiple widgets, which is sorta assumed by the requirement
+	# to pass the widget as an argument to get_data: the dataset can't know its
+	# own widget.
 	return $widget->x->{scaling}->sample_evenly($widget->x->minmax, $self->{N_points});
 }
 sub get_ys {

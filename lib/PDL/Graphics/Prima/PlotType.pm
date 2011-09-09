@@ -387,7 +387,7 @@ use PDL::NiceSlice;
 # working here - use SUPER::xmin, et al.?
 sub get_bin_edges {
 	# Return the bin-edges if we have an internal copy of them:
-	return $_[0]->{binEdges} if exists $_[0]->{binEdges};
+#	return $_[0]->{binEdges} if exists $_[0]->{binEdges};
 	
 	my ($self, $dataset, $widget) = @_;
 	
@@ -399,7 +399,7 @@ sub get_bin_edges {
 	my $edges = xvals(@dims) * $widths + $xs(0,);
 	
 	# Store these bin edges if the underlying dataset is static:
-	$self->{binEdges} = $edges unless ref($dataset) =~ /Func/;
+#	$self->{binEdges} = $edges unless ref($dataset) =~ /Func/;
 	
 	return $edges;
 	
@@ -427,14 +427,15 @@ sub xmin {
 	my ($self, $dataset, $widget) = @_;
 	# Get the bin edges and return the left-most edge:
 	my $edges = $self->get_bin_edges($dataset, $widget);
-	return ($edges(0)->min, 1);
+	# working here - used to be $edges(0)->min
+	return ($edges->min, 1);
 }
 sub xmax {
 	# unpack the arguments:
 	my ($self, $dataset, $widget) = @_;
 	# Get the bin edges and return the left-most edge:
 	my $edges = $self->get_bin_edges($dataset, $widget);
-	return ($edges(0)->max, 1);
+	return ($edges->max, 1);
 }
 
 sub ymin {
@@ -470,7 +471,7 @@ sub draw {
 	}
 	
 	# Get the edges and convert everything to pixels:
-	my $edges = $self->get_bin_edges;
+	my $edges = $self->get_bin_edges($dataset, $widget);
 	my $pixel_edges = $widget->x->reals_to_pixels($edges);
 	my $pixel_bottom = $widget->y->reals_to_pixels(0);
 	my $ys = $widget->y->reals_to_pixels($dataset->get_ys($widget));

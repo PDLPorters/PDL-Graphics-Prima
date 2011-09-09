@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 # Defines the scaling classes.
+# working here - add a broken axis scaling class
 
 package sc;
 use constant Linear => 'PDL::Graphics::Prima::Scaling::Linear';
@@ -493,7 +494,7 @@ sub is_valid_extremum {
 		$@ = 'nan is not allowed';
 		return 0;
 	}
-	elsif ($extremum + 1 != $extremum) {
+	elsif ($extremum + 1 == $extremum) {
 		# inf is bad:
 		$@ = 'must be finite';
 		return 0;

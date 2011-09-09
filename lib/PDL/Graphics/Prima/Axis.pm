@@ -218,8 +218,7 @@ sub _min {
 		# If no new value, just calling to get the current values:
 		my $self = shift;
 		my ($value, $is_auto) = $self->_min(@_);
-		$_[0]->notify('ChangeBounds')
-			if (@_ == 2);
+		$_[0]->notify('ChangeBounds') if (@_);
 		
 		return $value unless wantarray;
 		return ($value, $is_auto);
@@ -258,8 +257,7 @@ sub _max {
 		# If no new value, just calling to get the current values:
 		my $self = shift;
 		my ($value, $is_auto) = $self->_max(@_);
-		$_[0]->notify('ChangeBounds')
-			if (@_ == 2);
+		$_[0]->notify('ChangeBounds') if (@_);
 		
 		return $value unless wantarray;
 		return ($value, $is_auto);
