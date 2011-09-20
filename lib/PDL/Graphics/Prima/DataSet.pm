@@ -93,7 +93,7 @@ to implement a C<sample_evenly> function to support function-based datasets.
 package PDL::Graphics::Prima::DataSet;
 
 use PDL::Graphics::Prima::PlotType;
-
+use PDL::Core ':Internal'; # for topdl
 use Carp 'croak';
 
 =head2 PDL::Graphics::Prima::DataSet::new
@@ -212,8 +212,8 @@ sub initialize {
 	my $xs = $array_ref->[0];
 	my $ys = $array_ref->[1];
 	eval {
-		$xs = pdl($xs) unless ref($xs) eq 'PDL';
-		$ys = pdl($ys) unless ref($ys) eq 'PDL';
+		$xs = topdl($xs);
+		$ys = topdl($ys);
 		# Set infinity and nan to bad values:
 		$xs->inplace->setnantobad;
 		$ys->inplace->setnantobad;
@@ -258,6 +258,7 @@ sub draw {
 		$widget->set(%backups);
 		$plotType->draw($dataset, $widget);
 	}
+	$widget->set(%backups);
 }
 
 # Returns the data values from the dataset. The widget is required for the
