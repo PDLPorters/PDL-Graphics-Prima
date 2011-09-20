@@ -771,6 +771,215 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 
 ###############################################################################
+#                            Grid-based Plot Types                            #
+###############################################################################
+
+=head1 Plotting Two-Dimensional Data
+
+=cut
+
+#############################################
+# PDL::Graphics::Prima::PlotType::GridLines #
+#############################################
+
+package PDL::Graphics::Prima::PlotType::GridLines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+# working here
+
+#############################################
+# PDL::Graphics::Prima::PlotType::ColorGrid #
+#############################################
+# Plots a matrix
+
+package PDL::Graphics::Prima::PlotType::ColorGrid;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+use Carp 'croak';
+
+=head2 ColorGrid
+
+This plot type lets you specify colors or values on a grid, primarily for making
+color contour plots (as opposed to line contour plots). Put differently, it lets
+you visualize a two-dimensional histogram by using colors. It also forms the
+basis for the Matrix and Func2D plot types. This plot type uses the colors, x,
+and y piddles a bit differently than the other plot types---in particular, it
+requires that you supply a value for colors. However, you can safely mix it with
+other plot types if you wish.
+
+ColorGrid (and its derivatives) uses the x and y data to determine the grid
+dimensions. In the simplest use case, the x and y piddles each contain two
+elements, representing the grid's x min/max and y min/max. In that case, the
+spacing between each of the grid's rectangles is sampled lineary. Alternatively,
+you can specify all the x and y grid boundaries, in which case if the colors
+matrix has dimensions M x N, you will need to specify M + 1 values for x and
+N + 1 values for y.
+
+At this point, you should see the potential pitfalls of mixing this plot type
+with others. If you plot a quadratic function and include a ColorGrid plot type,
+the ColorGrid will interpret the x and y values as being 
+
+=cut
+
+# Install the short-name constructor:
+sub pt::ColorGrid {
+	PDL::Graphics::Prima::PlotType::ColorGrid->new(@_);
+}
+
+# Needed for function topdl:
+use PDL::Core ':Internal';
+
+# In the initialization, check that they supplied a color grid. I'd check the
+# x and y data, but I don't have access to that here:
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	
+	# Check that they have colors and that it is a meaningful value:
+	croak("You must supply colors to ColorGrid")
+		unless exists $self->{colors};
+	eval { $self->{colors} = topdl $self->{colors} };
+	if ($@) {
+		my $to_croak = $@;
+		$to_croak =~ s/ at.*/.\n/s;
+		$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's colors";
+		croak($to_croak);
+	}
+	
+	# If they supplied xs and/or ys, set them up as piddles:
+	if (exists $self->{xs}) {
+		# Ensure we're working with a piddle and not something else:
+		eval { $self->{xs} = topdl($self->{xs}) };
+		# If tha last line ran into trouble, it's because they didn't supply
+		# a meaningful expression for the xs, so croak:
+		if ($@) {
+			my $to_croak = $@;
+			$to_croak =~ s/ at.*/.\n/s;
+			$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's xs";
+			croak($to_croak);
+		}
+		
+		# Now make sure that we have the correct dimensions:
+		my $xs = $self->{xs};
+		
+		croak("xs first dimension must either be of length 2 or M+1, where"
+			. " M is the size of color's first dim")
+				unless $xs->dim(0) == 2
+					or $xs->dim(0) == $self->{colors}->dim(0) + 1;
+	}
+	if (exists $self->{ys}) {
+		# Ensure we're working with a piddle and not something else:
+		eval { $self->{ys} = topdl($self->{ys}) };
+		# If tha last line ran into trouble, it's because they didn't supply
+		# a meaningful expression for the ys, so croak:
+		if ($@) {
+			my $to_croak = $@;
+			$to_croak =~ s/ at.*/.\n/s;
+			$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's ys";
+			croak($to_croak);
+		}
+		
+		# Now make sure that we have the correct dimensions:
+		my $ys = $self->{ys};
+		
+		croak("ys first dimension must either be of length 2 or N+1, where"
+			. " N is the size of color's second dim")
+				unless $ys->dim(0) == 2
+					or $ys->dim(0) == $self->{colors}->dim(1) + 1;
+	}
+}
+
+# Don't need to supply x or y min/max functions
+
+# I need a drawing function. Keep the drawing type (bars) in sync with the
+# Prima drawing function used below.
+my @colorGrid_props = grep {$_ !~ /colors/} @PDL::Drawing::Prima::bars_props;
+
+sub draw {
+	my ($self, $dataset, $widget) = @_;
+	my ($xs, $ys) = $dataset->get_data($widget);
+	# Use the custom xs and ys if supplied:
+	$xs = $self->{xs} if exists $self->{xs};
+	$ys = $self->{ys} if exists $self->{ys};
+	
+	# Pull the colors out of self:
+	my $colors = $self->{colors};
+	
+	# sort the xs and ys:
+	$xs = $xs->qsort;
+	$ys = $ys->qsort;
+	
+	# How we proceed depends on how many dimensions x and y have:
+	if ($xs->dim(0) == 2) {
+		my @dims = $xs->dims;
+		$dims[0] = $colors->dim(0) + 1;
+		# Create N+1 values that run exactly from 0 to 1:
+		my $new_xs = PDL->zeroes(@dims)->xvals / $colors->dim(0);
+		# Rescale the xs by the widths x(1) - x(0):
+		$new_xs *= $xs(1) - $xs(0);
+		# Shift the xs by the min, x(0):
+		$new_xs += $xs(0);
+		# Finally, set the variable xs to hold these new values. This will not
+		# overwrite the original data from the dataset:
+		$xs = $new_xs;
+	}
+	elsif ($xs->dim(0) != $colors->dim(0) + 1) {
+		# Check that the the x- and color-dims agree:
+		croak("ColorGrid: x-data's first dimension must be of size M+1, "
+			. "where M is the size of color's first dimension");
+	}
+	if ($ys->dim(0) == 2) {
+		my @dims = $ys->dims;
+		$dims[0] = $colors->dim(1) + 1;
+		# Create N+1 values that run exactly from 0 to 1:
+		my $new_ys = PDL->zeroes(@dims)->xvals / $colors->dim(1);
+		# Rescale the ys by the widths y(1) - y(0):
+		$new_ys *= $ys(1) - $ys(0);
+		# Shift the ys by the min, y(0):
+		$new_ys += $ys(0);
+		# Finally, set the variable ys to hold these new values. This will not
+		# overwrite the original data from the dataset:
+		$ys = $new_ys;
+	}
+	elsif ($ys->dim(0) != $colors->dim(1) + 1) {
+		# Check that the the y- and color-dims agree:
+		croak("ColorGrid: y-data's first dimension must be of size N+1, "
+			. "where N is the size of color's second dimension");
+	}
+	
+	# Convert the xs and ys to the coordinate values:
+	$ys = $widget->y->reals_to_pixels($ys);
+	$xs = $widget->x->reals_to_pixels($xs);
+	
+	# Gather the properties that I will need to use in the plotting. Be sure to
+	# keep the props (generated above) in sync with the actual Prima drawing
+	# command used below.
+	my %properties = $self->generate_properties($dataset, @colorGrid_props);
+	
+	# Set up the x- and y- dimension lists for proper threading:
+	$xs = $xs->dummy(1, $colors->dim(1));
+	$ys = $ys->dummy(0, $colors->dim(0));
+
+	# Now draw the bars for each rectangle:
+	$widget->pdl_bars($xs(:-2), $ys(,:-2), $xs(1:), $ys(,1:)
+		, colors => $colors, %properties);
+}
+
+##########################################
+# PDL::Graphics::Prima::PlotType::Matrix #
+##########################################
+# Plots a matrix
+
+package PDL::Graphics::Prima::PlotType::Matrix;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
+
+=head2 Matrix
+
+Makes a simple visualization of a matrix. 
+
+=cut
+
+###############################################################################
 #                         Creating your own Plot Type                         #
 ###############################################################################
 # Also includes the base type
