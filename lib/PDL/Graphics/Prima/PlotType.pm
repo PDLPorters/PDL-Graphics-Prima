@@ -806,6 +806,225 @@ sub draw {
 }
 
 
+############################################
+# PDL::Graphics::Prima::PlotType::CallBack #
+############################################
+# Calls user-supplied callbacks for all major functions
+# Provides a playground to try out new plot types
+
+package PDL::Graphics::Prima::PlotType::CallBack;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+# working here - this isn't working the way it's supposed to
+
+=head1 CallBack
+
+This is a cool class, but it's not working at the moment. :-(
+
+This class lets you supply your own callbacks for auto-scaling min and max
+calculations and for the drawing routines. This may seem overly high-level, but
+it's mostly here so that you can implement custom drawing routines, implement
+user-level tweaks to existing classes, and toy around with new plot types
+without having to write a full-blown class.
+
+=head2 New Drawing Techniques
+
+If you like the way that a class operates but want to use your own drawing
+routines, you can specify a base class and a drawing callback like so:
+
+ my $smiley_plot_type = pt::CallBack(
+ 	base_class => 'PDL::Graphics::Prima::PlotType::Blobs',
+ 	draw => sub {
+ 		my ($self, $dataset, $widget) = @_;
+ 		
+ 		# Retrieve the data from the dataset:
+ 		my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+ 		
+ 		# Draw the smileys:
+ 		$widget->pdl_ellipses($xs, $ys, 10, 10);	# face
+ 		$widget->pdl_fill_ellipses($xs - 5, $ys + 4, 2, 2);	# left eye
+ 		$widget->pdl_fill_ellipses($xs + 5, $ys + 4, 2, 2); # right eye
+ 		$widget->pdl_fill_chords($xs, $ys + 3, 10, 10, 200, 340); # smiling mouth
+ 	},
+ 	radius => 10,	# be sure to coordinate with pdl_ellipses, above
+ );
+
+This will use the Blobs methods for determining xmin, xmax, ymin, and ymax, but
+use this custom method for drawing smileys.
+
+=cut
+
+
+# Install the short name constructor:
+sub pt::CallBack {
+	PDL::Graphics::Prima::PlotType::CallBack->new(@_);
+}
+
+# Set up the callback functions:
+sub initialize {
+	my $self = shift;
+
+	# Basic initialization:
+	PDL::Graphics::Prima::PlotType::initialize($self, @_);
+	
+	# Default the base class to the most basic one:
+	$self->{base_class} ||= 'PDL::Graphics::Prima::PlotType';
+	
+	# Call the superclass initialization:
+	my $init = $self->{base_class}->can('initialize');
+	&$init($self, @_);
+	
+	# Make sure that we have a valid draw function:
+	if ($self->{base_class} eq 'PDL::Graphics::Prima::PlotType') {
+		croak('You must supply a draw function or a drawable base class to the CallBack plot class')
+			unless exists $self->{draw} and ref ($self->{draw})
+				and ref ($self->{draw}) eq 'CODE';
+		
+	}
+}
+
+# Dynamic xmax processing based upon current value of xmax key:
+sub xmax {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Return an xmax that depends on what they supplied:
+	if (not exists $self->{xmax}) {
+		# No xmax specified. Use the base class's xmax:
+		my $class = ref($self);
+		bless $self, $self->{base_class};
+		$self->xmax($dataset, $widget);
+		bless $self, $class;
+	}
+	elsif (not ref($self->{xmax})) {
+		# No ref means they gave a scalar for xmax, which means they want to
+		# use the default padding of 1:
+		return ($self->{xmax}, 1);
+	}
+	elsif (ref($self->{xmax}) eq 'ARRAY') {
+		# Array ref for xmax means they gave both value and padding:
+		return @{$self->{xmax}};
+	}
+	elsif (ref($self->{xmax}) eq 'CODE') {
+		# Code ref means they supplied their own code:
+		my $func = $self->{xmax};
+		return &$func($self, $dataset, $widget);
+	}
+}
+
+# Dynamic xmin processing based upon current value of xmin key:
+sub xmin {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Return an xmin that depends on what they supplied:
+	if (not exists $self->{xmin}) {
+		# No xmin specified. Use the base class's xmin:
+		my $class = ref($self);
+		bless $self, $self->{base_class};
+		$self->xmin($dataset, $widget);
+		bless $self, $class;
+	}
+	elsif (not ref($self->{xmin})) {
+		# No ref means they gave a scalar for xmin, which means they want to
+		# use the default padding of 1:
+		return ($self->{xmin}, 1);
+	}
+	elsif (ref($self->{xmin}) eq 'ARRAY') {
+		# Array ref for xmin means they gave both the value and the padding:
+		return @{$self->{xmin}};
+	}
+	elsif (ref($self->{xmin}) eq 'CODE') {
+		# Code ref means they supplied their own code:
+		my $func = $self->{xmin};
+		return &$func($self, $dataset, $widget);
+	}
+}
+
+# Dynamic ymax processing based upon current value of ymax key:
+sub ymax {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Return an ymax that depends on what they supplied:
+	if (not exists $self->{ymax}) {
+		# No ymax specified. Use the base class's ymax:
+		my $class = ref($self);
+		bless $self, $self->{base_class};
+		$self->ymax($dataset, $widget);
+		bless $self, $class;
+	}
+	elsif (not ref($self->{ymax})) {
+		# No ref means they gave a scalar for ymax, which means they want to
+		# use the default padding of 1:
+		return ($self->{ymax}, 1);
+	}
+	elsif (ref($self->{ymax}) eq 'ARRAY') {
+		# Array ref for ymax means they gave both value and padding:
+		return @{$self->{ymax}};
+	}
+	elsif (ref($self->{ymax}) eq 'CODE') {
+		# Code ref means they supplied their own code:
+		my $func = $self->{ymax};
+		return &$func($self, $dataset, $widget);
+	}
+}
+
+# Dynamic ymin processing based upon current value of ymin key:
+sub ymin {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Return an ymin that depends on what they supplied:
+	if (not exists $self->{ymin}) {
+		# No ymin specified. Use the base class's ymin:
+		my $class = ref($self);
+		bless $self, $self->{base_class};
+		$self->ymin($dataset, $widget);
+		bless $self, $class;
+	}
+	elsif (not ref($self->{ymin})) {
+		# No ref means they gave a scalar for ymin, which means they want to
+		# use the default padding of 1:
+		return ($self->{ymin}, 1);
+	}
+	elsif (ref($self->{ymin}) eq 'ARRAY') {
+		# Array ref for ymin means they gave both the value and the padding:
+		return @{$self->{ymin}};
+	}
+	elsif (ref($self->{ymin}) eq 'CODE') {
+		# Code ref means they supplied their own code:
+		my $func = $self->{ymin};
+		return &$func($self, $dataset, $widget);
+	}
+}
+
+# Dynamic drawing based upon values of the draw key and/or the base class:
+sub draw {
+	my ($self, $dataset, $widget) = @_;
+	
+	if (not exists $self->{draw}) {
+		# Didn't supply a draw function, so call the base class's draw function:
+		if ($self->{base_class} eq 'PDL::Graphics::Prima::PlotType') {
+			croak('CallBack plot type must supply a drawing function or '
+				. 'a base class that can draw itself.');
+		}
+		
+		# Masquerade as the base class:
+		my $class = ref($self);
+		bless $self, $self->{base_class};
+		$self->draw($dataset, $widget);
+		bless $self, $class;
+		return;
+	}
+	
+	if (ref($self->{draw}) and ref($self->{draw}) eq 'CODE') {
+		# They supplied a code reference, so run it:
+		my $func = $self->{draw};
+		&$func($self, $dataset, $widget);
+		return;
+	}
+	
+	croak('You must supply a code reference for your drawing code.');
+}
+
+
 
 
 =head1 AUTHOR, COPYRIGHT
