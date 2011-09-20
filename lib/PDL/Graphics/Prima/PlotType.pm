@@ -315,6 +315,7 @@ more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
 package PDL::Graphics::Prima::PlotType::Blobs;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
+use PDL::Core ':Internal';
 use Carp 'croak';
 use PDL;
 
@@ -334,8 +335,8 @@ sub initialize {
 	
 	# make sure the radii are piddles and croak if something goes wrong:
 	eval {
-		$x_radius = pdl($x_radius) unless ref($x_radius) =~ /PDL/;
-		$y_radius = pdl($y_radius) unless ref($y_radius) =~ /PDL/;
+		$x_radius = topdl($x_radius);
+		$y_radius = topdl($y_radius);
 		1;
 	} or croak('Radii must be piddles, or values that can be interpreted by the pdl constructor');
 	
@@ -379,17 +380,10 @@ sub ymax {
 
 sub draw {
 	my ($self, $dataset, $widget) = @_;
-	my %properties;
-	# Add all of the specified fill_ellipses properties to a local collection
-	# that gets passed to the routine:
-	foreach (@PDL::Drawing::Prima::fill_ellipses_props) {
-		if (exists $self->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-		elsif (exists $dataset->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-	}
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties($dataset
+		, @PDL::Drawing::Prima::fill_ellipses_props);
 	
 	# Retrieve the data from the dataset:
 	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
@@ -522,17 +516,10 @@ sub ymax {
 
 sub draw {
 	my ($self, $dataset, $widget) = @_;
-	my %properties;
-	# Add all of the specified rectangle properties to a local collection
-	# that gets passed to the routine:
-	foreach (@PDL::Drawing::Prima::rectangles_props) {
-		if (exists $self->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-		elsif (exists $dataset->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-	}
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties($dataset
+		, @PDL::Drawing::Prima::rectangles_props);
 	
 	# Get the edges and convert everything to pixels:
 	my $edges = $self->get_bin_edges($dataset, $widget);
