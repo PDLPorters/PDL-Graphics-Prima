@@ -89,6 +89,26 @@ sub draw {
 	$widget->pdl_polylines($xs, $ys, %properties);
 }
 
+##########################################
+# PDL::Graphics::Prima::PlotType::Spikes #
+##########################################
+# working here - get rid of the class-specific padding; if anything, such
+# padding should be part of the general class, not this specific one
+
+=head2 Spikes
+
+Draws x/y data as a collection of vertical or horizontal lines. In the default
+behavior, for each (x, y) data point, it draws a line from (x, 0) to (x, y). You
+can change the baseline by specifying either the C<y_baseline> or C<x_baseline>
+key. For example, by specifying C<< y_baseline => 5 >>, this will draw a lines
+starting from (x, 5) instead of (x, 0). Specifying C<< x_baseline => -2 >> will
+lead to horizontal lines instead of vertical lines, drawn from (-2, y) to
+(x, y). Finally, if you specify the undefined value, as
+C<< x_baseline => undef >> or C<< x_baseline => undef >>, the baseline will be
+taken as the minimum of the dataset's x or y data, respectively.
+
+=cut
+
 package PDL::Graphics::Prima::PlotType::Spikes;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
@@ -97,34 +117,188 @@ sub pt::Spikes {
 	PDL::Graphics::Prima::PlotType::Spikes->new(@_);
 }
 
-# I don't have any special initialization to do, so I won't override it here
-#sub initialize {
-#	
-#}
+# Set padding options:
+sub initialize {
+	my $self = shift;
 
-# The min/max functions work just fine for spikes but I need to define a drawing
-# method:
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+
+# Should move this to the base class, perhaps
+#	# Specify the various default padding options and validate supplied values:
+#	foreach my $pad_name (map $_.'_padding', qw(left right bottom top)) {
+#		if (exists $self->{$pad_name}) {
+#			croak("$pad_name must be a positive integer")
+#				unless $self->{$pad_name} =~ /^\d+$/ and $self->{$pad_name} > 0;
+#		}
+#		else {
+#			$self->{$pad_name} = 10;
+#		}		
+#	}
+	
+	# Ensure that a baseline exists:
+	if (not exists $self->{x_baseline} and not exists $self->{y_baseline}) {
+		$self->{y_baseline} = 0;
+	}
+	elsif(exists $self->{x_baseline} and exists $self->{y_baseline}) {
+		croak("You can only specify an x_baseline or a y_baseline, not both");
+	}
+}
+
+# Override the min/max functions to give padding values:
+sub xmin {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Call the superclass xmin function, ignoring the returned padding:
+	my ($xmin) = $self->SUPER::xmin($dataset, $widget);
+	
+	# If the baseline is an x-baseline (horizontal lines), we will consider an
+	# x-min of whatever they indicated; otherwise, the data's x-min is the x-min
+	# of interest:
+	if (exists $self->{x_baseline} and not defined $self->{x_baseline}) {
+		return ($xmin, 1);
+	}
+	elsif (exists $self->{x_baseline}) {
+		return ($self->{x_baseline}, 1) if $self->{x_baseline} < $xmin;
+		return ($xmin, 1);
+	}
+	
+	# Otherwise, the baseline is a y-baseline, in which case we are drawing
+	# vertical lines. The xmin is straight-forward but we must take the
+	# linewidths into account for the padding.
+	if (exists $self->{lineWidths}) {
+		my $width = $self->{lineWidths}->max;
+		return ($xmin, $width);
+	}
+	# Otherwise, return a padding of 1:
+	return ($xmin, 1);
+}
+
+sub xmax {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Call the superclass xmax function, ignoring the returned padding:
+	my ($xmax) = $self->SUPER::xmax($dataset, $widget);
+	
+	# If the baseline is an x-baseline (horizontal lines), we will consider an
+	# x-max of whatever they indicated in case all the x-data is less than the
+	# baseline. In the special case of the undefined baseline, the max will
+	# always be the data's max since the baseline is the data's min:
+	if (exists $self->{x_baseline} and not defined $self->{x_baseline}) {
+		return ($xmax, 1);
+	}
+	elsif (exists $self->{x_baseline}) {
+		return ($self->{x_baseline}, 1) if $self->{x_baseline} > $xmax;
+		return ($xmax, 1);
+	}
+
+	# Otherwise, the baseline is a y-baseline, in which case we are drawing
+	# vertical lines. The xmin is straight-forward but we must take the
+	# linewidths into account for the padding.
+	if (exists $self->{lineWidths}) {
+		my $width = $self->{lineWidths}->max;
+		return ($xmax, $width);
+	}
+	# Otherwise, return a padding of 1:
+	return ($xmax, 1);
+}
+
+sub ymin {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Call the superclass ymin function, ignoring the returned padding:
+	my ($ymin) = $self->SUPER::ymin($dataset, $widget);
+	
+	# If the baseline is an y-baseline (vertical lines), we will consider an
+	# y-min of whatever they indicated; otherwise, the data's y-min is the y-min
+	# of interest:
+	if (exists $self->{y_baseline} and not defined $self->{y_baseline}) {
+		return ($ymin, 1);
+	}
+	elsif (exists $self->{y_baseline}) {
+		return ($self->{y_baseline}, 1) if $self->{y_baseline} < $ymin;
+		return ($ymin, 1);
+	}
+	
+	# Otherwise, the baseline is an x-baseline, in which case we are drawing
+	# horizontal lines. The ymin is straight-forward but we must take the
+	# linewidths into account for the padding.
+	if (exists $self->{lineWidths}) {
+		my $width = $self->{lineWidths}->max;
+		return ($ymin, $width);
+	}
+	# Otherwise, return a padding of 1:
+	return ($ymin, 1);
+}
+
+sub ymax {
+	my ($self, $dataset, $widget) = @_;
+	
+	# Call the superclass ymax function, ignoring the returned padding:
+	my ($ymax) = $self->SUPER::ymax($dataset, $widget);
+	
+	# If the baseline is an y-baseline (vertical lines), we will consider an
+	# y-max of whatever they indicated in case all the y-data is less than the
+	# baseline. In the special case of the undefined baseline, the max will
+	# always be the data's max since the baseline is the data's min:
+	if (exists $self->{y_baseline} and not defined $self->{y_baseline}) {
+		return ($ymax, 1);
+	}
+	elsif (exists $self->{y_baseline}) {
+		return ($self->{y_baseline}, 1) if $self->{y_baseline} > $ymax;
+		return ($ymax, 1);
+	}
+
+	# Otherwise, the baseline is an x-baseline, in which case we are drawing
+	# horizontal lines. The ymax is straight-forward but we must take the
+	# linewidths into account for the padding.
+	if (exists $self->{lineWidths}) {
+		my $width = $self->{lineWidths}->max;
+		return ($ymax, $width);
+	}
+	# Otherwise, return a padding of 1:
+	return ($ymax, 1);
+}
+
+# Here is the method for drawing spikes:
 sub draw {
 	my ($self, $dataset, $widget) = @_;
-	my %properties;
-	# Add all of the specified line properties to a local collection that
-	# gets passed to the line routine:
-	foreach (@PDL::Drawing::Prima::lines_props) {
-		if (exists $self->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-		elsif (exists $dataset->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-	}
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties($dataset
+		, @PDL::Drawing::Prima::lines_props);
 
 	# Retrieve the data from the dataset:
 	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
-	my $zeroes = $widget->y->reals_to_pixels($ys->zeroes); #-
-
-	# Draw the lines:
-	$widget->pdl_lines($xs, $ys, $xs, $zeroes, %properties);
+	
+	# Draw the lines, either horizontal or vertical, based on the given baseline
+	if (exists $self->{y_baseline}) {
+		my $baseline = $ys->zeroes;
+		if (defined $self->{y_baseline}) {
+			$baseline = $widget->y->reals_to_pixels($baseline + $self->{y_baseline});
+		}
+		else {
+			# working here - make threadable?
+			$baseline .= $ys->min;
+		}
+		# Draw the lines:
+		$widget->pdl_lines($xs, $ys, $xs, $baseline, %properties);
+	}
+	else {
+		my $baseline = $xs->zeroes;
+		if (defined $self->{x_baseline}) {
+			$baseline = $widget->x->reals_to_pixels($baseline + $self->{x_baseline});
+		}
+		else {
+			# working here - make threadable?
+			$baseline .= $xs->min;
+		}
+		# Draw the lines:
+		$widget->pdl_lines($xs, $ys, $baseline, $ys, %properties);
+	}
 }
+
+
 
 #########################################
 # PDL::Graphics::Prima::PlotType::Blobs #
