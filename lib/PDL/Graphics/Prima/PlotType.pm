@@ -539,8 +539,219 @@ sub draw {
 package PDL::Graphics::Prima::PlotType::BoxAndWhisker;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
+#############################################
+# PDL::Graphics::Prima::PlotType::ErrorBars #
+#############################################
+# Adds error bars
+
 package PDL::Graphics::Prima::PlotType::ErrorBars;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+# working here - ensure documentation consistency
+
+=head2 ErrorBars
+
+You create an error bars plotType objet with C<pt::ErrorBars>:
+
+ pt::ErrorBars(x_err => 10);
+
+You must specify at least one sort of error bar to plot, though you can mix and
+match as you wish. Each error specification must be a piddle or something that
+can be converted to a piddle:
+
+ x_err       - symmetric x error bars
+ y_err       - symmetric y error bars
+ x_left_err  - left x error bars
+ x_right_err - right x error bars
+ y_upper_err - upper y error bars
+ y_lower_err - lower y error bars
+
+Note that the more specific error bars will override the less specific ones,
+so if you provide C<x_err> and C<x_left_err>, the left error bars override the
+basic ones.
+
+You can also specify the width of the error bars in pixels:
+
+ err_width   - width of both error bars
+ x_err_width - width of x-error bars
+ y_err_width - width of y-error bars
+
+Again, the more specific widths override the less specific ones.
+
+=cut
+
+# Install the short name constructor:
+sub pt::ErrorBars {
+	PDL::Graphics::Prima::PlotType::ErrorBars->new(@_);
+}
+
+# The ErrorBars initializer figures out the x and y bar widths
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	
+	# Set the x and y widths, with a default of 10:
+	$self->{x_err_width} //= $self->{err_width} // 10;
+	$self->{y_err_width} //= $self->{err_width} // 10;
+	
+	# Set the various internal variables:
+	my $bars = $self->{x_left_err} // $self->{x_err}; #/
+	$self->{left_bars} = $bars->abs if defined $bars;
+	$bars = $self->{x_right_err} // $self->{x_err}; #/
+	$self->{right_bars} = $bars->abs if defined $bars;
+	$bars = $self->{y_upper_err} // $self->{y_err}; #/
+	$self->{upper_bars} = $bars->abs if defined $bars;
+	$bars = $self->{y_lower_err} // $self->{y_err}; #/
+	$self->{upper_bars} = $bars->abs if defined $bars;
+}
+
+sub y_bars_present {
+	my $self = shift;
+	return exists($self->{upper_bars}) or exists($self->{lower_bars});
+}
+
+sub x_bars_present {
+	my $self = shift;
+	return exists($self->{left_bars}) or exists($self->{right_bars});
+}
+
+# The various min/max functions
+sub xmin {
+	my ($self, $dataset, $widget) = @_;
+
+	# Return the minimum of the data modified by the error bars, as they exist.
+	my ($xs, $ys) = $dataset->get_data($widget);
+	$xs = $xs - $self->{left_bars} if exists $self->{left_bars};
+	my ($xmins) = PDL::minmaxforpair($xs, $ys);
+	
+	# Add padding for y error-bars if present:
+	return ($xmins->min, $self->{y_err_width})
+		if $self->y_bars_present;
+	# Otherwise we don't need any extra space:
+	return ($xmins->min, 1);
+}
+
+sub xmax {
+	my ($self, $dataset, $widget) = @_;
+
+	# Return the maximum of the data modified by the error bars, as they exist.
+	my ($xs, $ys) = $dataset->get_data($widget);
+	$xs = $xs + $self->{right_bars} if exists $self->{right_bars};
+	my (undef, undef, $xmaxes) = PDL::minmaxforpair($xs, $ys);
+	
+	# Add padding for y error-bars if present:
+	return ($xmaxes->max, $self->{y_err_width})
+		if $self->y_bars_present;
+	# Otherwise we don't need any extra space:
+	return ($xmaxes->max, 1);
+}
+
+sub ymin {
+	my ($self, $dataset, $widget) = @_;
+
+	# Return the minimum of the data modified by the error bars, as they exist.
+	my ($xs, $ys) = $dataset->get_data($widget);
+	$ys = $ys - $self->{lower_bars} if exists $self->{lower_bars};
+	my (undef, $ymins) = PDL::minmaxforpair($xs, $ys);
+	
+	# Add padding for x error-bars if present:
+	return ($ymins->min, $self->{x_err_width})
+		if $self->x_bars_present;
+	# Otherwise we don't need any extra space:
+	return ($ymins->min, 1);
+}
+
+sub ymax {
+	my ($self, $dataset, $widget) = @_;
+
+	# Return the maximum of the data modified by the error bars, as they exist.
+	my ($xs, $ys) = $dataset->get_data($widget);
+	$ys = $ys + $self->{upper_bars} if exists $self->{upper_bars};
+	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($xs, $ys);
+	
+	# Add padding for x error-bars if present:
+	return ($ymaxes->max, $self->{x_err_width})
+		if $self->x_bars_present;
+	# Otherwise we don't need any extra space:
+	return ($ymaxes->max, 1);
+}
+
+sub draw {
+	my ($self, $dataset, $widget) = @_;
+	my ($xs, $ys) = $dataset->get_data($widget);
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties($dataset
+		, @PDL::Drawing::Prima::lines_props);
+	
+	#---( left error bars )---#
+	if (exists $self->{left_bars}) {
+		my $left_xs = $xs - $self->{left_bars};
+		
+		# Convert from points to pixels:
+		$left_xs = $widget->x->reals_to_pixels($left_xs);
+		my $local_xs = $widget->x->reals_to_pixels($xs);
+		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+
+		# Draw the line from the point to the edge:
+		$widget->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
+		# Draw the end caps:
+		my $width = $self->{x_err_width}/2;
+		$widget->pdl_lines($left_xs, $local_ys + $width, $left_xs
+			, $local_ys - $width, %properties);
+	}
+	
+	#---( right error bars )---#
+	if (exists $self->{right_bars}) {
+		my $right_xs = $xs + $self->{right_bars};
+		
+		# Convert from points to pixels:
+		$right_xs = $widget->x->reals_to_pixels($right_xs);
+		my $local_xs = $widget->x->reals_to_pixels($xs);
+		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+
+		# Draw the line from the point to the edge:
+		$widget->pdl_lines($local_xs, $local_ys, $right_xs, $local_ys, %properties);
+		# Draw the end caps:
+		my $width = $self->{x_err_width} / 2;
+		$widget->pdl_lines($right_xs, $local_ys + $width, $right_xs
+			, $local_ys - $width, %properties);
+	}
+	
+	#---( upper error bars )---#
+	if (exists $self->{upper_bars}) {
+		my $upper_ys = $ys + $self->{upper_bars};
+		
+		# Convert from points to pixels:
+		$upper_ys = $widget->y->reals_to_pixels($upper_ys); #--
+		my $local_xs = $widget->x->reals_to_pixels($xs);
+		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+
+		# Draw the line from the point to the edge
+		$widget->pdl_lines($local_xs, $local_ys, $local_xs, $upper_ys, %properties);
+		# Draw the caps:
+		my $width = $self->{y_err_width} / 2;
+		$widget->pdl_lines($local_xs - $width, $upper_ys, $local_xs + $width
+			, $upper_ys, %properties);
+	}
+	
+	#---( lower error bars )---#
+	if (exists $self->{lower_bars}) {
+		my $lower_ys = $ys - $self->{lower_bars};
+		
+		# Convert from points to pixels:
+		$lower_ys = $widget->y->reals_to_pixels($lower_ys); #--
+		my $local_xs = $widget->x->reals_to_pixels($xs);
+		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+
+		# Draw the line from the point to the edge:
+		$widget->pdl_lines($local_xs, $local_ys, $local_xs, $lower_ys, %properties);
+		# Draw the caps
+		my $width = $self->{y_err_width} / 2;
+		$widget->pdl_lines($local_xs - $width, $lower_ys, $local_xs + $width
+			, $lower_ys, %properties);
+	}
+}
 
 #########################################
 # PDL::Graphics::Prima::PlotType::Bands #
