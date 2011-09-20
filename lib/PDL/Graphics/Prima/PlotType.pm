@@ -1,193 +1,64 @@
 use strict;
 use warnings;
 
-package PDL::Graphics::Prima::PlotType;
+# Note: The base class is defined near the bottom of the file because I wanted
+# to write the documentation for creating new derived classes in the same space
+# as where I wrote the code for the base class.
 
-use Carp 'croak';
+=head1 NAME
 
-=pod
+PDL::Graphics::Prima::PlotType - a collection of plot types
 
-To write your own plot type, you must create a class that is derived from
-C<PDL::Graphics::Prima::PlotType>. (To make the discussion a bit more concrete, I
-am going to use the ficticious FooBars plotType, which I suppose would plot some
-fancy error bars.) Such a derived class would probably start out with these
-lines of code:
+=head1 DESCRIPTION
 
- package PDL::Graphics::Prima::PlotType::FooBars;
- use base 'PDL::Graphics::Prima::PlotType';
-
-You must then write a custom C<draw> function, and you can optionally overload
-the following functions: C<xmin>, C<xmax>, C<ymin>, C<ymax>, C<initialize>.
-
-You should also install a constructor under C<pt::FooBars> that looks like
-this:
-
- sub pt::FooBars {
-     PDL::Graphics::Prima::PlotType::FooBars->new(@_);
- }
-
-That uses the inherited C<PDL::Graphics::Prima::PlotType::new> function, which will
-eventually call your class's C<initialize> function. If your initializer expects
-custom arguments, you should overload the C<initialize> function like so:
-
- # still in the PDL::Graphics::Prima::PlotType::FooBars package
- sub initialize {
-     my ($self, @args) = @_;
-     
-     # You could pull items out of @args at this point if you
-     # want. To call the superclass initialization do this:
-     $self->SUPER::initialize(@args);
-     
-     # Here's some custom args processing. If the user did
-     # not specify a curviness, default to 4:
-     $self->{curviness} //= 4;
-     
-     # Could also check that the supplied values make sense:
-     croak('Curviness must be a positive integer')
-         unless $self->{curviness} =~ /^\d+$/
-           and $self->{curviness} > 0;
- }
-
-You could shove all of that construction functionality into C<pt::FooBars>, but
-then other classes would not be able to derive functionality from your 
-(undoubtedly elegant) class without resorting to rather inelegant code.
-
-Which brings me to writing plotTypes that are derived from other plotTypes.
-That is allowed, of course, in which case you can override whichever class
-functions you want. At that point, you are doing normal Perl OO programming,
-so it's as easy (and/or annoying) as that.
-
-=cut
-
-# The plotType new function. Do not override this. If you want to override how
-# the plotType is constructed, override the initialize function in your derived
-# class.
-sub new {
-	my $class = shift;
-	my $self = {};
-	bless $self, $class;
-	$self->initialize(@_);
-	return $self;
-}
-
-# Standard initialization expects key/value pairs and simply stores them in
-# $self:
-sub initialize {
-	my $self = shift;
-	croak('Standard plotTypes arguments must be in key => value pairs')
-		if @_ % 2 == 1;
-	my %args = @_;
-	foreach my $key (keys %args) {
-		$self->{$key} = $args{$key};
-	}
-}
-
-=head2 xmin, xmax, ymin, ymax
-
-These plotType functions are called when the graph needs to determine automatic
-minima and maxima. Line plots simply return the data's minimum and maximum, but
-more complex plot types, such as those including error bars or blobs, need to
-take more details into consideration.
-
-These functions are always called with three arguments and should always return
-two values. The three arguments are:
+This module provides all of the different plot types that you can use in a
+PDL::Graphics::Prima widget. The documentation that follows is broken into three
+parts:
 
 =over
 
-=item plotType
+=item Line-based plot types
 
-Either the class name for the plotType, or an actual instance of the plotType.
-This passes in whatever the dataset was given for the plotType.
+Many plots are based on plotting points of data or lines, or perhaps shaded
+areas. If you think of your data as a function of a single variable, like a
+time series, you will likely use these plot types to visualize your data.
 
-=item dataset
+=item Grid-based plot types
 
-The dataset object associated with this particular plotting operation. You can
-access the actual data through this object.
+Other plots focus on using color or greyscale to visualize data that is a
+function of two variables. If you need to plot a 2D histogram or you want to
+visualize the elements of a matrix, you will likely use these plot types.
 
-=item widget
+=item Creating new plot types
 
-The graph widget on which the data is plotted. You will have to go through this
-object to get at the x- or y-axes, which contain the actual minima and maxima
-of the plot.
-
-=back
-
-The two values it should return are:
-
-=over
-
-=item extremum-value
-
-The actual minimum value needed to automatically display the data nicely. For
-line plots this is just the min or max of the dataset, but if you have error
-bars, for example, you would want a smaller minimum and a larger maximum to
-accomodate the width or height of the error bars.
-
-=item pixel-padding
-
-Any extra space needed to display the results nicely. For example, the width of
-blobs are specified in pixels. In that case, you would specify a minimum or
-maximum value corresponding to the dataset's extremum, and specify a padding
-corresponding to the blob's x- or y-radius, as appropriate.
+If the supplied plot types do not match your needs, you can always make a new
+one: all of the code for all of these plot types is written in Perl, so it isn't
+too difficult. This section describes how to create custom plot types for your
+own needs.
 
 =back
-
-The x-version of these functions is never called by function-based datasets,
-since the x-values for such datsets are determined on-the-fly. If you cannot
-determine an extremum, or do not want to determine an extremum, you can return
-the undefined value and it will be ignored.
 
 =cut
 
-sub xmin {
-	my ($self, $dataset, $widget) = @_;
+################################################################################
+#                            Line-based Plot Types                            #
+################################################################################
 
-	# Ostensibly, this version of xmin doesn't care what invocant you called it
-	# with because it does not need any information from self. It also does not
-	# need any information from the widget. I unpack them here to illustrate the
-	# order of the arguments.
-	
-	# Return the minimum of the data with a padding of 1 pixel. Note that this
-	# assumes that if the data at $dataset->[0] a piddle if it is not a code
-	# reference. The validation for this assumption was handled in the
-	# initialize function.
-	
-	# This logic is made complicated by the fact that a bad value in x or y
-	# should invalidate the pair. So, I resort to using the minmaxforpair
-	# function, written specifically to solve this very problem.
-	my ($xs, $ys) = $dataset->get_data($widget);
-	
-	my ($xmins) = PDL::minmaxforpair($xs, $ys);
-	return ($xmins->min, 1);
-}
+=head1 One-Dimensional Plot Types
 
-sub xmax {
-	# Get the dataset object, the second argument to this function:
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the xmax:
-	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($xmaxes->max, 1);
-}
+=cut
 
-sub ymin {
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the ymin:
-	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($ymins->min, 1);
-}
-sub ymax {
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the ymin:
-	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($ymaxes->max, 1);
-}
+#########################################
+# PDL::Graphics::Prima::PlotType::Lines #
+#########################################
 
-sub draw {
-	my $invocant = shift;
-	my $class = ref($invocant) ? ref($invocant) : $invocant;
-	croak("Plot type $class does not define its own drawing function. Please "
-		. 'report this bug to the author');
-}
+=head2 Lines
+
+Draws the x/y data as lines. This lets you draw each curve with an individual
+color and line style; it does not let you specify a color and/or line style for
+each segment.
+
+=cut
 
 package PDL::Graphics::Prima::PlotType::Lines;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
@@ -206,17 +77,10 @@ sub pt::Lines {
 # method:
 sub draw {
 	my ($self, $dataset, $widget) = @_;
-	my %properties;
-	# Add all of the specified polyline properties to a local collection that
-	# gets passed to the polyline routine:
-	foreach (@PDL::Drawing::Prima::polylines_props) {
-		if (exists $self->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-		elsif (exists $dataset->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
-	}
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties($dataset
+		, @PDL::Drawing::Prima::polylines_props);
 
 	# Retrieve the data from the dataset:
 	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
@@ -262,7 +126,17 @@ sub draw {
 	$widget->pdl_lines($xs, $ys, $xs, $zeroes, %properties);
 }
 
+#########################################
+# PDL::Graphics::Prima::PlotType::Blobs #
+#########################################
 
+=head2 Blobs
+
+Lets you draw filled ellipses with per-point x- and y- pixel radii. If you
+specify the key C<radius>, it draws filled circles with the given radius. The
+more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
+
+=cut
 
 package PDL::Graphics::Prima::PlotType::Blobs;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
@@ -351,8 +225,24 @@ sub draw {
 		, %properties);
 }
 
+##########################################
+# PDL::Graphics::Prima::PlotType::Points #
+##########################################
+
 package PDL::Graphics::Prima::PlotType::Points;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+#############################################
+# PDL::Graphics::Prima::PlotType::Histogram #
+#############################################
+
+=head2 Histogram
+
+working here - document
+
+key: topPadding
+
+=cut
 
 package PDL::Graphics::Prima::PlotType::Histogram;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
@@ -480,7 +370,10 @@ sub draw {
 			, $pixel_edges(1:-1), $ys, %properties);
 }
 
-
+#################################################
+# PDL::Graphics::Prima::PlotType::BoxAndWhisker #
+#################################################
+# Plots vertical box-and-whisker at each data point
 
 package PDL::Graphics::Prima::PlotType::BoxAndWhisker;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
@@ -488,7 +381,280 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 package PDL::Graphics::Prima::PlotType::ErrorBars;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
+#########################################
+# PDL::Graphics::Prima::PlotType::Bands #
+#########################################
+# Plots symmetric or unsymmetric error bands around the data
+
 package PDL::Graphics::Prima::PlotType::Bands;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+########################################
+# PDL::Graphics::Prima::PlotType::Area #
+########################################
+# Plots shaded area, where one edge is the data
+
+package PDL::Graphics::Prima::PlotType::Area;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+
+###############################################################################
+#                         Creating your own Plot Type                         #
+###############################################################################
+# Also includes the base type
+
+package PDL::Graphics::Prima::PlotType;
+
+use Carp 'croak';
+
+=head1 Creating your own Plot Type
+
+To write your own plot type, you must create a class that is derived from
+C<PDL::Graphics::Prima::PlotType>. (To make the discussion a bit more concrete,
+I am going to use the ficticious FooBars plotType, which I suppose would plot
+some fancy error bars.) Such a derived class would probably start out with these
+lines of code:
+
+ package PDL::Graphics::Prima::PlotType::FooBars;
+ use base 'PDL::Graphics::Prima::PlotType';
+
+You must then write a custom C<draw> function, and you can optionally overload
+the following functions: C<xmin>, C<xmax>, C<ymin>, C<ymax>, C<initialize>.
+
+You should also install a constructor under C<pt::FooBars> that looks like
+this:
+
+ sub pt::FooBars {
+     PDL::Graphics::Prima::PlotType::FooBars->new(@_);
+ }
+
+That uses the inherited C<PDL::Graphics::Prima::PlotType::new> function, which
+will eventually call your class's C<initialize> function. If your initializer
+expects custom arguments, you should overload the C<initialize> function like
+so:
+
+ # still in the PDL::Graphics::Prima::PlotType::FooBars package
+ sub initialize {
+     my $self = shift;
+     
+     # You could pull items out of @args at this point if you
+     # want. To call the superclass initialization do this:
+     $self->SUPER::initialize(@_);
+     
+     # Here's some custom args processing. If the user did
+     # not specify a curviness, default to 4:
+     $self->{curviness} //= 4;
+     
+     # Could also check that the supplied values make sense:
+     croak('Curviness must be a positive integer')
+         unless $self->{curviness} =~ /^\d+$/
+           and $self->{curviness} > 0;
+ }
+
+You could shove all of that construction functionality into C<pt::FooBars>, but
+then other classes would not be able to derive functionality from your 
+undoubtedly elegant class without resorting to rather inelegant code.
+
+Which brings me to writing plotTypes that are derived from other plotTypes.
+That is allowed, of course, in which case you can override whichever class
+functions you want. At that point, you are doing normal Perl OO programming,
+so it's as easy (and/or annoying) as that.
+
+=cut
+
+# The plotType new function. Do not override this. If you want to override how
+# the plotType is constructed, override the initialize function in your derived
+# class.
+sub new {
+	my $class = shift;
+	my $self = {};
+	bless $self, $class;
+	$self->initialize(@_);
+	return $self;
+}
+
+# Standard initialization expects key/value pairs and simply stores them in
+# $self:
+sub initialize {
+	my $self = shift;
+	croak('Standard plotTypes arguments must be in key => value pairs')
+		if @_ % 2 == 1;
+	my %args = @_;
+	foreach my $key (keys %args) {
+		$self->{$key} = $args{$key};
+	}
+}
+
+=head2 xmin, xmax, ymin, ymax
+
+Note: these are likely to change in the future.
+
+These plotType functions are called when the graph needs to determine automatic
+minima and maxima. Line plots simply return the data's minimum and maximum, but
+more complex plot types, such as those including error bars or blobs, need to
+take more details into consideration.
+
+These functions are always called with three arguments and should always return
+two values. The three arguments are:
+
+=over
+
+=item plotType
+
+This is whatever you created with your constructor; if you're following the
+example above, that would be an instance of the plotType. This passes in
+whatever the dataset was given for the plotType.
+
+=item dataset
+
+The dataset object associated with this particular plotting operation. You can
+access the actual data through this object.
+
+=item widget
+
+The graph widget on which the data is plotted. You will have to go through this
+object to get at the x- or y-axes, which contain the actual minima and maxima
+of the plot.
+
+=back
+
+The two values it should return are:
+
+=over
+
+=item extremum-value
+
+The actual minimum value needed to automatically display the data nicely. For
+line plots this is just the min or max of the dataset, but if you have error
+bars, for example, you would want a smaller minimum and a larger maximum to
+accomodate the width or height of the error bars.
+
+=item pixel-padding
+
+Any extra space needed to display the results nicely. For example, the width of
+blobs are specified in pixels. In that case, you would specify a minimum or
+maximum value corresponding to the dataset's extremum, and specify a padding
+corresponding to the blob's x- or y-radius, as appropriate.
+
+=back
+
+The x-version of these functions is never called by function-based datasets,
+since the x-values for such datsets are determined on-the-fly. If you cannot
+determine an extremum, or do not want to determine an extremum, you can return
+the undefined value and it will be ignored.
+
+=cut
+
+sub xmin {
+	my ($self, $dataset, $widget) = @_;
+
+	# Ostensibly, this version of xmin doesn't care what invocant you called it
+	# with because it does not need any information from self. I unpack all of
+	# the arguments here to illustrate the calling order.
+	
+	# Return the minimum of the data with a padding of 1 pixel. Note that this
+	# assumes that the data at $dataset->[0] is a piddle if it is not a code
+	# reference. The validation for this assumption was handled in the
+	# initialize function.
+	
+	# This logic is made complicated by the fact that a bad value in x or y
+	# should invalidate the pair. So, I resort to using the minmaxforpair
+	# function, written specifically to solve this very problem.
+	my ($xs, $ys) = $dataset->get_data($widget);
+	
+	my ($xmins) = PDL::minmaxforpair($xs, $ys);
+	return ($xmins->min, 1);
+}
+
+sub xmax {
+	# Get the dataset object, the second argument to this function:
+	my ($dataset, $widget) = @_[1..2];
+	# Get both x and y and get the xmax:
+	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data($widget));
+	return ($xmaxes->max, 1);
+}
+
+sub ymin {
+	my ($dataset, $widget) = @_[1..2];
+	# Get both x and y and get the ymin:
+	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data($widget));
+	return ($ymins->min, 1);
+}
+sub ymax {
+	my ($dataset, $widget) = @_[1..2];
+	# Get both x and y and get the ymin:
+	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data($widget));
+	return ($ymaxes->max, 1);
+}
+
+=head2 generate_properties
+
+Needs to be explained. Basically, this accumulates all the properties from the
+plotType object together with thsoe from the dataset into a single hash that
+you can submit to one of the (PDL-based) Prima drawing methods.
+
+This function is provided for your use in the draw() function. You should not
+usually have a need to override it.
+
+=cut
+
+# This function exists to aggregate the list of properties that have been set
+# for the dataset in general (I want all plot types for this data to be red) and
+# for this particular plotType object (I want the error bars to have a lineWidth
+# of 3):
+sub generate_properties {
+	my ($self, $dataset, @prop_list) = @_;
+	my %properties;
+	
+	# Add all of the specified properties to a local collection that eventually
+	# gets passed to the low-level drawing routine:
+	foreach (@prop_list) {
+		if (ref($self) and exists $self->{$_}) {
+			$properties{$_} = $self->{$_};
+		}
+		elsif (exists $dataset->{$_}) {
+			$properties{$_} = $dataset->{$_};
+		}
+	}
+	
+	return %properties;
+}
+
+=head2 draw
+
+Needs explanation and examples. This function will be called whenever the
+plot widget needs to redraw your plotType (window resizes, zooms, etc). It is
+called with three arguments: the plotType object, the dataSet object, and
+the widget object.
+
+Now, something that I I<always> forget to do is to convert the data values to
+pixel values. You do that with the widget's x- and y-axis objects with code like
+
+ my $x_to_plot = $widget->x->reals_to_pixels($xs)
+
+If it seems like your new plot type is not plotting anything, be sure that you
+have properly converted the points you are trying to plot.
+
+=cut
+
+sub draw {
+	my $invocant = shift;
+	my $class = ref($invocant) ? ref($invocant) : $invocant;
+	croak("Plot type $class does not define its own drawing function. Please "
+		. 'report this bug to the author');
+}
+
+
+
+
+=head1 AUTHOR, COPYRIGHT
+
+This module was written by David Mertens.
+
+Copyright 2011, David Mertens, all rights reserved. This library is free
+software; you can redistribute it and/or modify it under the same tersm as Perl
+itself.
+
+=cut
 
 1;
