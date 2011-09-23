@@ -97,7 +97,11 @@ sub init {
 
 # Simply changes the internal value; does not issue a redraw. The pixel_extent
 # data contains the full width or height of the widget, in pixels.
-sub set_pixel_extent {
+sub pixel_extent {
+	if (@_ == 1) {
+		return $_[0]->{pixel_extent};
+	}
+	
 	my ($self, $new_extent) = @_;
 
 	$self->{pixel_extent} = $new_extent;
@@ -178,6 +182,11 @@ sub recompute_max_auto {
 
 sub recompute_auto {
 	my ($self) = @_;
+	# Perform the calculation if either value is auto:
+#	if ($self->{minAuto} or $self->{maxAuto}) {
+#		my ($min, $max) = $self->owner->compute_min_max_for($self->name);
+#		
+#	}
 	$self->recompute_min_auto if ($self->{minAuto});
 	$self->recompute_max_auto if ($self->{maxAuto});
 }
@@ -371,21 +380,17 @@ Note that the internal min/max values are stored in C<minValue> and C<maxValue>.
 =cut
 
 sub reals_to_relatives {
-	my ($axis, $dataset) = @_;
-	return $axis->{scaling}->transform(
-		  $axis->{minValue}
-		, $axis->{maxValue}
-		, $dataset
-	);
+	my ($axis, $dataset, $min, $max) = @_;
+	$min = $axis->{minValue} unless defined $min;
+	$max = $axis->{maxValue} unless defined $max;
+	return $axis->{scaling}->transform($min, $max, $dataset);
 }
 
 sub relatives_to_reals {
-	my ($axis, $dataset) = @_;
-	return $axis->{scaling}->inv_transform(
-		  $axis->{minValue}
-		, $axis->{maxValue}
-		, $dataset
-	);
+	my ($axis, $dataset, $min, $max) = @_;
+	$min = $axis->{minValue} unless defined $min;
+	$max = $axis->{maxValue} unless defined $max;
+	return $axis->{scaling}->inv_transform($min, $max, $dataset);
 }
 
 =head2 pixels_to_relatives, relatives_to_pixels
@@ -417,13 +422,13 @@ locations. This simply combines the previous two documented functions.
 =cut
 
 sub reals_to_pixels {
-	my ($axis, $dataset) = @_;
-	return $axis->relatives_to_pixels($axis->reals_to_relatives($dataset));
+	my ($axis, $dataset, @args) = @_;
+	return $axis->relatives_to_pixels($axis->reals_to_relatives($dataset, @args));
 }
 
 sub pixels_to_reals {
-	my ($axis, $dataset) = @_;
-	return $axis->relatives_to_reals($axis->pixels_to_relatives($dataset));
+	my ($axis, $dataset, @args) = @_;
+	return $axis->relatives_to_reals($axis->pixels_to_relatives($dataset), @args);
 }
 
 =head2 viewMin, viewMax, viewMinMax

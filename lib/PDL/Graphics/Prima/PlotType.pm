@@ -73,8 +73,38 @@ sub pt::Lines {
 #	
 #}
 
-# The min/max functions work just fine for lines, but I need to define a drawing
-# method:
+# Collation needs some work, since the threading doesn't work quite right
+# out-of-the-box. The line data is polyline data and it must be reduced
+# first.
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	
+	# Extract the line widths, against which we'll collate:
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
+	# get the rest of the piddles; we don't need their names:
+	my @prop_piddles = values %properties;
+	
+	# Get the data:
+	my ($xs, $ys) = $dataset->get_data;
+	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
+	
+	# working here - now that minmaxforpair does not return infs, make sure
+	# this works
+	my ($min_to_check, $max_to_check) = ($min_x, $max_x);
+	($min_to_check, $max_to_check) = ($min_y, $max_y) if $axis_name eq 'y';
+	
+	# Collate the min and the max:
+	return PDL::collate_min_max_wrt_many($min_to_check, $lineWidths,
+			$max_to_check, $lineWidths, $pixel_extent, @prop_piddles);
+}
+
+
+# I need to define a drawing method:
 sub draw {
 	my ($self, $dataset, $widget) = @_;
 	
@@ -143,133 +173,77 @@ sub initialize {
 	elsif(exists $self->{x_baseline} and exists $self->{y_baseline}) {
 		croak("You can only specify an x_baseline or a y_baseline, not both");
 	}
+	foreach (qw(x_baseline y_baseline)) {
+		# Make sure they supplied a defined value:
+		croak("You must supply a numeric value for the baseline")
+			if exists $self->{$_} and not defined $self->{$_};
+		# Ensure that value is numeric:
+		$self->{$_} = $self->{$_} + 0 if exists $self->{$_};
+	}
 }
 
-# Override the min/max functions to give padding values:
-sub xmin {
-	my ($self, $dataset, $widget) = @_;
+# The collation code needs to be written:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
 	
-	# Call the superclass xmin function, ignoring the returned padding:
-	my ($xmin) = $self->SUPER::xmin($dataset, $widget);
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 	
-	# If the baseline is an x-baseline (horizontal lines), we will consider an
-	# x-min of whatever they indicated; otherwise, the data's x-min is the x-min
-	# of interest:
-	if (exists $self->{x_baseline} and not defined $self->{x_baseline}) {
-		return ($xmin, 1);
-	}
-	elsif (exists $self->{x_baseline}) {
-		return ($self->{x_baseline}, 1) if $self->{x_baseline} < $xmin;
-		return ($xmin, 1);
-	}
+	# Get the data:
+	my ($to_check, $extra) = my ($xs, $ys) = $self->dataset->get_data;
+	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
 	
-	# Otherwise, the baseline is a y-baseline, in which case we are drawing
-	# vertical lines. The xmin is straight-forward but we must take the
-	# linewidths into account for the padding.
-	if (exists $self->{lineWidths}) {
-		my $width = $self->{lineWidths}->max;
-		return ($xmin, $width);
+	# The min/max depend on whether the baseline we're using has the same
+	# name as the axis we're using, or not. If the baseline has the same
+	# name as the axis of interest, then the spikes are drawn in the
+	# direction of the axis and the needed padding is 1. If the baseline is
+	# in the other axis, then the pixel extent is the line width.
+	my $baseline_name = $axis_name . '_baseline';
+	if (exists $self->{$baseline_name}) {
+		# get the property piddles; we don't need their names:
+		my @prop_piddles = (values %properties, $extra);
+		
+		# Collate the min and the max:
+		my ($min, $max) = PDL::collate_min_max_wrt_many($to_check, 1,
+			$to_check, 1, $pixel_extent, @prop_piddles);
+		
+		# make sure that the minima are less than or equal to zero:
+		my $baseline = $self->{$baseline_name};
+		my $good_min = $min->where($min->isgood);
+		$good_min->where($good_min > $baseline) .= $baseline
+			if($good_min->nelem > 0);
+		my $good_max = $max->where($max->isgood);
+		$good_max->where($good_max < $baseline) .= $baselne
+			if($good_max->nelem > 0);
+		
+		return ($min, $max);
 	}
-	# Otherwise, return a padding of 1:
-	return ($xmin, 1);
-}
-
-sub xmax {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Call the superclass xmax function, ignoring the returned padding:
-	my ($xmax) = $self->SUPER::xmax($dataset, $widget);
-	
-	# If the baseline is an x-baseline (horizontal lines), we will consider an
-	# x-max of whatever they indicated in case all the x-data is less than the
-	# baseline. In the special case of the undefined baseline, the max will
-	# always be the data's max since the baseline is the data's min:
-	if (exists $self->{x_baseline} and not defined $self->{x_baseline}) {
-		return ($xmax, 1);
+	else {
+		# Extract the line widths, against which we'll collate:
+		my $lineWidths = $properties{lineWidths};
+		$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+		delete $properties{lineWidths};
+		# get the rest of the piddles; we don't need their names:
+		my @prop_piddles = (values %properties, $extra);
+		
+		# Collate and return the min and the max:
+		return PDL::collate_min_max_wrt_man($to_check, $lineWidths,
+				$to_check, $lineWidths, $pixel_extent, @prop_piddles);
 	}
-	elsif (exists $self->{x_baseline}) {
-		return ($self->{x_baseline}, 1) if $self->{x_baseline} > $xmax;
-		return ($xmax, 1);
-	}
-
-	# Otherwise, the baseline is a y-baseline, in which case we are drawing
-	# vertical lines. The xmin is straight-forward but we must take the
-	# linewidths into account for the padding.
-	if (exists $self->{lineWidths}) {
-		my $width = $self->{lineWidths}->max;
-		return ($xmax, $width);
-	}
-	# Otherwise, return a padding of 1:
-	return ($xmax, 1);
-}
-
-sub ymin {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Call the superclass ymin function, ignoring the returned padding:
-	my ($ymin) = $self->SUPER::ymin($dataset, $widget);
-	
-	# If the baseline is an y-baseline (vertical lines), we will consider an
-	# y-min of whatever they indicated; otherwise, the data's y-min is the y-min
-	# of interest:
-	if (exists $self->{y_baseline} and not defined $self->{y_baseline}) {
-		return ($ymin, 1);
-	}
-	elsif (exists $self->{y_baseline}) {
-		return ($self->{y_baseline}, 1) if $self->{y_baseline} < $ymin;
-		return ($ymin, 1);
-	}
-	
-	# Otherwise, the baseline is an x-baseline, in which case we are drawing
-	# horizontal lines. The ymin is straight-forward but we must take the
-	# linewidths into account for the padding.
-	if (exists $self->{lineWidths}) {
-		my $width = $self->{lineWidths}->max;
-		return ($ymin, $width);
-	}
-	# Otherwise, return a padding of 1:
-	return ($ymin, 1);
-}
-
-sub ymax {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Call the superclass ymax function, ignoring the returned padding:
-	my ($ymax) = $self->SUPER::ymax($dataset, $widget);
-	
-	# If the baseline is an y-baseline (vertical lines), we will consider an
-	# y-max of whatever they indicated in case all the y-data is less than the
-	# baseline. In the special case of the undefined baseline, the max will
-	# always be the data's max since the baseline is the data's min:
-	if (exists $self->{y_baseline} and not defined $self->{y_baseline}) {
-		return ($ymax, 1);
-	}
-	elsif (exists $self->{y_baseline}) {
-		return ($self->{y_baseline}, 1) if $self->{y_baseline} > $ymax;
-		return ($ymax, 1);
-	}
-
-	# Otherwise, the baseline is an x-baseline, in which case we are drawing
-	# horizontal lines. The ymax is straight-forward but we must take the
-	# linewidths into account for the padding.
-	if (exists $self->{lineWidths}) {
-		my $width = $self->{lineWidths}->max;
-		return ($ymax, $width);
-	}
-	# Otherwise, return a padding of 1:
-	return ($ymax, 1);
 }
 
 # Here is the method for drawing spikes:
 sub draw {
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties($dataset
 		, @PDL::Drawing::Prima::lines_props);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
+	my $widget = $self->widget;
 	
 	# Draw the lines, either horizontal or vertical, based on the given baseline
 	if (exists $self->{y_baseline}) {
@@ -348,48 +322,45 @@ sub initialize {
 	$self->{yRadius} = $y_radius;
 }
 
-sub xmin {
-	# Get the dataset object:
-	my ($self, $dataset, $widget) = @_;
-	# Return the data's min and the max blob horizontal radius:
-	my ($xmin) = $self->SUPER::xmin($dataset, $widget);
-	return ($xmin, $self->{xRadius}->max);
-}
-sub xmax {
-	# Get the dataset object:
-	my ($self, $dataset, $widget) = @_;
-	# Return the data's max and the max blob horizontal radius:
-	my ($xmax) = $self->SUPER::xmax($dataset, $widget);
-	return ($xmax, $self->{xRadius}->max);
-}
-
-sub ymin {
-	# Get the dataset object:
-	my ($self, $dataset, $widget) = @_;
-	# Return the data's min and the max blob vertical radius:
-	my ($ymin) = $self->SUPER::ymin($dataset, $widget);
-	return ($ymin, $self->{yRadius}->max);
-}
-sub ymax {
-	# Get the dataset object:
-	my ($self, $dataset, $widget) = @_;
-	# Return the data's max and the max blob horizontal radius:
-	my ($ymax) = $self->SUPER::ymax($dataset, $widget);
-	return ($ymax, $self->{yRadius}->max);
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::fill_ellipses_props);
+	my @extras = values %properties;
+	
+	# Get the data and radii:
+	my ($x, $y) = $self->dataset->get_data;
+	my ($to_check, $radii);
+	if ($axis_name eq 'x') {
+		$to_check = $xs;
+		$radii = $self->{xRadius};
+		push @extras, $ys, $self->{yRadius};
+	}
+	else {
+		$to_check = $ys;
+		$radii = $self->{yRadius};
+		push @extras, $xs, $self->{xRadius};
+	}
+	
+	# Return the collated results:
+	return PDL::collate_min_max_wrt_many($to_check, $radii, $to_check, $radii
+		, $pixel_extent, @extras);
 }
 
 sub draw {
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties($dataset
-		, @PDL::Drawing::Prima::fill_ellipses_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::fill_ellipses_props);
 	
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
 
 	# plot it:
-	$widget->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
+	$self->widget->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
 		, %properties);
 }
 
@@ -408,7 +379,7 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 working here - document
 
-key: topPadding
+keys: topPadding, baseline
 
 =cut
 
@@ -432,32 +403,35 @@ sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	
-	# Default to an upper padding of of 5 pixels:
-	$self->{topPadding} //= 5;
+	# Default to an upper padding of of 10 pixels:
+	$self->{topPadding} = 10 unless defined $self->{topPadding};
 	croak("topPadding must be a nonnegative integer")
 		unless $self->{topPadding} =~ /^\d+$/ and $self->{topPadding} >= 0;
+	
+	# Make sure we have a default baseline:
+	$self->{baseline} = 0 unless defined $self->{baseline};
+	$self->{baseline} += 0;
 }
 
 use PDL::NiceSlice;
 
 # Returns user-supplied or computed bin-edge data.
-# working here - apply a caching strategy?
-# working here - use SUPER::xmin, et al.?
 sub get_bin_edges {
 	# Return the bin-edges if we have an internal copy of them:
-#	return $_[0]->{binEdges} if exists $_[0]->{binEdges};
+	return $_[0]->{binEdges} if exists $_[0]->{binEdges};
 	
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
 	
-	# Compute new bin edges:
-	my $xs = $dataset->get_xs($widget);
+	# Compute linear bin edges if none are supplied:
+	my $xs = $self->dataset->get_xs($widget);
 	my @dims = $xs->dims;
 	$dims[0]++;
 	my $widths = $xs(1,) - $xs(0,);
 	my $edges = xvals(@dims) * $widths + $xs(0,);
+	# working here - croak on bad bounds?
 	
 	# Store these bin edges if the underlying dataset is static:
-#	$self->{binEdges} = $edges unless ref($dataset) =~ /Func/;
+	$self->{binEdges} = $edges unless ref($dataset) =~ /Func/;
 	
 	return $edges;
 	
@@ -480,51 +454,46 @@ sub get_bin_edges {
 #	return $edges;
 }
 
-sub xmin {
-	# unpack the arguments:
-	my ($self, $dataset, $widget) = @_;
-	# Get the bin edges and return the left-most edge:
-	my $edges = $self->get_bin_edges($dataset, $widget);
-	# working here - used to be $edges(0)->min
-	return ($edges->min, 1);
-}
-sub xmax {
-	# unpack the arguments:
-	my ($self, $dataset, $widget) = @_;
-	# Get the bin edges and return the left-most edge:
-	my $edges = $self->get_bin_edges($dataset, $widget);
-	return ($edges->max, 1);
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
+	
+	# Extract the line widths, against which we'll collate:
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
+	
+	my ($xs, $ys) = $self->dataset->get_data;
+	# For the y min/max, get the y-data, the padding, and the baseline:
+	if ($axis_name eq 'y') {
+		my $padding = $self->{topPadding};
+		return PDL::collate_min_max_wrt_many($ys, $lineWidths
+			, $ys, $lineWidths + $padding, $pixel_extent
+			, $xs, values %properties);
+	}
+	# For the x min/max, get the bin edges and collate by line width:
+	else {
+		my $edges = $self->get_bin_edges;
+		return PDL::collate_min_max_wrt_many($edges(0:-2), $lineWidths
+			, $edges(1:-1), $lineWidths, $pixel_extent
+			, $ys, values %properties);
+	}
 }
 
-sub ymin {
-	my ($self, $dataset, $widget) = @_;
-	# Get the y-data:
-	my $ys = $dataset->get_ys($widget);
-	# Return the data's min, or zero, with no padding:
-	# (This allows the histogram to include negative y-values.)
-	my $ymin = $ys->min;
-	$ymin = 0 if $ymin > 0;
-	return ($ymin, 0);
-}
-sub ymax {
-	my ($self, $dataset, $widget) = @_;
-	# Get the y-data:
-	my $ys = $dataset->get_ys($widget);
-	# Return the data's max with a big padding:
-	return ($ys->max, $self->{topPadding});
-}
 
 sub draw {
 	my ($self, $dataset, $widget) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties($dataset
-		, @PDL::Drawing::Prima::rectangles_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
 	
 	# Get the edges and convert everything to pixels:
 	my $edges = $self->get_bin_edges($dataset, $widget);
 	my $pixel_edges = $widget->x->reals_to_pixels($edges);
-	my $pixel_bottom = $widget->y->reals_to_pixels(0);
+	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline});
 	my $ys = $widget->y->reals_to_pixels($dataset->get_ys($widget));
 	
 	$widget->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
@@ -615,65 +584,138 @@ sub x_bars_present {
 	return exists($self->{left_bars}) or exists($self->{right_bars});
 }
 
-# The various min/max functions
-sub xmin {
-	my ($self, $dataset, $widget) = @_;
-
-	# Return the minimum of the data modified by the error bars, as they exist.
-	my ($xs, $ys) = $dataset->get_data($widget);
-	$xs = $xs - $self->{left_bars} if exists $self->{left_bars};
-	my ($xmins) = PDL::minmaxforpair($xs, $ys);
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
 	
-	# Add padding for y error-bars if present:
-	return ($xmins->min, $self->{y_err_width})
-		if $self->y_bars_present;
-	# Otherwise we don't need any extra space:
-	return ($xmins->min, 1);
-}
-
-sub xmax {
-	my ($self, $dataset, $widget) = @_;
-
-	# Return the maximum of the data modified by the error bars, as they exist.
-	my ($xs, $ys) = $dataset->get_data($widget);
-	$xs = $xs + $self->{right_bars} if exists $self->{right_bars};
-	my (undef, undef, $xmaxes) = PDL::minmaxforpair($xs, $ys);
+	# Get the list of properties for which we need to look for bad values:
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 	
-	# Add padding for y error-bars if present:
-	return ($xmaxes->max, $self->{y_err_width})
-		if $self->y_bars_present;
-	# Otherwise we don't need any extra space:
-	return ($xmaxes->max, 1);
-}
-
-sub ymin {
-	my ($self, $dataset, $widget) = @_;
-
-	# Return the minimum of the data modified by the error bars, as they exist.
-	my ($xs, $ys) = $dataset->get_data($widget);
-	$ys = $ys - $self->{lower_bars} if exists $self->{lower_bars};
-	my (undef, $ymins) = PDL::minmaxforpair($xs, $ys);
+	# Extract the line widths, which might be the index during the collation
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
 	
-	# Add padding for x error-bars if present:
-	return ($ymins->min, $self->{x_err_width})
-		if $self->x_bars_present;
-	# Otherwise we don't need any extra space:
-	return ($ymins->min, 1);
-}
-
-sub ymax {
-	my ($self, $dataset, $widget) = @_;
-
-	# Return the maximum of the data modified by the error bars, as they exist.
-	my ($xs, $ys) = $dataset->get_data($widget);
-	$ys = $ys + $self->{upper_bars} if exists $self->{upper_bars};
-	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($xs, $ys);
+	# This gets pretty complex. For example, consider the x-min. The
+	# collation must combine the x data and their widths (the widths of the
+	# error bars as well as the caps) along with x-minus-errors and the
+	# linewidths.
 	
-	# Add padding for x error-bars if present:
-	return ($ymaxes->max, $self->{x_err_width})
-		if $self->x_bars_present;
-	# Otherwise we don't need any extra space:
-	return ($ymaxes->max, 1);
+	my ($xs, $ys) = $self->dataset->get_data;
+	my (@mins, @maxes);
+	
+	# I'm going to hack through this. It could probably be cleaner, so
+	# I'm marking it as working here:
+	if ($axis_name eq 'x') {
+		# Let's get started with left error bars
+		if (exists($self->{left_bars})) {
+			my ($min, $max) = PDL::collate_min_max_wrt_many(
+				  $xs - $self->{left_bars}, $lineWidths, $xs, 0
+				, $pixel_extent, values %properties
+				, $self->{x_err_width}, $lineWidths, $ys);
+			push @mins, $min;
+			push @maxes, $max;
+		}
+		# Right error bars:
+		if (exists $self->{left_bars}) {
+			my ($min, $max) = PDL::collate_min_max_wrt_many(
+				  $xs, 0, $xs + $self->{right_bars}, $lineWidths
+				, $pixel_extent, values %properties
+				, $self->{x_err_width}, $lineWidths, $ys);
+			push @mins, $min;
+			push @maxes, $max;
+		}
+		# Vertical error bars:
+		if ($self->y_bars_present) {
+			# Build the list of widths to be the greater of the lineWidths
+			# and the y_err_width
+			my $a = PDL::Core::topdl($lineWidths);
+			my $b = PDL::Core::topdl($self->{y_err_width});
+			($b, $a) = ($a, $b) if $a->ndims < $b->ndims;
+			my $width = $a->cat($b)->mv(-1,0)->maximum;
+			
+			if (exists $self->{upper_bars}) {
+				my ($min, $max) = PDL::collate_min_max_wrt_many(
+					  $xs, $width, $xs, $width
+					, $pixel_extent, values %properties
+					, $self->{y_err_width}, $lineWidths, $ys
+					, $self->{upper_bars});
+				push @mins, $min;
+				push @maxes, $max;
+			}
+			if (exists $self->{lower_bars}) {
+				my ($min, $max) = PDL::collate_min_max_wrt_many(
+					  $xs, $width, $xs, $width
+					, $pixel_extent, values %properties
+					, $self->{y_err_width}, $lineWidths, $ys
+					, $self->{lower_bars});
+				push @mins, $min;
+				push @maxes, $max;
+			}
+		}
+	}
+	else {
+		# Start with lower error bars
+		if (exists($self->{lower_bars})) {
+			my ($min, $max) = PDL::collate_min_max_wrt_many(
+				  $ys - $self->{lower_bars}, $lineWidths, $ys, 0
+				, $pixel_extent, values %properties
+				, $self->{y_err_width}, $lineWidths, $xs);
+			push @mins, $min;
+			push @maxes, $max;
+		}
+		# Upper error bars:
+		if (exists $self->{upper_bars}) {
+			my ($min, $max) = PDL::collate_min_max_wrt_many(
+				  $ys, 0, $ys + $self->{upper_bars}, $lineWidths
+				, $pixel_extent, values %properties
+				, $self->{y_err_width}, $lineWidths, $xs);
+			push @mins, $min;
+			push @maxes, $max;
+		}
+		# Vertical error bars:
+		if ($self->x_bars_present) {
+			# Build the list of widths to be the greater of the lineWidths
+			# and the y_err_width
+			my $a = PDL::Core::topdl($lineWidths);
+			my $b = PDL::Core::topdl($self->{x_err_width});
+			($b, $a) = ($a, $b) if $a->ndims < $b->ndims;
+			my $width = $a->cat($b)->mv(-1,0)->maximum;
+			
+			if (exists $self->{left_bars}) {
+				my ($min, $max) = PDL::collate_min_max_wrt_many(
+					  $ys, $width, $ys, $width
+					, $pixel_extent, values %properties
+					, $self->{x_err_width}, $lineWidths, $xs
+					, $self->{left_bars});
+				push @mins, $min;
+				push @maxes, $max;
+			}
+			if (exists $self->{right_bars}) {
+				my ($min, $max) = PDL::collate_min_max_wrt_many(
+					  $ys, $width, $ys, $width
+					, $pixel_extent, values %properties
+					, $self->{x_err_width}, $lineWidths, $xs
+					, $self->{right_bars});
+				push @mins, $min;
+				push @maxes, $max;
+			}
+		}
+	}
+	
+	# combine all of them
+	if (@mins > 1) {
+		# combine with cat and return
+		return cat(@mins), cat(@maxes);
+	}
+	elsif (@mins = 1) {
+		return (@mins, @maxes);
+	}
+	else {
+		# return arrays full of bad values
+		my $to_return = zeroes($pixel_extent+1)->setvaltobad(0);
+		return ($to_return, $to_return);
+	}
 }
 
 sub draw {
@@ -889,15 +931,34 @@ sub initialize {
 	}
 }
 
+# Collation function is really, really simple
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::bars_props);
+	
+	my ($xs, $ys) = $self->dataset->get_data;
+	my $widget = $self->widget;
+	# Use the custom xs and ys if supplied:
+	$xs = $self->{xs} if exists $self->{xs};
+	$ys = $self->{ys} if exists $self->{ys};
+	
+	my ($to_check, $extra) = ($xs, $ys);
+	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
+	
+	# Fudging a little bith with $extra, this could be improved
+	# working here
+	return PDL::collate_min_max_wrt_many($to_check(:-2), 0, $to_check(1:), 0
+		, values %properties, $extra(1:));
+}
+
 # Don't need to supply x or y min/max functions
 
-# I need a drawing function. Keep the drawing type (bars) in sync with the
-# Prima drawing function used below.
-my @colorGrid_props = grep {$_ !~ /colors/} @PDL::Drawing::Prima::bars_props;
-
 sub draw {
-	my ($self, $dataset, $widget) = @_;
-	my ($xs, $ys) = $dataset->get_data($widget);
+	my ($self) = @_;
+	my ($xs, $ys) = $self->dataset->get_data;
+	my $widget = $self->widget;
 	# Use the custom xs and ys if supplied:
 	$xs = $self->{xs} if exists $self->{xs};
 	$ys = $self->{ys} if exists $self->{ys};
@@ -954,15 +1015,14 @@ sub draw {
 	# Gather the properties that I will need to use in the plotting. Be sure to
 	# keep the props (generated above) in sync with the actual Prima drawing
 	# command used below.
-	my %properties = $self->generate_properties($dataset, @colorGrid_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
 	
 	# Set up the x- and y- dimension lists for proper threading:
 	$xs = $xs->dummy(1, $colors->dim(1));
 	$ys = $ys->dummy(0, $colors->dim(0));
 
 	# Now draw the bars for each rectangle:
-	$widget->pdl_bars($xs(:-2), $ys(,:-2), $xs(1:), $ys(,1:)
-		, colors => $colors, %properties);
+	$widget->pdl_bars($xs(:-2), $ys(,:-2), $xs(1:), $ys(,1:), %properties);
 }
 
 ##########################################
@@ -1126,46 +1186,27 @@ the undefined value and it will be ignored.
 
 =cut
 
-sub xmin {
-	my ($self, $dataset, $widget) = @_;
-
-	# Ostensibly, this version of xmin doesn't care what invocant you called it
-	# with because it does not need any information from self. I unpack all of
-	# the arguments here to illustrate the calling order.
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 	
-	# Return the minimum of the data with a padding of 1 pixel. Note that this
-	# assumes that the data at $dataset->[0] is a piddle if it is not a code
-	# reference. The validation for this assumption was handled in the
-	# initialize function.
+	# Extract the line widths, against which we'll collate:
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
+	# get the rest of the piddles; we don't need their names:
+	my @prop_piddles = values %properties;
 	
-	# This logic is made complicated by the fact that a bad value in x or y
-	# should invalidate the pair. So, I resort to using the minmaxforpair
-	# function, written specifically to solve this very problem.
-	my ($xs, $ys) = $dataset->get_data($widget);
+	# Get the data:
+	my ($xs, $ys) = $dataset->get_data;
+	my ($to_check, $extra) = ($x, $y);
+	($to_check, $extra) = ($y, $x) if $axis_name eq 'y';
 	
-	my ($xmins) = PDL::minmaxforpair($xs, $ys);
-	return ($xmins->min, 1);
-}
-
-sub xmax {
-	# Get the dataset object, the second argument to this function:
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the xmax:
-	my (undef, undef, $xmaxes) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($xmaxes->max, 1);
-}
-
-sub ymin {
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the ymin:
-	my (undef, $ymins) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($ymins->min, 1);
-}
-sub ymax {
-	my ($dataset, $widget) = @_[1..2];
-	# Get both x and y and get the ymin:
-	my (undef, undef, undef, $ymaxes) = PDL::minmaxforpair($dataset->get_data($widget));
-	return ($ymaxes->max, 1);
+	# Collate:
+	return collate_min_max_wrt_many($to_check, $lineWidths
+		, $to_check, $lineWidths, $pixel_extent, $extra, @prop_piddles);
 }
 
 =head2 generate_properties
@@ -1184,8 +1225,9 @@ usually have a need to override it.
 # for this particular plotType object (I want the error bars to have a lineWidth
 # of 3):
 sub generate_properties {
-	my ($self, $dataset, @prop_list) = @_;
+	my ($self, @prop_list) = @_;
 	my %properties;
+	my $dataset = $self->dataset;
 	
 	# Add all of the specified properties to a local collection that eventually
 	# gets passed to the low-level drawing routine:
@@ -1199,6 +1241,26 @@ sub generate_properties {
 	}
 	
 	return %properties;
+}
+
+=head2 widget
+
+working here
+
+=head2 dataset
+
+working here
+
+=cut
+
+sub widget {
+	$_[0]->{widget} = $_[1] if (@_ == 2);
+	return $_[0]->{widget};
+}
+
+sub dataset {
+	$_[0]->{dataSet} = $_[1] if (@_ == 2);
+	return $_[0]->{dataSet};
 }
 
 =head2 draw
@@ -1235,7 +1297,9 @@ sub draw {
 package PDL::Graphics::Prima::PlotType::CallBack;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
-# working here - this isn't working the way it's supposed to
+# working here - this isn't working the way it's supposed to, and I need to
+# update the documentation since I no longer have the min/max functions, but
+# I do need the collation function.
 
 =head1 CallBack
 
@@ -1300,118 +1364,6 @@ sub initialize {
 			unless exists $self->{draw} and ref ($self->{draw})
 				and ref ($self->{draw}) eq 'CODE';
 		
-	}
-}
-
-# Dynamic xmax processing based upon current value of xmax key:
-sub xmax {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Return an xmax that depends on what they supplied:
-	if (not exists $self->{xmax}) {
-		# No xmax specified. Use the base class's xmax:
-		my $class = ref($self);
-		bless $self, $self->{base_class};
-		$self->xmax($dataset, $widget);
-		bless $self, $class;
-	}
-	elsif (not ref($self->{xmax})) {
-		# No ref means they gave a scalar for xmax, which means they want to
-		# use the default padding of 1:
-		return ($self->{xmax}, 1);
-	}
-	elsif (ref($self->{xmax}) eq 'ARRAY') {
-		# Array ref for xmax means they gave both value and padding:
-		return @{$self->{xmax}};
-	}
-	elsif (ref($self->{xmax}) eq 'CODE') {
-		# Code ref means they supplied their own code:
-		my $func = $self->{xmax};
-		return &$func($self, $dataset, $widget);
-	}
-}
-
-# Dynamic xmin processing based upon current value of xmin key:
-sub xmin {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Return an xmin that depends on what they supplied:
-	if (not exists $self->{xmin}) {
-		# No xmin specified. Use the base class's xmin:
-		my $class = ref($self);
-		bless $self, $self->{base_class};
-		$self->xmin($dataset, $widget);
-		bless $self, $class;
-	}
-	elsif (not ref($self->{xmin})) {
-		# No ref means they gave a scalar for xmin, which means they want to
-		# use the default padding of 1:
-		return ($self->{xmin}, 1);
-	}
-	elsif (ref($self->{xmin}) eq 'ARRAY') {
-		# Array ref for xmin means they gave both the value and the padding:
-		return @{$self->{xmin}};
-	}
-	elsif (ref($self->{xmin}) eq 'CODE') {
-		# Code ref means they supplied their own code:
-		my $func = $self->{xmin};
-		return &$func($self, $dataset, $widget);
-	}
-}
-
-# Dynamic ymax processing based upon current value of ymax key:
-sub ymax {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Return an ymax that depends on what they supplied:
-	if (not exists $self->{ymax}) {
-		# No ymax specified. Use the base class's ymax:
-		my $class = ref($self);
-		bless $self, $self->{base_class};
-		$self->ymax($dataset, $widget);
-		bless $self, $class;
-	}
-	elsif (not ref($self->{ymax})) {
-		# No ref means they gave a scalar for ymax, which means they want to
-		# use the default padding of 1:
-		return ($self->{ymax}, 1);
-	}
-	elsif (ref($self->{ymax}) eq 'ARRAY') {
-		# Array ref for ymax means they gave both value and padding:
-		return @{$self->{ymax}};
-	}
-	elsif (ref($self->{ymax}) eq 'CODE') {
-		# Code ref means they supplied their own code:
-		my $func = $self->{ymax};
-		return &$func($self, $dataset, $widget);
-	}
-}
-
-# Dynamic ymin processing based upon current value of ymin key:
-sub ymin {
-	my ($self, $dataset, $widget) = @_;
-	
-	# Return an ymin that depends on what they supplied:
-	if (not exists $self->{ymin}) {
-		# No ymin specified. Use the base class's ymin:
-		my $class = ref($self);
-		bless $self, $self->{base_class};
-		$self->ymin($dataset, $widget);
-		bless $self, $class;
-	}
-	elsif (not ref($self->{ymin})) {
-		# No ref means they gave a scalar for ymin, which means they want to
-		# use the default padding of 1:
-		return ($self->{ymin}, 1);
-	}
-	elsif (ref($self->{ymin}) eq 'ARRAY') {
-		# Array ref for ymin means they gave both the value and the padding:
-		return @{$self->{ymin}};
-	}
-	elsif (ref($self->{ymin}) eq 'CODE') {
-		# Code ref means they supplied their own code:
-		my $func = $self->{ymin};
-		return &$func($self, $dataset, $widget);
 	}
 }
 
