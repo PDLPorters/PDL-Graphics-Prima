@@ -74,7 +74,7 @@ that is only meant to be used internally is in parentheses
     |- (maxValue float)
     |- (maxAuto boolean)
     |- (pixel_extent int)
-    |- $self->pixel_extent($new_extent)
+    |- $self->pixel_extent([$new_extent])
     |- $self->recompute_min_auto()
     |- $self->recompute_max_auto()
     |- $self->recompute_auto()
@@ -97,7 +97,7 @@ that is only meant to be used internally is in parentheses
       |- $self->draw($dataset, $widget)
     |- $self->get_data_as_pixels($widget)
     |- $self->extremum($nane, $comperator, $widget)
-  |- $self->compute_data_extremum($extremum_name)
+  |- $self->compute_min_max_for($axis_name)
 
 
 =cut

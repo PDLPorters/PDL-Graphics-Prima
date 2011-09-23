@@ -339,6 +339,13 @@ computing a minimum in the previous example, I could rewrite it as
 
 =cut
 
+# working here - function based datasets with nonzero widths will get
+# their x-bounds from the widget, then return wider bounds to accomodate
+# the data for the full width. This means that either (1) successive
+# resizing will lead to larger and larger bounds or (2) the plots of the
+# function-data will be cropped. Of course, all of this is only a problem
+# with auto-scaling. Otherwise it gives no trouble.
+
 sub compute_collated_min_max_for {
 	# Must get the collated min max for each plot type for this data:
 	my ($self, $axis_name, $pixel_extent) = @_;
@@ -399,7 +406,7 @@ sub initialize {
 	# Set the default number of data points (for evaluated data) to 200:
 	$dataset->{N_points} ||= 200;
 	croak("N_points must be a positive number")
-		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0
+		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0;
 }
 
 sub get_xs {
@@ -422,6 +429,9 @@ sub get_data {
 	my $xs = $dataset->get_xs;
 	return ($xs, $dataset->{func}->($xs));
 }
+
+# working here - implement some sort of collation solution, and also allow
+# specification of x-bounds.
 
 sub extremum {
 	my ($self, $func_name, $comperator, $widget) = @_;
