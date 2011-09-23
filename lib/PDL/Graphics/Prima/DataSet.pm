@@ -58,6 +58,7 @@ sub STORE {
 			# want a two-function:
 			if (ref($value->[1]) and ref($value->[1]) eq 'CODE') {
 				$dataset = PDL::Graphics::Prima::DataSet::FuncBoth->new($value, $self->{widget});
+			}
 			else {
 				$dataset = PDL::Graphics::Prima::DataSet::Func->new($value, $self->{widget});
 			}
@@ -101,6 +102,8 @@ package PDL::Graphics::Prima::DataSet;
 use PDL::Graphics::Prima::PlotType;
 use PDL::Core ':Internal'; # for topdl
 use Carp 'croak';
+use strict;
+use warnings;
 
 =head2 PDL::Graphics::Prima::DataSet::new
 
@@ -171,6 +174,7 @@ sub new {
 	my @args;
 	if (ref($array[1]) eq 'CODE') {
 		@args = @array[2..$#array];
+	}
 	elsif (ref($array[0]) eq 'CODE') {
 		@args = @array[1..$#array];
 	}
@@ -263,7 +267,7 @@ supplied to the dataset.
 # Calls all the drawing functions for the plotTypes for this dataset:
 sub draw {
 	my ($dataset) = @_;
-	my $widget = $self->widget;
+	my $widget = $dataset->widget;
 	
 	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
 			lineEnd rop rop2);
@@ -355,23 +359,23 @@ sub compute_collated_min_max_for {
 	foreach my $plotType (@{$self->{plotType}}) {
 		
 		# Accumulate all the collated results
-		my ($min, $max) = $plotType->compute_collated_min_max_for($axis_name
-				, $pixel_extent, $self, $widget);
+		my ($min, $max)
+		= $plotType->compute_collated_min_max_for($axis_name, $pixel_extent);
 		# The collated results are not required to be one dimensional.
-		# As such, I need to reduce them. I do this by moving the 0th
-		# dimension to the back and then calling minimum until I have only
-		# one dimension remaining.
+		# As such, I need to reduce them. I do this by moving the dimension
+		# with $pixel_extent entries to the back and then calling minimum
+		# until I have only one dimension remaining.
 		$min = $min->squeeze->mv(0,-1);
 		$min = $min->minimum while($min->ndims > 1);
-		$min = $max->squeeze->mv(0,-1);
+		$max = $max->squeeze->mv(0,-1);
 		$max = $max->maximum while($max->ndims > 1);
 		push @min_collection, $min;
 		push @max_collection, $max;
 	}
 	
 	# Merge all the data:
-	my $collated_min = cat(@min_collection)->minimum;
-	my $collated_max = cat(@max_collection)->maximum;
+	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
+	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
 	
 	return ($collated_min, $collated_max);
 }
@@ -396,6 +400,8 @@ package PDL::Graphics::Prima::DataSet::Func;
 our @ISA = qw(PDL::Graphics::Prima::DataSet);
 
 use Carp 'croak';
+use strict;
+use warnings;
 
 # Even less to do for this than for a normal dataset. Just store the function in
 # $self and ensure we have a sensible value for N_points:
@@ -419,7 +425,7 @@ sub get_xs {
 }
 sub get_ys {
 	my ($self) = @_;
-	my $xs = $self->get_xs($widget);
+	my $xs = $self->get_xs;
 	return $self->{func}->($xs);
 }
 

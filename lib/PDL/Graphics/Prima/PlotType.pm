@@ -90,7 +90,7 @@ sub compute_collated_min_max_for {
 	my @prop_piddles = values %properties;
 	
 	# Get the data:
-	my ($xs, $ys) = $dataset->get_data;
+	my ($xs, $ys) = $self->dataset->get_data;
 	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
 	
 	# working here - now that minmaxforpair does not return infs, make sure
@@ -106,17 +106,16 @@ sub compute_collated_min_max_for {
 
 # I need to define a drawing method:
 sub draw {
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties($dataset
-		, @PDL::Drawing::Prima::polylines_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
 
 	# Draw the lines:
-	$widget->pdl_polylines($xs, $ys, %properties);
+	$self->widget->pdl_polylines($xs, $ys, %properties);
 }
 
 ##########################################
@@ -214,7 +213,7 @@ sub compute_collated_min_max_for {
 		$good_min->where($good_min > $baseline) .= $baseline
 			if($good_min->nelem > 0);
 		my $good_max = $max->where($max->isgood);
-		$good_max->where($good_max < $baseline) .= $baselne
+		$good_max->where($good_max < $baseline) .= $baseline
 			if($good_max->nelem > 0);
 		
 		return ($min, $max);
@@ -228,7 +227,7 @@ sub compute_collated_min_max_for {
 		my @prop_piddles = (values %properties, $extra);
 		
 		# Collate and return the min and the max:
-		return PDL::collate_min_max_wrt_man($to_check, $lineWidths,
+		return PDL::collate_min_max_wrt_many($to_check, $lineWidths,
 				$to_check, $lineWidths, $pixel_extent, @prop_piddles);
 	}
 }
@@ -238,12 +237,11 @@ sub draw {
 	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties($dataset
-		, @PDL::Drawing::Prima::lines_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
 	my $widget = $self->widget;
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
 	
 	# Draw the lines, either horizontal or vertical, based on the given baseline
 	if (exists $self->{y_baseline}) {
@@ -332,7 +330,7 @@ sub compute_collated_min_max_for {
 	my @extras = values %properties;
 	
 	# Get the data and radii:
-	my ($x, $y) = $self->dataset->get_data;
+	my ($xs, $ys) = $self->dataset->get_data;
 	my ($to_check, $radii);
 	if ($axis_name eq 'x') {
 		$to_check = $xs;
@@ -388,6 +386,8 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 use Carp 'croak';
 use PDL;
+use strict;
+use warnings;
 
 # working here - does the background color make drawing a filled rectangle
 # unnecessary?
@@ -423,7 +423,7 @@ sub get_bin_edges {
 	my ($self) = @_;
 	
 	# Compute linear bin edges if none are supplied:
-	my $xs = $self->dataset->get_xs($widget);
+	my $xs = $self->dataset->get_xs;
 	my @dims = $xs->dims;
 	$dims[0]++;
 	my $widths = $xs(1,) - $xs(0,);
@@ -431,7 +431,7 @@ sub get_bin_edges {
 	# working here - croak on bad bounds?
 	
 	# Store these bin edges if the underlying dataset is static:
-	$self->{binEdges} = $edges unless ref($dataset) =~ /Func/;
+	$self->{binEdges} = $edges unless ref($self->dataset) =~ /Func/;
 	
 	return $edges;
 	
@@ -485,7 +485,9 @@ sub compute_collated_min_max_for {
 
 
 sub draw {
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
+	my $dataset = $self->dataset;
+	my $widget = $self->widget;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
@@ -494,7 +496,7 @@ sub draw {
 	my $edges = $self->get_bin_edges($dataset, $widget);
 	my $pixel_edges = $widget->x->reals_to_pixels($edges);
 	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline});
-	my $ys = $widget->y->reals_to_pixels($dataset->get_ys($widget));
+	my $ys = $widget->y->reals_to_pixels($dataset->get_ys);
 	
 	$widget->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
 			, $pixel_edges(1:-1), $ys, %properties);
@@ -706,7 +708,7 @@ sub compute_collated_min_max_for {
 	# combine all of them
 	if (@mins > 1) {
 		# combine with cat and return
-		return cat(@mins), cat(@maxes);
+		return PDL::cat(@mins), PDL::cat(@maxes);
 	}
 	elsif (@mins = 1) {
 		return (@mins, @maxes);
@@ -719,12 +721,12 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self, $dataset, $widget) = @_;
-	my ($xs, $ys) = $dataset->get_data($widget);
+	my ($self) = @_;
+	my ($xs, $ys) = $self->dataset->get_data;
+	my $widget = $self->widget;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties($dataset
-		, @PDL::Drawing::Prima::lines_props);
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 	
 	#---( left error bars )---#
 	if (exists $self->{left_bars}) {
@@ -1194,15 +1196,15 @@ sub compute_collated_min_max_for {
 	
 	# Extract the line widths, against which we'll collate:
 	my $lineWidths = $properties{lineWidths};
-	$lineWidths = $widget->lineWidth unless defined $lineWidths;
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
 	# get the rest of the piddles; we don't need their names:
 	my @prop_piddles = values %properties;
 	
 	# Get the data:
-	my ($xs, $ys) = $dataset->get_data;
-	my ($to_check, $extra) = ($x, $y);
-	($to_check, $extra) = ($y, $x) if $axis_name eq 'y';
+	my ($xs, $ys) = $self->dataset->get_data;
+	my ($to_check, $extra) = ($xs, $ys);
+	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
 	
 	# Collate:
 	return collate_min_max_wrt_many($to_check, $lineWidths

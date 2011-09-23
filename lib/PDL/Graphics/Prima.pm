@@ -8,7 +8,7 @@ use Prima;
 
 use base 'Prima::Widget';
 
-use Carp qw(croak cluck);
+use Carp qw(croak cluck confess);
 use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
@@ -155,6 +155,10 @@ sub init {
 	tie %datasets, 'PDL::Graphics::Prima::DataSet::Collection', $self;
 	$self->{dataSets} = \%datasets;
 	
+	# Turn off the axis autoscaling until after we've added the data
+	$self->{x}->{initializing} = 1;
+	$self->{y}->{initializing} = 1;
+	
 	# Add datasets. All of the datasets are validated when added as key/value
 	# pairs to the tied hash:
 	while (my ($key, $value) = each %profile) {
@@ -163,11 +167,16 @@ sub init {
 		# working here - catch errors?
 		$self->dataSets->{$1} = $value;
 	}
+	
+	# Turn the axis autoscaling back on:
+	$self->{x}->{initializing} = 0;
+	$self->{y}->{initializing} = 0;
 }
 
 #sub x { return $_[0]->{x} }
 #sub y { return $_[0]->{y} }
 
+# This is key: *this* is what triggers autoscaling
 sub on_size {
 	my ($self, undef, undef, $width, $height) = @_;
 	$self->x->pixel_extent($width);
@@ -374,8 +383,8 @@ sub compute_min_max_for {
 	}
 	
 	# Merge all the data:
-	my $collated_min = cat(@min_collection)->minimum;
-	my $collated_max = cat(@max_collection)->maximum;
+	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
+	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
 	
 	# Iterativelye pair down the set until we've found the minmax. At this
 	# point, we have two arrays with $pixel_extent elements each. Cat an
@@ -388,9 +397,9 @@ sub compute_min_max_for {
 	# good. (In that case, I think they should both fail.) working here
 	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
 	my $trimmed_maxima = $maxima->whereND($maxima(:,0;-)->isgood);
-	
-	my ($min_mask, $max_mask)
-		= PDL::trim_collated($trimmed_minima, $trimmed_maxima);
+
+	my $min_mask = $trimmed_minima->trim_collated_min;
+	my $max_mask = $trimmed_maxima->trim_collated_max;
 	$trimmed_minima = $trimmed_minima->whereND($min_mask);
 	$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
 	
@@ -402,10 +411,10 @@ sub compute_min_max_for {
 		, -$min_pix/$virtual_pixel_extent);
 	my $max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 		, 1 + $max_pix/$virtual_pixel_extent);
-	
-	my ($old_min, $old_max) = ($min + 1, $max - 1);
-	while($old_min != $min and $old_max != $max) {
-		($old_min, $old_max) = ($min, $max);
+
+	my $N_rows = $trimmed_minima->dim(0) + 1;
+	while($N_rows != $trimmed_minima->dim(0)) {
+		$N_rows = $trimmed_minima->dim(0);
 		
 		# Compute the updated min/max calculated values:
 		$trimmed_minima(:,2)
@@ -418,8 +427,9 @@ sub compute_min_max_for {
 					+ $trimmed_maxima(:,1), $min, $max);
 		
 		# Trim again:
-		($min_mask, $max_mask) = 
-			= PDL::trim_collated($trimmed_minima, $trimmed_maxima);
+		$min_mask = $trimmed_minima->trim_collated_min;
+		$max_mask = $trimmed_maxima->trim_collated_max;
+
 		$trimmed_minima = $trimmed_minima->whereND($min_mask);
 		$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
 		
