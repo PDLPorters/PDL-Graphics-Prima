@@ -54,11 +54,18 @@ sub STORE {
 		# If the first argument is a code reference, then the user simply wants
 		# to plot a function.
 		if (ref($value->[0]) and ref($value->[0]) eq 'CODE') {
-			$dataset = PDL::Graphics::Prima::DataSet::Func->new($value);
+			# If the second argument is *also* a code reference, then they
+			# want a two-function:
+			if (ref($value->[1]) and ref($value->[1]) eq 'CODE') {
+				$dataset = PDL::Graphics::Prima::DataSet::FuncBoth->new($value, $self->{widget});
+			}
+			else {
+				$dataset = PDL::Graphics::Prima::DataSet::Func->new($value, $self->{widget});
+			}
 		}
 		# Otherwise, the user must specify both the x- and y- data sets.
 		else {
-			$dataset = PDL::Graphics::Prima::DataSet->new($value);
+			$dataset = PDL::Graphics::Prima::DataSet->new($value, $self->{widget});
 		}
 	}
 	else {
@@ -75,7 +82,7 @@ sub STORE {
 	
 	# Recompute the auto min/max values:
 	$self->{widget}->x->recompute_auto;
-	$self->{widget}->y->recompute_auto;  # (ignore; for text highlighting in gedit) --
+	$self->{widget}->y->recompute_auto;
 }
 
 =pod
@@ -95,6 +102,8 @@ package PDL::Graphics::Prima::DataSet;
 use PDL::Graphics::Prima::PlotType;
 use PDL::Core ':Internal'; # for topdl
 use Carp 'croak';
+use strict;
+use warnings;
 
 =head2 PDL::Graphics::Prima::DataSet::new
 
@@ -156,14 +165,17 @@ See the drawing function.
 # base class and for derived classes. To change behavior at creation time,
 # derived classes should override the initialize function.
 sub new {
-	my ($class, $array_ref) = @_;
+	my ($class, $array_ref, $widget) = @_;
 	my @array = @$array_ref;
 	
-	# initialize self to the passed hash, or an empty one if none was supplied.
-	# The array ref either contains a code ref and then key/value pairs, or
-	# the x and y data, followed by key/value pairs:
+	# pull out the x/y data and initialize self to the remaining elements of
+	# the passed array ref. The array ref either contains a code ref and
+	# then key/value pairs, or the x and y data, followed by key/value pairs:
 	my @args;
-	if (ref($array[0]) eq 'CODE') {
+	if (ref($array[1]) eq 'CODE') {
+		@args = @array[2..$#array];
+	}
+	elsif (ref($array[0]) eq 'CODE') {
 		@args = @array[1..$#array];
 	}
 	else {
@@ -171,7 +183,7 @@ sub new {
 	}
 	croak("Arguments must be passed as key/value pairs")
 		unless @args % 2 == 0;
-	my $self = {@args};
+	my $self = {@args, widget => $widget};
 	
 	# Make sure self has a plotType option:
 	$self->{plotType} = pt::Lines unless exists $self->{plotType};
@@ -180,9 +192,15 @@ sub new {
 	$self->{plotType} = [$self->{plotType}]
 		unless ref($self->{plotType}) eq 'ARRAY';
 	
-	# Bless the array ref into the class and call the class's initialization
-	# function:
+	# Bless the hash into the class and tell all the plot types the dataset
+	# and widget to which they belong:
 	bless ($self, $class);
+	foreach (@{$self->{plotType}}) {
+		$_->widget($widget);
+		$_->dataset($self);
+	}
+	
+	# call the class's initialization function:
 	$self->initialize($array_ref);
 	
 	return $self;
@@ -226,6 +244,18 @@ sub initialize {
 		. 'or scalars that pdl() knows how to process');
 }
 
+=head2 widget
+
+The widget associated with the dataset.
+
+=cut
+
+sub widget {
+	$_[0]->{widget} = $_[1] if @_ == 2;
+	return $_[0]->{widget};
+}
+
+
 =head2 draw
 
 Calls all of the drawing functions for each plotType of the dataset. This also
@@ -236,7 +266,8 @@ supplied to the dataset.
 
 # Calls all the drawing functions for the plotTypes for this dataset:
 sub draw {
-	my ($dataset, $widget) = @_;
+	my ($dataset) = @_;
+	my $widget = $dataset->widget;
 	
 	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
 			lineEnd rop rop2);
@@ -256,7 +287,7 @@ sub draw {
 	foreach my $plotType (@{$dataset->{plotType}}) {
 		# set the default drawing parameters and draw the plot type
 		$widget->set(%backups);
-		$plotType->draw($dataset, $widget);
+		$plotType->draw;
 	}
 	$widget->set(%backups);
 }
@@ -274,8 +305,7 @@ piddles.
 sub get_xs { $_[0]->{xs} }
 sub get_ys { $_[0]->{ys} }
 sub get_data {
-	my ($dataset, $widget) = @_;
-	return ($dataset->get_xs($widget), $dataset->get_ys($widget));
+	return ($_[0]->{xs}, $_[0]->{ys});
 }
 
 =head2 get_data_as_pixels
@@ -286,13 +316,16 @@ values of the x- and y- data to actual pixel positions in the widget.
 =cut
 
 sub get_data_as_pixels {
-	my ($dataset, $widget) = @_;
+	my ($dataset) = @_;
+	my $widget = $dataset->widget;
 	
-	my ($xs, $ys) = $dataset->get_data($widget);
-	return ($widget->x->reals_to_pixels($xs), $widget->y->reals_to_pixels($ys)); #--
+	my ($xs, $ys) = $dataset->get_data;
+	return ($widget->x->reals_to_pixels($xs), $widget->y->reals_to_pixels($ys));
 }
 
-=head2 extremum
+=head2 compute_collated_min_max_for
+
+working here
 
 Computes the requested extremum. The syntax looks like this:
 
@@ -310,40 +343,44 @@ computing a minimum in the previous example, I could rewrite it as
 
 =cut
 
-# working here - undoubtedly this is slow. I need to benchmark things and figure
-# out what is slow and needs to be fixed.
+# working here - function based datasets with nonzero widths will get
+# their x-bounds from the widget, then return wider bounds to accomodate
+# the data for the full width. This means that either (1) successive
+# resizing will lead to larger and larger bounds or (2) the plots of the
+# function-data will be cropped. Of course, all of this is only a problem
+# with auto-scaling. Otherwise it gives no trouble.
 
-sub extremum {
-	# This is the object method. It should only be called on objects blessed as
-	# PDL::Graphics::Prima::Dataset. We need to call the given extremum functions
-	# for all of the plotTypes:
-	my ($self, $func_name, $widget, $comperator) = @_;
+sub compute_collated_min_max_for {
+	# Must get the collated min max for each plot type for this data:
+	my ($self, $axis_name, $pixel_extent) = @_;
+	my $widget = $self->{dataSets}->{widget};
 	
-	# Determine the comperator if it was not supplied:
-	if (not defined $comperator) {
-		$comperator = -1;
-		$comperator = 1 if $func_name =~ /max$/;
-	}
-	
-	# Different plot types can involve different extrema, or different padding.
-	# I will track the most extreme value and largest padding seperately.
-	my ($most_extreme, $biggest_padding) = (undef, 0);
+	my (@min_collection, @max_collection);
 	foreach my $plotType (@{$self->{plotType}}) {
-		my ($extremum, $padding) = $plotType->$func_name($self, $widget);
-		# Undef means that this type cannot determine its extremum. In that
-		# case, move to the next data type to see if they have anything to say:
-		next unless defined $extremum;
-		# Make sure the padding is set to a defined value:
-		$padding ||= 0;
-		# Keep track of the largest padding:
-		$biggest_padding = $padding if $biggest_padding < $padding;
-		# Only save the value if it is the most extreme:
-		$most_extreme = $extremum
-			if not defined $most_extreme
-				or ($extremum <=> $most_extreme) == $comperator;
+		
+		# Accumulate all the collated results
+		my ($min, $max)
+		= $plotType->compute_collated_min_max_for($axis_name, $pixel_extent);
+		# The collated results are not required to be one dimensional.
+		# As such, I need to reduce them. I do this by moving the dimension
+		# with $pixel_extent entries to the back and then calling minimum
+		# until I have only one dimension remaining.
+		$min = $min->squeeze->mv(0,-1);
+		$min = $min->minimum while($min->ndims > 1);
+		$max = $max->squeeze->mv(0,-1);
+		$max = $max->maximum while($max->ndims > 1);
+		push @min_collection, $min;
+		push @max_collection, $max;
 	}
-	return ($most_extreme, $biggest_padding);
+	
+	# Merge all the data:
+	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
+	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
+	
+	return ($collated_min, $collated_max);
 }
+
+# working here - implement FuncBoth
 
 =head2 PDL::Graphics::Prima::DataSet::Func
 
@@ -363,6 +400,8 @@ package PDL::Graphics::Prima::DataSet::Func;
 our @ISA = qw(PDL::Graphics::Prima::DataSet);
 
 use Carp 'croak';
+use strict;
+use warnings;
 
 # Even less to do for this than for a normal dataset. Just store the function in
 # $self and ensure we have a sensible value for N_points:
@@ -373,32 +412,32 @@ sub initialize {
 	# Set the default number of data points (for evaluated data) to 200:
 	$dataset->{N_points} ||= 200;
 	croak("N_points must be a positive number")
-		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0
+		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0;
 }
 
 sub get_xs {
-	my ($self, $widget) = @_;
+	my ($self) = @_;
+	my $x_axis = $self->widget->x;
 	
 	# working here - implement caching as an option in $self, like this:
 	#if ($self->{cacheData}) ...
-	# However, note that caching will not work if a single dataset is allowed
-	# to be plotted by multiple widgets, which is sorta assumed by the requirement
-	# to pass the widget as an argument to get_data: the dataset can't know its
-	# own widget.
-	return $widget->x->{scaling}->sample_evenly($widget->x->minmax, $self->{N_points});
+	return $x_axis->{scaling}->sample_evenly($x_axis->minmax, $self->{N_points});
 }
 sub get_ys {
-	my ($self, $widget) = @_;
-	my $xs = $self->get_xs($widget);
+	my ($self) = @_;
+	my $xs = $self->get_xs;
 	return $self->{func}->($xs);
 }
 
 sub get_data {
-	my ($dataset, $widget) = @_;
+	my ($dataset) = @_;
 	
-	my $xs = $dataset->get_xs($widget);
+	my $xs = $dataset->get_xs;
 	return ($xs, $dataset->{func}->($xs));
 }
+
+# working here - implement some sort of collation solution, and also allow
+# specification of x-bounds.
 
 sub extremum {
 	my ($self, $func_name, $comperator, $widget) = @_;

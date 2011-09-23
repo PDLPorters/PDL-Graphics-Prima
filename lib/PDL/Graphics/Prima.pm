@@ -8,7 +8,7 @@ use Prima;
 
 use base 'Prima::Widget';
 
-use Carp qw(croak cluck);
+use Carp qw(croak cluck confess);
 use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
@@ -49,8 +49,8 @@ PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
 =head1 OVERVIEW
 
 Here is an overview of the plotting infrastructure to help keep your head
-straight. The data types are indicated after the datatype and information that
-is only meant to be used internally is in parentheses
+straight. The data types are indicated after the datatype and information
+that is only meant to be used internally is in parentheses
 
  Plotting Widget
   |- xLabel string
@@ -74,7 +74,7 @@ is only meant to be used internally is in parentheses
     |- (maxValue float)
     |- (maxAuto boolean)
     |- (pixel_extent int)
-    |- $self->set_pixel_extent($new_extent)
+    |- $self->pixel_extent([$new_extent])
     |- $self->recompute_min_auto()
     |- $self->recompute_max_auto()
     |- $self->recompute_auto()
@@ -97,7 +97,7 @@ is only meant to be used internally is in parentheses
       |- $self->draw($dataset, $widget)
     |- $self->get_data_as_pixels($widget)
     |- $self->extremum($nane, $comperator, $widget)
-  |- $self->compute_data_extremum($extremum_name)
+  |- $self->compute_min_max_for($axis_name)
 
 
 =cut
@@ -117,7 +117,7 @@ sub profile_default {
 		replotDuration => 30,
 		# Blank profiles for the axes:
 		x => {},
-		y => {},  # ===
+		y => {},
 	};
 }
 
@@ -155,6 +155,10 @@ sub init {
 	tie %datasets, 'PDL::Graphics::Prima::DataSet::Collection', $self;
 	$self->{dataSets} = \%datasets;
 	
+	# Turn off the axis autoscaling until after we've added the data
+	$self->{x}->{initializing} = 1;
+	$self->{y}->{initializing} = 1;
+	
 	# Add datasets. All of the datasets are validated when added as key/value
 	# pairs to the tied hash:
 	while (my ($key, $value) = each %profile) {
@@ -163,15 +167,20 @@ sub init {
 		# working here - catch errors?
 		$self->dataSets->{$1} = $value;
 	}
+	
+	# Turn the axis autoscaling back on:
+	$self->{x}->{initializing} = 0;
+	$self->{y}->{initializing} = 0;
 }
 
 #sub x { return $_[0]->{x} }
 #sub y { return $_[0]->{y} }
 
+# This is key: *this* is what triggers autoscaling
 sub on_size {
 	my ($self, undef, undef, $width, $height) = @_;
-	$self->x->set_pixel_extent($width);
-	$self->y->set_pixel_extent($height); #--
+	$self->x->pixel_extent($width);
+	$self->y->pixel_extent($height);
 }
 
 my $inf = -pdl(0)->log->at(0);
@@ -269,39 +278,172 @@ highest pixel-padding is associated with the least extreme value.
 =for better-implementation-iterating
 XXX working here
 
+Work with arrays, in which case the index itself is equal to the needed
+padding. Build a doubly-linked list with a structure patterned after
+
+ padding => number    # padding of interest
+ data => float        # min/max for this padding
+ curr_value => float  # computed extent
+ next => pointer      # next (smaller) padding
+
+Also, keep track of the tail, the current min, and the current max.
+
+The linked list is initially assembled in order of decreasing padding
+(largest padding on top). Here's something that's important, which you will
+need to get your head around, and which I will illustrate with an example.
+Suppose we have two paddings, 10 pixels and 5 pixels, and we're trying to
+compute the minimum. If the minimum data value with a pixel padding of 5 is
+2.2 and the minimum data value with a pixel padding of 10 is 2.1, we know
+that the pixel padding of 10 must lead to a smaller minimum than the pixel
+padding of 5. As such, we can remove the pixel padding of 5 from the
+list. I call this weeding out the values. The result is that as we go
+through the list in order of decreasing padding, the data values will become
+more extreme, like a pyramid.
+
+The argument I just made about the paddings for 5 and 10 pixels only took
+their data values and the sort order of the padding into account. It did not
+take the actual values of the paddings into account. In the next stage,
+which is iterative, I will begin to account for the effect of the different
+padding values.
+
+With the pyramid in hand, examine the tail values for both the min and the
+max. Each of these will have a padding associated with them. Estimate the
+min and max by assuming that the tail values, together with their padding,
+represent the most extreme values of the data set, which is a conservative
+estimate. With this estimate in hand, run through the list and compute the
+min or max associated with each list element, taking the padding and current
+scaling into account, and storing the result in curr_value. Then weed out
+the list using curr_value and iterate the procedure of this last paragraph
+until the tail of both the min and the max lists does not change.
+
+An important feature of this algorithm is that the min/max values begin with
+very conservative estimates and become more extreme with each round.
+
+Furthermore, the pyramid data structure is arranged so that with each round
+the width of the top end of the pyramid grows more than the width of the
+bottom end.
+
+To actually implement this scheme, I will require that datasets monitor
+their own data and report a data/padding list upon request. How the datasets
+monitor their data is entirely up to them. (I am considering using an
+on_change slice, which I secretly insert over the user's piddle by modifying
+the @_ argument array, to efficiently monitor changes.)
+
+In order to properly handle bad values, I need to write a function that can
+look for bad values over many piddles, tens of piddles. I believe I can
+achieve this by writing a function that takes, say, 20 piddles, and wrapping
+it in Perl code that supplies null piddles when you only need to call the
+function for 10 piddles. The funcion would be called collate_min_max_for_many
+and the calling convention for it would look like this:
+
+ ($min, $max) = collate_min_max_for_many(N_to_return, N_buckets, $index, $p1, $p2, ...)
+
+This is best illustrated with the blobs plot type, since it would use a
+nontrivial value for index. If I wanted to compute the collated min and max
+for the x-data, taking potential bad values for y, xradii, yradii, and
+colors into account, I would call the function like so:
+
+ my ($blob_x_min, $blob_x_max)
+     = collate_min_max_for_many(
+         1,              # return min/max for $x
+         $widget->width, # only need the number of pixels corresponding to the widget
+         $xRadii,        # the index
+         $x,             # x-data for which to find min/max
+         $y,             # \
+         $yRadii,        #  |- ignore x-values if any of these are bad
+         $colors,        # /
+     )
+         
+
+In this case
+
+where N <= M, M < 20, and the return dimensions are N x whatever.
+
 =cut
 
-# Returns the computed extremum and padding from the datasets:
-sub compute_data_extremum {
-	my ($self, $extremum) = @_;
-	# extremum should be one of the strings 'xmin', 'xmax', 'ymin', or 'ymax',
-	# though it should be called using the constants defined above.
+sub compute_min_max_for {
+	my ($self, $axis_name) = @_;
 	
-	# working here - explain this
-	my ($to_return, $spaceship_wants) = ($inf, -1);
-	($to_return, $spaceship_wants) = (-$inf, 1) if $extremum =~ /max$/;
+	# Get plotting pixel extent, which I'll need to send to the dataSets in
+	# order for them to compute their pyramids.
+	my $pixel_extent = $self->x->pixel_extent;
+	$pixel_extent = $self->y->pixel_extent if $axis_name eq 'y';
 	
-	my ($most_extreme, $biggest_padding) = (undef, 0);
-	# working here - I would like to do this:
-#	foreach my $dataset ( @{$self->{dataSets}} ) {
-	# but that's not working. Instead, I must resort to this:
 	my $datasets = $self->{dataSets};
+	my (@min_collection, @max_collection);
 	while (my ($key, $dataset) = each %$datasets) {
 		next if $key eq 'widget';
 		
-		# Get the dataset's extremum and padding
-		my ($extremum, $padding) = $dataset->extremum($extremum, $self, $spaceship_wants);
-		next if not defined $extremum;
-		
-		# Keep track of the largest padding:
-		$biggest_padding = $padding if $biggest_padding < $padding;
-		# Only save the value if it is the most extreme:
-		$most_extreme = $extremum
-			if not defined $most_extreme
-				or ($extremum <=> $most_extreme) == $spaceship_wants;
+		# Accumulate all the collated results
+		my ($min, $max) = $dataset->compute_collated_min_max_for($axis_name, $pixel_extent);
+		# The collated results should be one dimensional, so no reduction
+		# necessary (as opposed to the DataSet code):
+		push @min_collection, $min;
+		push @max_collection, $max;
 	}
 	
-	return ($most_extreme, $biggest_padding);
+	# Merge all the data:
+	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
+	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
+	
+	# Iterativelye pair down the set until we've found the minmax. At this
+	# point, we have two arrays with $pixel_extent elements each. Cat an
+	# index and what will eventually be a computed value onto the original
+	# lists so our slicing keeps track of the padding and original values.
+	my $minima = $collated_min->cat($collated_min->sequence, $collated_min);
+	my $maxima = $collated_max->cat($collated_max->sequence, $collated_max);
+	
+	# I should check this for sanity, like if none of the min or max are
+	# good. (In that case, I think they should both fail.) working here
+	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
+	my $trimmed_maxima = $maxima->whereND($maxima(:,0;-)->isgood);
+
+	my $min_mask = $trimmed_minima->trim_collated_min;
+	my $max_mask = $trimmed_maxima->trim_collated_max;
+	$trimmed_minima = $trimmed_minima->whereND($min_mask);
+	$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
+	
+	# Compute properly scaled extrema:
+	my ($min_pix, $max_pix) = ($trimmed_minima->at(0,1), $trimmed_maxima->at(0,1));
+	my $virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
+	my ($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
+	my $min = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
+		, -$min_pix/$virtual_pixel_extent);
+	my $max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
+		, 1 + $max_pix/$virtual_pixel_extent);
+
+	my $N_rows = $trimmed_minima->dim(0) + 1;
+	while($N_rows != $trimmed_minima->dim(0)) {
+		$N_rows = $trimmed_minima->dim(0);
+		
+		# Compute the updated min/max calculated values:
+		$trimmed_minima(:,2)
+			.= $self->{$axis_name}->pixels_to_reals(
+				$self->{$axis_name}->reals_to_pixels($trimmed_minima(:,0), $min, $max)
+					- $trimmed_minima(:,1), $min, $max);
+		$trimmed_maxima(:,2)
+			.= $self->{$axis_name}->pixels_to_reals(
+				$self->{$axis_name}->reals_to_pixels($trimmed_maxima(:,0), $min, $max)
+					+ $trimmed_maxima(:,1), $min, $max);
+		
+		# Trim again:
+		$min_mask = $trimmed_minima->trim_collated_min;
+		$max_mask = $trimmed_maxima->trim_collated_max;
+
+		$trimmed_minima = $trimmed_minima->whereND($min_mask);
+		$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
+		
+		# Recompute the properly scaled extreme:
+		($min_pix, $max_pix) = ($trimmed_minima->at(0,1), $trimmed_maxima->at(0,1));
+		$virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
+		($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
+		$min = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
+			, -$min_pix/$virtual_pixel_extent);
+		$max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
+			, 1 + $max_pix/$virtual_pixel_extent);
+	}
+	
+	return ($min, $max);
 }
 
 =head1 Properties
@@ -418,6 +560,7 @@ sub on_paint {
 	$self->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
 	
 	# backup the drawing parameters:
+	# working here - consider a better way than listing them here explicitly
 	my @to_backup = qw(color backColor linePattern lineWidth lineJoin
 			lineEnd rop rop2);
 	my %backups = map {$_ => $self->$_} (@to_backup);

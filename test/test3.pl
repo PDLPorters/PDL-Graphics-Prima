@@ -5,7 +5,9 @@ use blib;
 use Prima qw(Application);
 use PDL::Graphics::Prima;
 
+
 my $t_data = sequence(6) / 0.5 + 1;
+print "t_data are $t_data\n";
 my $y_data = exp($t_data);
 
 my $wDisplay = Prima::MainWindow->create(

@@ -97,7 +97,12 @@ sub init {
 
 # Simply changes the internal value; does not issue a redraw. The pixel_extent
 # data contains the full width or height of the widget, in pixels.
-sub set_pixel_extent {
+# THIS IS WHAT TRIGGERS AUTOSCALING CALCULATIONS, at least initially.
+sub pixel_extent {
+	if (@_ == 1) {
+		return $_[0]->{pixel_extent};
+	}
+	
 	my ($self, $new_extent) = @_;
 
 	$self->{pixel_extent} = $new_extent;
@@ -116,70 +121,22 @@ indicating whether or not the Auto flag is set.
 
 =cut
 
-sub recompute_min_auto {
-	my ($self) = @_;
-	$self->{minAuto} = 1;
-	my $extremum_name = $self->name . 'min';
+=head2 recompute_auto
 
-	my ($min, $padding) = $self->owner->compute_data_extremum($extremum_name);
+Requests a recomputation of the autoscaling. This is usually triggered by
+a window resize or a new or modified dataset.
 
-	# Only change things if a defined value was returned for the minimum.
-	# (Undefined minima can be returned if there is no data, for example.)
-	if (defined $min) {
-		# Make sure we don't have defined but useless values:
-		{
-			no warnings 'numeric';
-			confess("Min calculated as nan") if $min != $min;
-			if ($min+1 == $min) {
-				confess("Min calculated as inf") if $min > 0;
-				confess("Min calculated as -inf");
-			}
-		}
-		my $max = $self->{maxValue};
-		# call the scaling object's methods for computing the real min/max, with
-		# the padding taken into account:
-		($min, $max) = $self->min_max_with_padding($min, $max
-			, min_padding => $padding
-			, max_padding => 0);
-		die "Bad min calculation" if $min != $min;
-		$self->{minValue} = $min;
-	}
-}
-
-sub recompute_max_auto {
-	my ($self) = @_;
-	$self->{maxAuto} = 1;
-	my $extremum_name = $self->name . 'max';
-
-	my ($max, $padding) = $self->owner->compute_data_extremum($extremum_name);
-
-	# Only change things if a defined value was returned for the maximum.
-	# (Undefined maxima can be returned if there is no data, for example.)
-	if (defined $max) {
-		# Make sure we don't have defined but useless values:
-		{
-			no warnings 'numeric';
-			confess("Max calculated as nan") if $max != $max;
-			if ($max+1 == $max) {
-				confess("Max calculated as inf") if $max > 0;
-				confess("Max calculated as -inf");
-			}
-		}
-		my $min = $self->{minValue};
-		# call the scaling object's methods for computing the real max/max, with
-		# the padding taken into account:
-		($min, $max) = $self->min_max_with_padding($min, $max
-			, max_padding => $padding
-			, min_padding => 0);
-		die "Bad max calculation" if $max != $max;
-		$self->{maxValue} = $max;
-	}
-}
+=cut
 
 sub recompute_auto {
 	my ($self) = @_;
-	$self->recompute_min_auto if ($self->{minAuto});
-	$self->recompute_max_auto if ($self->{maxAuto});
+	return if $self->{initializing};
+	# No need to recompute unless at least one of them is auto-scaled:
+	return unless $self->{minAuto} or $self->{maxAuto};
+	
+	my ($min, $max) = $self->owner->compute_min_max_for($self->name);
+	$self->{minValue} = $min if $self->{minAuto};
+	$self->{maxValue} = $max if $self->{maxAuto};
 }
 
 # Accessor functions. There are a bunch of private functions that do
@@ -193,7 +150,8 @@ sub _min {
 		# do nothing
 	}
 	elsif ($new_value == lm::Auto) {
-		$self->recompute_min_auto;
+		$self->{minAuto} = 1;
+		$self->recompute_auto;
 	}
 	elsif ($new_value == lm::Hold) {
 		# Hold means they want to keep the current bounds, so stop
@@ -232,7 +190,8 @@ sub _max {
 		# do nothing
 	}
 	elsif ($new_value == lm::Auto) {
-		$self->recompute_max_auto;
+		$self->{minAuto} = 1;
+		$self->recompute_auto;
 	}
 	elsif ($new_value == lm::Hold) {
 		# Hold means they want to keep the current bounds, so stop
@@ -276,11 +235,14 @@ and you will get a two-element list if you call it as a getter. For example:
  
  print "The x min/max values are ", join(', ', $graph_widget->x->minmax), "\n";
 
+Note that if you are setting both the min and the max to autoscaling, 
+calling minmax(lm::Auto, lm::Auto) is faster than calling min(lm::Auto)
+followed by max(lm::Auto).
 
 =cut
 
-# working here - this could be made more efficient when both the min and the
-# max end up being auto-scaling:
+# working here - eventually, cache the min and max calculations
+
 {
 	# Create the minmax function without issuing a redefinition warning
 	no warnings 'redefine';
@@ -288,51 +250,23 @@ and you will get a two-element list if you call it as a getter. For example:
 	sub minmax {
 		my @minmax = ($_[0]->{minValue}, $_[0]->{maxValue});
 		if (@_ > 1) {
-			$_[0]->_min($_[1]);
-			$_[0]->_max($_[2]);
-			$_[0]->notify('ChangeBounds');
+			my ($self, $min, $max) = @_;
+			# Handle autoscaling specially. When both autoscale, the
+			# recompute should only happen once:
+			if ($min == lm::Auto and $max == lm::Auto) {
+				$self->{minAuto} = 1;
+				$self->{maxAuto} = 1;
+				$self->recompute_auto;
+			}
+			# otherwise call the individual min/max functions:
+			else {
+				$self->_min($min);
+				$self->_max($max);
+			}
+			$self->notify('ChangeBounds');
 		}
 		return @minmax;
 	}
-}
-
-# This computes the adjusted minimum and maximum for the given pixel padding:
-sub min_max_with_padding {
-	# Unpack the arguments:
-	my ($self, $min, $max, %args) = @_;
-	{
-		no warnings 'numeric';
-									# nan check         inf check
-		confess("Min must be real") if ($min != $min or $min+1 == $min);
-		confess("Max must be real") if ($max != $max or $max+1 == $max);
-	}
-	my ($min_padding, $max_padding) = @args{qw(min_padding max_padding)};
-	
-	# Determine the pixel extent (width or height) of the data as if the pixel
-	# extent of the plotting region had the padding cut out of it:
-	my $virtual_pixel_extent
-		= $self->{pixel_extent} * ($self->viewMax - $self->viewMin)
-			- $max_padding - $min_padding;
-
-	# Compute the relative positions of the edges of the padding, given the
-	# virtual (reduced) pixel extent:
-	my $relative_padding_min = -$min_padding / $virtual_pixel_extent;
-	my $relative_padding_max = 1 + $max_padding / $virtual_pixel_extent;
-	
-	# Perform the inverse scaling transform to get the real numbers
-	# corresponding to those relative values:
-	my $new_min = $self->scaling->inv_transform($min, $max, $relative_padding_min);
-	my $new_max = $self->scaling->inv_transform($min, $max, $relative_padding_max);
-	
-	die "Bad new min from inv_transform"
-		#          nan check             inf check
-		if ($new_min != $new_min or $new_min+1 == $new_min);
-	die "Bad new max from inv_transform"
-		#          nan check             inf check
-		if ($new_max != $new_max or $new_max+1 == $new_max);
-	
-	# Return those real numbers:
-	return ($new_min, $new_max);
 }
 
 # working here - document
@@ -371,21 +305,17 @@ Note that the internal min/max values are stored in C<minValue> and C<maxValue>.
 =cut
 
 sub reals_to_relatives {
-	my ($axis, $dataset) = @_;
-	return $axis->{scaling}->transform(
-		  $axis->{minValue}
-		, $axis->{maxValue}
-		, $dataset
-	);
+	my ($axis, $dataset, $min, $max) = @_;
+	$min = $axis->{minValue} unless defined $min;
+	$max = $axis->{maxValue} unless defined $max;
+	return $axis->{scaling}->transform($min, $max, $dataset);
 }
 
 sub relatives_to_reals {
-	my ($axis, $dataset) = @_;
-	return $axis->{scaling}->inv_transform(
-		  $axis->{minValue}
-		, $axis->{maxValue}
-		, $dataset
-	);
+	my ($axis, $dataset, $min, $max) = @_;
+	$min = $axis->{minValue} unless defined $min;
+	$max = $axis->{maxValue} unless defined $max;
+	return $axis->{scaling}->inv_transform($min, $max, $dataset);
 }
 
 =head2 pixels_to_relatives, relatives_to_pixels
@@ -417,13 +347,13 @@ locations. This simply combines the previous two documented functions.
 =cut
 
 sub reals_to_pixels {
-	my ($axis, $dataset) = @_;
-	return $axis->relatives_to_pixels($axis->reals_to_relatives($dataset));
+	my ($axis, $dataset, @args) = @_;
+	return $axis->relatives_to_pixels($axis->reals_to_relatives($dataset, @args));
 }
 
 sub pixels_to_reals {
-	my ($axis, $dataset) = @_;
-	return $axis->relatives_to_reals($axis->pixels_to_relatives($dataset));
+	my ($axis, $dataset, @args) = @_;
+	return $axis->relatives_to_reals($axis->pixels_to_relatives($dataset), @args);
 }
 
 =head2 viewMin, viewMax, viewMinMax
