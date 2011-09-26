@@ -191,7 +191,7 @@ sub _max {
 		# do nothing
 	}
 	elsif ($new_value == lm::Auto) {
-		$self->{minAuto} = 1;
+		$self->{maxAuto} = 1;
 		$self->recompute_auto;
 	}
 	elsif ($new_value == lm::Hold) {
