@@ -382,6 +382,8 @@ sub compute_min_max_for {
 		push @max_collection, $max;
 	}
 	
+	return if @min_collection == 0;
+	
 	# Merge all the data:
 	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
 	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;

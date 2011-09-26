@@ -135,6 +135,7 @@ sub recompute_auto {
 	return unless $self->{minAuto} or $self->{maxAuto};
 	
 	my ($min, $max) = $self->owner->compute_min_max_for($self->name);
+	return unless defined $min and defined $max;
 	$self->{minValue} = $min if $self->{minAuto};
 	$self->{maxValue} = $max if $self->{maxAuto};
 }
