@@ -1,10 +1,75 @@
-PDL::Graphics::Prima - a graphing widget using the Prima toolkit.
+PDL::Graphics::Prima
+====================
 
-At this point I have split the PDL-Prima bindings into a seperate distribution
-called PDL::Drawing::Prima. This distribution provides the graphing widget, which
-is a whole complicated collection of modules. The development of these
-modules was stagnating the development of the drawing distribution, which is
-why I pulled them into their own seperate distribution.
+A PDL graphing library using the Prima toolkit.
+
+
+This collection of modules that provides a PDL-centric 2D graphing library
+that is fast, intelligent, multi-platform and highly interactive. Fast
+because it's built on the PDL::Drawing::Prima bindings, which make use of
+the PDL threading engine to quickly execute large sets of drawing operations.
+Intelligent because I have put a lot of thought into important behavior like
+autoscaling and smart tick marking and they Do The Right Thing almost every
+time, without the need for manual manipulation. Multi-platform and highly
+interactive because it is built upon Prima, the Perl-centric multi-platform
+set of drawing functions and GUI toolkit, and because interactive behavior
+like panning and zooming are built right into the widget.
+
+For more information, see the documentation for PDL::Graphics::Prima.
+
+
+INSTALLATION
+============
+
+There are a number of ways to install this module. The simplest is to
+install it using CPAN:
+
+	cpan PDL::Graphics::Prima
+
+If you have your hands on the actual source code (or you "look"ed at this
+module from the CPAN shell), you would do the following:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+Note that there are almost no tests for this distribution at the moment.
+Frankly, I'm not sure exactly to go about testing this sort of distribution.
+Patches welcome! However, there are a number of example (and as such, test
+scripts) in the test/ directory in the source distribution if you want to
+take the library for a spin.
+
+
+DEPENDENCIES
+============
+
+This module depends on the Perl Data Language, specifically version 2.4.10.
+As of the time of writing, that has not yet been released, which means you
+will need a developer's release of PDL, or a clone of the latest developer's
+repository. This is needed because it uses whereND, and that was introduced
+after the release of 2.4.9.
+
+This module also depends on PDL::Drawing::Prima, which itself depends on
+the Prima toolkit. You will almost certainly need a C compiler to install
+these.
+
+
+CODE REPOSITORY
+===============
+
+This project is being actively developed at Github. Find the latest at:
+
+ https://github.com/run4flat/PDL-Graphics-Prima
+
+
+COPYRIGHT AND LICENCE
+=====================
+
+Copyright (C) 2011, David Mertens
+
+This library is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
 
 Author: David Mertens <dcmertens.perl.csharp@gmail.com>
 
