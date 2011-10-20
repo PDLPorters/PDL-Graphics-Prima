@@ -1,6 +1,8 @@
 # This is meant to produce the pathological effects with regard to 
 # autoscaling that precipitated my revamp of the autoscaling code.
-# To see this behave poorly, check out commit ******
+# It also uses the exact same value for the y-values, which means that the
+# data itself does not have an intrinsic scale. Under such circumstances,
+# the min/max methods need to still return something reasonable.
 
 use strict;
 use warnings;

@@ -61,8 +61,8 @@ that is only meant to be used internally is in parentheses
   |- x and y axes
     |- min float
     |- max float
-    |- viewMin float (0-1)
-    |- viewMax float (0-1)
+    |- lowerEdge integer
+    |- upperEdge integer
     |- scaling, a class name or an object
       |- $self->compute_ticks($min, $max)
       |- $self->transform($min, $max, $data)
@@ -73,12 +73,12 @@ that is only meant to be used internally is in parentheses
     |- (minAuto boolean)
     |- (maxValue float)
     |- (maxAuto boolean)
-    |- (pixel_extent int)
-    |- $self->pixel_extent([$new_extent])
-    |- $self->recompute_min_auto()
-    |- $self->recompute_max_auto()
-    |- $self->recompute_auto()
-    |- $self->minmax_with_padding($data)
+#   |- (pixel_extent int)
+#   |- $self->pixel_extent([$new_extent])
+?   |- $self->recompute_min_auto()
+?   |- $self->recompute_max_auto()
+    |- $self->update_edges()
+?   |- $self->minmax_with_padding($data)
     |- $self->reals_to_relatives($data)
     |- $self->relatives_to_reals($data)
     |- $self->pixels_to_relatives($data)
@@ -109,9 +109,8 @@ sub profile_default {
 	return {
 		%def,
 		# default properties go here
-		xLabel => '',
-		yLabel => '',
 		title => '',
+		titleSpace => 80,
 		backColor => cl::White,
 		# replot duration in milliseconds
 		replotDuration => 30,
@@ -125,9 +124,10 @@ sub profile_default {
 sub init {
 	my $self = shift;
 	my %profile = $self->SUPER::init(@_);
-	foreach ( qw(xLabel yLabel title) ) {
-		$self->{$_} = $profile{$_};
-	}
+	
+	# Set the labels and title:
+	$self->{title} = $profile{title};
+	$self->{titleSpace} = $profile{titleSpace};
 	
 	# Create the x- and y-axis objects, overriding the owner and axis name
 	# properties if they are set in the profile.
@@ -173,17 +173,16 @@ sub init {
 	$self->{y}->{initializing} = 0;
 }
 
-#sub x { return $_[0]->{x} }
-#sub y { return $_[0]->{y} }
+# This is key: *this* is what triggers autoscaling for the first time
+# working here, consider setting sizeMin, sizeMax
 
-# This is key: *this* is what triggers autoscaling
 sub on_size {
-	my ($self, undef, undef, $width, $height) = @_;
-	$self->x->pixel_extent($width);
-	$self->y->pixel_extent($height);
+	my $self = shift;
+	$self->x->update_edges;
+	$self->y->update_edges;
 }
 
-my $inf = -pdl(0)->log->at(0);
+my $inf = -PDL->new(0)->log->at(0);
 
 =for details
 XXX working here
@@ -366,8 +365,14 @@ sub compute_min_max_for {
 	
 	# Get plotting pixel extent, which I'll need to send to the dataSets in
 	# order for them to compute their pyramids.
-	my $pixel_extent = $self->x->pixel_extent;
-	$pixel_extent = $self->y->pixel_extent if $axis_name eq 'y';
+	my ($left, $bottom, $right, $top) = $self->get_edge_requirements;
+	my $pixel_extent;
+	if ($axis_name eq 'x') {
+		$pixel_extent = $self->width - $left - $right;
+	}
+	else {
+		$pixel_extent = $self->height - $top - $bottom;
+	}
 	
 	my $datasets = $self->{dataSets};
 	my (@min_collection, @max_collection);
@@ -394,7 +399,7 @@ sub compute_min_max_for {
 	# lists so our slicing keeps track of the padding and original values.
 	my $minima = $collated_min->cat($collated_min->sequence, $collated_min);
 	my $maxima = $collated_max->cat($collated_max->sequence, $collated_max);
-	
+
 	# I should check this for sanity, like if none of the min or max are
 	# good. (In that case, I think they should both fail.) working here
 	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
@@ -404,21 +409,40 @@ sub compute_min_max_for {
 	my $max_mask = $trimmed_maxima->trim_collated_max;
 	$trimmed_minima = $trimmed_minima->whereND($min_mask);
 	$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
-	
-	# Compute properly scaled extrema:
+
+	# Compute properly scaled extrema.
+	# min_pix and max_pix are the plain pixel paddings needed by the lowest
+	# element in the pyramid:
 	my ($min_pix, $max_pix) = ($trimmed_minima->at(0,1), $trimmed_maxima->at(0,1));
+	# virtual_pixel_extent is the room available to plot the data when the
+	# real pixel extent is reduced by the requested pixel padding:
 	my $virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
+	# min_data and max_data are the actual min and max values of the data
+	# that are supposed to fit within the virtual pixel extent.
 	my ($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
+	# min and max are the final minimal and maximal values that we use for
+	# the axis so that all the data can be drawn within the plot.
 	my $min = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 		, -$min_pix/$virtual_pixel_extent);
 	my $max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 		, 1 + $max_pix/$virtual_pixel_extent);
-
-	my $N_rows = $trimmed_minima->dim(0) + 1;
-	while($N_rows != $trimmed_minima->dim(0)) {
+	
+	# It is possible that all the x-data or all the y-data are identical. In
+	# that case, this scheme would normally be degenerate and return nan,
+	# which makes things croak. To solve this problem, we check if the
+	# current min/max values are identical and return the scaling's response
+	# in such a situation:
+	return $self->{$axis_name}->scaling->min_max_for_degenerate($min)
+		if $min == $max;
+	
+	# We will iterate until we stop removing rows, at which point the lowest
+	# level of the pyramid is what we want.
+	my $N_rows;
+	do {
 		$N_rows = $trimmed_minima->dim(0);
 		
-		# Compute the updated min/max calculated values:
+		# Assuming that the current min/max are roughly correct, compute the
+		# updated min/max calculated values:
 		$trimmed_minima(:,2)
 			.= $self->{$axis_name}->pixels_to_reals(
 				$self->{$axis_name}->reals_to_pixels($trimmed_minima(:,0), $min, $max)
@@ -435,17 +459,41 @@ sub compute_min_max_for {
 		$trimmed_minima = $trimmed_minima->whereND($min_mask);
 		$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
 		
-		# Recompute the properly scaled extreme:
+		# Recompute the properly scaled extrema:
 		($min_pix, $max_pix) = ($trimmed_minima->at(0,1), $trimmed_maxima->at(0,1));
 		$virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
-		($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
+		($min_data, $max_data) = ($trimmed_minima->at(0,0), $trimmed_maxima->at(0,0));
 		$min = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 			, -$min_pix/$virtual_pixel_extent);
 		$max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 			, 1 + $max_pix/$virtual_pixel_extent);
-	}
+	} while($N_rows != $trimmed_minima->dim(0));
 	
 	return ($min, $max);
+}
+
+
+# This should distinguish between shared space and exclusive space. For
+# example, the title requests exclusive space (a height of titleSpace),
+# which is added to that shared max shared space requested by both of the
+# axes. The return values should be left, bottom, right, top
+sub get_edge_requirements {
+	my $self = shift;
+	my @x_req = $self->x->get_edge_requirements;
+	my @y_req = $self->y->get_edge_requirements;
+	
+	# Merge the two:
+	my @requirement = (0, 0, 0, 0);
+	my $i = 0;
+	foreach my $req (@x_req, @y_req) {
+		$requirement[$i] = $req if $requirement[$i] < $req;
+		$i++;
+		$i %= 4;
+	}
+	
+	$requirement[3] += $self->{titleSpace} if $self->{title};
+	
+	return @requirement;
 }
 
 =head1 Properties
@@ -456,19 +504,31 @@ Sets or gets the various strings for the axis labeling and the title.
 
 =cut
 
-sub xLabel {
-	return $_[0]->{xLabel} unless $#_;
-	$_[0]->{xLabel} = $_[1];
-	$_[0]->notify('ChangeXLabel');
+# Setter that does not notify and sets the title spacing property as well
+# The constructor (init) must call this function, or initialize titleSpace
+# itself.
+sub _title {
+	$_[0]->{title} = $_[1];
 }
-sub yLabel {
-	return $_[0]->{yLabel} unless $#_;
-	$_[0]->{yLabel} = $_[1];
-	$_[0]->notify('ChangeYLabel');
-}
+
 sub title {
 	return $_[0]->{title} unless $#_;
-	$_[0]->{title} = $_[1];
+	$_[0]->_title($_[1]);
+	$_[0]->notify('ChangeTitle');
+}
+
+sub _titleSpace {
+	my ($self, $new_space) = @_;
+	croak("titleSpace must be a positive integer")
+		unless $new_space =~ /^\d+$/;
+	
+	# working here - tie in to sizeMin, sizeMax, and other things
+	$self->{titleSpace} = $new_space;
+}
+
+sub titleSpace {
+	return $_[0]->{titleSpace} unless $#_;
+	$_[0]->_titleSpace($_[1]);
 	$_[0]->notify('ChangeTitle');
 }
 
@@ -503,11 +563,14 @@ sub dataSets {
 	$_[0]->notify('ChangeData');
 }
 
-# For any of these events, repaint:
-sub _repaint {$_[0]->notify('Replot')}
-*on_changetitle = \&_repaint;
-*on_changexlabel = \&_repaint;
-*on_changeylabel = \&_repaint;
+# For a change in title, recompute the autoscaling and replot.
+# Make sure this 
+sub on_changetitle {
+	my $self = shift;
+	$self->x->update_edges;
+	$self->y->update_edges;
+	$self->notify('Replot');
+}
 
 # Sets up a timer in self that eventually calls the paint notification:
 sub on_replot {
@@ -522,9 +585,9 @@ You can send notifications and tie callbacks for the following events:
 
 =head2 ChangeTitle
 
-=head2 ChangeXLabel
+=head2 Replot
 
-=head2 ChangeYLabel
+=head2 ChangeData
 
 =cut
 
@@ -540,7 +603,7 @@ You can send notifications and tie callbacks for the following events:
 		%{Prima::Widget-> notification_types()},
 		# working here - choose a better signal type
 		'Replot' => nt::Default,
-		map { ("Change$_" => nt::Default) } qw(Title XLabel YLabel Data),
+		map { ("Change$_" => nt::Default) } qw(Title Data),
 	);
 	
 	sub notification_types { return \%notifications }
@@ -552,17 +615,22 @@ sub on_paint {
 	# Clear the canvas:
 	$self->clear;
 	
-	# Get the clipping rectangle from the axes:
-	my ($clip_left, $clip_right) = $self->x->viewMinMax;
-	$clip_left *= $self->width;
-	$clip_right *= $self->width;
-	my ($clip_bottom, $clip_top) = $self->y->viewMinMax;
-	$clip_bottom *= $self->height;
-	$clip_top *= $self->height;
+	# Get the clipping rectangle for the actual drawing space:
+	my ($clip_left, $clip_bottom, $right_edge, $top_edge)
+		= $self->get_edge_requirements;
+	
+	# The right and top edge values should be subtracted from the width and
+	# height, respectively:
+	my $clip_right = $self->width - $right_edge;
+	my $clip_top = $self->height - $top_edge;
+	
+	# Clip the widget before we begin drawing
 	$self->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
 	
 	# backup the drawing parameters:
-	# working here - consider a better way than listing them here explicitly
+	# working here - consider writing PDL::Drawing::Prima to back these up
+	# for me automatically so I don't have to do it here
+	# also, consider a better way than listing them here explicitly
 	my @to_backup = qw(color backColor linePattern lineWidth lineJoin
 			lineEnd rop rop2);
 	my %backups = map {$_ => $self->$_} (@to_backup);
@@ -587,27 +655,28 @@ sub on_paint {
 	
 	# Draw the axes
 	$self->clipRect(0, 0, $self->size);
-	$self->x->draw($self);
-	$self->y->draw($self);
+	$self->x->draw($self, $clip_left, $clip_bottom, $clip_right, $clip_top);
+	$self->y->draw($self, $clip_left, $clip_bottom, $clip_right, $clip_top);
 	
-	# Draw the axis labels and title:
-	# working here - I need to clean this up a bit
-	my ($width, $height) = $self->size;
-	if ($self->{xLabel}) {
-		$self->draw_text($self->{xLabel}
-			, 0, 0, $width, $height * $self->y->viewMin / 2
-			, dt::Center | dt::Top
-			);
+	# Draw the title:
+	if ($self->{titleSpace}) {
+		my ($width, $height) = $self->size;
+		# Set up the font characteristics:
+		my $font_height = $self->font->height;
+		$self->font->height($font_height * 1.5);
+		my $style = $self->font->style;
+		$self->font->style(fs::Bold);
+		
+		# Draw the title:
+		$self->draw_text($self->{title}, 0, $height - $self->{titleSpace}
+				, $width, $height
+				, dt::Center | dt::VCenter | dt::NewLineBreak | dt::NoWordWrap
+				| dt::UseExternalLeading);
+		
+		# Reset the font characteristics:
+		$self->font->height($font_height);
+		$self->font->style($style);
 	}
-	if ($self->{yLabel}) {
-		$self->font(direction => 90);
-		$self->draw_text($self->{yLabel}
-			, 0, 0, $width * $self->x->viewMin / 2, $height
-			, dt::VCenter | dt::Right
-		);
-		$self->font(direction => 0);
-	}
-#	warn("No title, yet");
 }
 
 # For mousewheel events, we zoom in or out. However, if they're over the axes,
@@ -691,6 +760,16 @@ sub on_mousemove {
 		# A left mouse drag actually moves the graph around. Determine the
 		# change in relative values, then change the min/max accordingly.
 		
+		# It sometimes happens that the mouse move event gets triggered
+		# without a corresponding mouse down event, such as when I click
+		# on the window from *another* application and move my mouse around.
+		# If the mouse down coordinates are not known, store the current
+		# ones and simply return.
+		if (not defined $self->{mouse_down_rel}->{mb::Left}) {
+			$self->{mouse_down_rel}->{mb::Left} = [$x_stop_rel, $y_stop_rel];
+			return 1;
+		}
+		
 		# working here - per-button mouse click tracking? I ask because sometimes
 		# I accidentially click the left mouse button when I'm selecting a zoom
 		# rectangle and it messed things up.
@@ -730,43 +809,40 @@ sub on_mousemove {
 sub on_mouseup {
 	my ($self, $up_button, $up_mods, $x_stop_pixel, $y_stop_pixel) = @_;
 	
+	# Remove the previous button record for left and middle buttons:
 	if ($up_button & mb::Left) {
 		delete $self->{mouse_down_rel}->{mb::Left};
 	}
-	if ($up_button & mb::Right) {
+	elsif ($up_button & mb::Middle) {
+		delete $self->{mouse_down_rel}->{mb::Middle};
+	}
+	elsif ($up_button & mb::Right and defined $self->{mouse_down_rel}->{mb::Right}) {
 		# Zoom in to the requested rectangle:
 		my ($x_start_rel, $y_start_rel) = @{$self->{mouse_down_rel}->{mb::Right}};
 		my $x_stop_rel = $self->x->pixels_to_relatives($x_stop_pixel);
 		my $y_stop_rel = $self->y->pixels_to_relatives($y_stop_pixel);
 		
-		# Reset the x min/max
-		my ($min_rel, $max_rel) = get_min_max_for($x_start_rel, $x_stop_rel);
-		# Compute the new min/max values from the axis scaling:
-		my $min_real = $self->x->relatives_to_reals($min_rel);
-		my $max_real = $self->x->relatives_to_reals($max_rel);
-		# Set the new min/max values:
-		$self->x->minmax($min_real, $max_real);
+		# Only rescale if there is a legitimate x- and y- box:
+		if ($x_stop_rel != $x_start_rel and $y_stop_rel != $y_start_rel) {
+			# Reset the x min/max
+			my ($min_rel, $max_rel) = get_min_max_for($x_start_rel, $x_stop_rel);
+			# Compute the new min/max values from the axis scaling:
+			my $min_real = $self->x->relatives_to_reals($min_rel);
+			my $max_real = $self->x->relatives_to_reals($max_rel);
+			# Set the new min/max values:
+			$self->x->minmax($min_real, $max_real);
 
-		# Reset the y min/max
-		($min_rel, $max_rel) = get_min_max_for($y_start_rel, $y_stop_rel);
-		# Compute the new min/max values from the axis scaling:
-		$min_real = $self->y->relatives_to_reals($min_rel);
-		$max_real = $self->y->relatives_to_reals($max_rel);
-		# Set the new min/max values:
-		$self->y->minmax($min_real, $max_real);
-		
+			# Reset the y min/max
+			($min_rel, $max_rel) = get_min_max_for($y_start_rel, $y_stop_rel);
+			# Compute the new min/max values from the axis scaling:
+			$min_real = $self->y->relatives_to_reals($min_rel);
+			$max_real = $self->y->relatives_to_reals($max_rel);
+			# Set the new min/max values:
+			$self->y->minmax($min_real, $max_real);
+		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
-	if ($up_button & mb::Middle) {
-		# Remove the previous button record
-		delete $self->{mouse_down_rel}->{mb::Middle};
-	}
-}
-
-# A function that allows for quick one-off plots:
-sub plot {
-	
 }
 
 1;

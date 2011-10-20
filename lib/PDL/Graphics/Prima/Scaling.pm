@@ -21,6 +21,15 @@ sub order_of_magnitude {
 	return 10**(int $exponent);
 }
 
+# A function that returns a usable min/max when the two are identical. For
+# linear scaling, this amounts to returning the current value +- half itself,
+# unless that value is zero (in which case I return +-1).
+sub min_max_for_degenerate {
+	my ($class, $value) = @_;
+	return (-1, 1) if $value == 0;
+	return (0.5*$value,1.5 * $value);
+}
+
 sub _adjusted_position {
 	my ($value, $interval, $offset, $direction) = @_;
 	
@@ -198,6 +207,13 @@ package PDL::Graphics::Prima::Scaling::Log;
 
 use PDL;
 use Carp;
+
+sub min_max_for_degenerate {
+	my ($class, $value) = @_;
+	croak("All values must be strictly positive with logarithmic scaling")
+		unless $value > 0;
+	return ($value / 2, $value * 2);
+}
 
 # For data between 0.5 and 15, I would want tick marks at
 # 0.5, 1, 1.5, 2.5, 5, 10, 15

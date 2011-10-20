@@ -863,6 +863,8 @@ At this point, you should see the potential pitfalls of mixing this plot type
 with others. If you plot a quadratic function and include a ColorGrid plot type,
 the ColorGrid will interpret the x and y values as being 
 
+working here: document the palette key, especially undef => 
+
 =cut
 
 # Install the short-name constructor:
@@ -872,6 +874,7 @@ sub pt::ColorGrid {
 
 # Needed for function topdl:
 use PDL::Core ':Internal';
+use PDL::Graphics::Prima::Palette;
 
 # In the initialization, check that they supplied a color grid. I'd check the
 # x and y data, but I don't have access to that here:
@@ -931,6 +934,12 @@ sub initialize {
 				unless $ys->dim(0) == 2
 					or $ys->dim(0) == $self->{colors}->dim(1) + 1;
 	}
+	
+	# make sure we have a basic palette:
+	unless (exists $self->{palette}) {
+		$self->{palette} = pal::WhiteToBlack;
+	}
+	$self->{palette}->plotType($self) if defined $self->{palette};
 }
 
 # Collation function is really, really simple
@@ -952,10 +961,8 @@ sub compute_collated_min_max_for {
 	# Fudging a little bith with $extra, this could be improved
 	# working here
 	return PDL::collate_min_max_wrt_many($to_check(:-2), 0, $to_check(1:), 0
-		, values %properties, $extra(1:));
+		, $pixel_extent, values %properties, $extra(1:));
 }
-
-# Don't need to supply x or y min/max functions
 
 sub draw {
 	my ($self) = @_;
@@ -1014,10 +1021,14 @@ sub draw {
 	$ys = $widget->y->reals_to_pixels($ys);
 	$xs = $widget->x->reals_to_pixels($xs);
 	
-	# Gather the properties that I will need to use in the plotting. Be sure to
-	# keep the props (generated above) in sync with the actual Prima drawing
-	# command used below.
+	# Gather the properties that I will need to use in the plotting.
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
+	
+	# Check if a palette was supplied, and if so replace the colors with
+	# their palettized equivalent:
+	if (defined $self->{palette}) {
+		$properties{colors} = $self->{palette}->apply($colors);
+	}
 	
 	# Set up the x- and y- dimension lists for proper threading:
 	$xs = $xs->dummy(1, $colors->dim(1));

@@ -81,8 +81,8 @@ sub STORE {
 #	$dataset->initialize_plot_types;
 	
 	# Recompute the auto min/max values:
-	$self->{widget}->x->recompute_auto;
-	$self->{widget}->y->recompute_auto;
+	$self->{widget}->x->update_edges;
+	$self->{widget}->y->update_edges;
 }
 
 =pod

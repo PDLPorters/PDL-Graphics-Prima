@@ -21,6 +21,13 @@ $wDisplay->insert('Plot',
 		]
 	],
 	pack => { fill => 'both', expand => 1},
+	x => {
+		label => 'x data',
+	},
+	y => {
+		label => 'y data',
+	},
+	title => 'test',
 );
 
 run Prima;
