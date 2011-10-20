@@ -3,11 +3,10 @@ PDL::Graphics::Prima
 
 A PDL graphing library using the Prima toolkit.
 
-
-This collection of modules that provides a PDL-centric 2D graphing library
-that is fast, intelligent, multi-platform and highly interactive. Fast
-because it's built on the PDL::Drawing::Prima bindings, which make use of
-the PDL threading engine to quickly execute large sets of drawing operations.
+This collection of modules provides a PDL-centric 2D graphing library that
+is fast, intelligent, multi-platform and highly interactive. Fast because
+it's built on the PDL::Drawing::Prima bindings, which make use of the PDL
+threading engine to quickly execute large sets of drawing operations.
 Intelligent because I have put a lot of thought into important behavior like
 autoscaling and smart tick marking and they Do The Right Thing almost every
 time, without the need for manual manipulation. Multi-platform and highly
