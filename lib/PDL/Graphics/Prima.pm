@@ -635,9 +635,10 @@ sub on_paint {
 			lineEnd rop rop2);
 	my %backups = map {$_ => $self->$_} (@to_backup);
 	
-	# Draw the data:
-	while(my ($key, $dataset) = each %{$self->{dataSets}}) {
+	# Draw the data, sorted by key name:
+	foreach my $key (sort keys %{$self->{dataSets}}) {
 		next if $key eq 'widget';
+		my $dataset = $self->{dataSets}->{$key};
 		$dataset->draw($self);
 		
 		# Restore the drawing parameters after each draw function:
