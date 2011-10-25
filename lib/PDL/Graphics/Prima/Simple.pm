@@ -211,8 +211,9 @@ sub plot {
 	
 	if ($pid == 0) {
 		# child process, create the plot
-		require 'PDL/Graphics/Prima.pm';
+		require 'Prima.pm';
 		Prima->import('Application');
+		require 'PDL/Graphics/Prima.pm';
 		PDL::Graphics::Prima->import();
 		
 		my $wDisplay = Prima::MainWindow->create(
