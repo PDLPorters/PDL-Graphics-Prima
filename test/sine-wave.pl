@@ -6,4 +6,9 @@ use PDL::Graphics::Prima::Simple;
 
 my $x = sequence(100)/10;
 my $y = sin($x);
-line_plot($x, $y);
+plot(-data => [$x, $y],
+	onKeyUp => sub {
+		print "You clicked the mouse\n";
+		print "Got args [", join('], [', @_), "]\n";
+	},
+);
