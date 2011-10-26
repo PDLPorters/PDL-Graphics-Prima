@@ -205,31 +205,56 @@ sub plot {
 	croak("Arguments to plot must be in key => value pairs")
 		unless @_ % 2 == 0;
 	my %args = @_;
-	
-	my $pid = fork();
-	die "cannot fork" unless defined $pid;
-	
-	if ($pid == 0) {
-		# child process, create the plot
-		require 'Prima.pm';
-		Prima->import('Application');
-		require 'PDL/Graphics/Prima.pm';
-		PDL::Graphics::Prima->import();
+
+	if (defined $::application) {
+		# If the application is already running, then simply create a new
+		# window:
 		
-		my $wDisplay = Prima::MainWindow->create(
+		my $window = Prima::Window->create(
 			text  => $args{title} || 'PDL::Graphics::Prima',
 			size  => $args{size} || [our @default_sizes],
 		);
-		
-		$wDisplay->insert('Plot',
+
+		$window->insert('Plot',
 			pack => { fill => 'both', expand => 1},
 			%args
 		);
+		
+		# have the widget minimize the window and then die out. Then restart it with 
+		$window->execute;
+		$window->destroy;
+	}
+	else {
 
-		# Display the plot and exit when done:
-		run Prima;
-		exit;
-	
+		my $pid = fork();
+		die "cannot fork" unless defined $pid;
+		
+		if ($pid == 0) {
+			$SIG{TERM} = sub {
+				exit;
+			};
+			
+			# child process, create the plot
+			require 'Prima.pm';
+			Prima->import('Application');
+			require 'PDL/Graphics/Prima.pm';
+			PDL::Graphics::Prima->import();
+			
+			my $wDisplay = Prima::MainWindow->create(
+				text  => $args{title} || 'PDL::Graphics::Prima',
+				size  => $args{size} || [our @default_sizes],
+			);
+			
+			$wDisplay->insert('Plot',
+				pack => { fill => 'both', expand => 1},
+				%args
+			);
+
+			# Display the plot and exit when done:
+			run Prima;
+			
+			exit;
+		}
 	}
 }
 
@@ -274,6 +299,7 @@ our @default_sizes = (400, 400);
 # Override the import method to handle a few user-specifiable arguments:
 sub import {
 	my $package = shift;
+	my $sequential;
 	my @args;
 	# Run through all the arguments and pull out anything special:
 	foreach my $arg (@_) {
@@ -287,12 +313,24 @@ sub import {
 			# Apparently we're good to go so save the sizes:
 			@default_sizes = @$arg;
 		}
+		elsif ($arg eq '-sequential') {
+			$sequential++;
+		}
 		else {
 			push @args, $arg;
 		}
 	}
 	
 	$package->export_to_level(1, $package, @args);
+
+	if($sequential or $^O =~ /MS/) {
+		# If this is windows, we'll use a single application that gets managed
+		# by the various plot commands:
+		require 'Prima.pm';
+		Prima->import(qw(Application));
+		require 'PDL/Graphics/Prima.pm';
+		PDL::Graphics::Prima->import();
+	}
 }
 
 1;

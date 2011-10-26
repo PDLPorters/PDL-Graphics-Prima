@@ -52,6 +52,8 @@ Here is an overview of the plotting infrastructure to help keep your head
 straight. The data types are indicated after the datatype and information
 that is only meant to be used internally is in parentheses
 
+At the moment, it is not quite accurate and needs updating. I'm Sory. :-(
+
  Plotting Widget
   |- xLabel string
   |- yLabel string
@@ -756,6 +758,14 @@ sub on_mousemove {
 	# Compute the relative and real final mouse locations
 	my $x_stop_rel = $self->x->pixels_to_relatives($x_stop_pixel);
 	my $y_stop_rel = $self->y->pixels_to_relatives($y_stop_pixel);
+	
+	# On windows, the drag button is not properly reported. However, it is
+	# there is never any issue with failure to report a mouse-down event (like
+	# we get with X systems), so if I got here, it is easy enough to adapt.
+	if ($^O =~ /MS/) {
+		$drag_button = mb::Left if defined $self->{mouse_down_rel}->{mb::Left};
+		$drag_button = mb::Right if defined $self->{mouse_down_rel}->{mb::Right};
+	}
 	
 	if ($drag_button & mb::Left) {
 		# A left mouse drag actually moves the graph around. Determine the
