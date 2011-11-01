@@ -195,7 +195,7 @@ sub is_valid_extremum {
 		$@ = 'nan is not allowed; value must be real';
 		return 0;
 	}
-	elsif ($_[1] + 1 == $_[1]) {	# inf
+	elsif ($_[1] * 0.0 != 0.0) {	# inf
 		$@ = 'value must be finite';
 		return 0;
 	}
@@ -510,7 +510,7 @@ sub is_valid_extremum {
 		$@ = 'nan is not allowed';
 		return 0;
 	}
-	elsif ($extremum + 1 == $extremum) {
+	elsif ($extremum * 0.0 != 0.0) {
 		# inf is bad:
 		$@ = 'must be finite';
 		return 0;
