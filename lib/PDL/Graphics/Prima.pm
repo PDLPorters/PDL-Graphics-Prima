@@ -5,6 +5,9 @@ $| = 1;
 package Prima::Plot;
 use PDL::Lite;
 use Prima;
+use Prima::ImageDialog;
+use Prima::MsgBox;
+use Prima::Utils;
 
 use base 'Prima::Widget';
 
@@ -817,6 +820,7 @@ sub on_mousemove {
 	$self->{mouse_move_rel} = [$x_stop_rel, $y_stop_rel];
 }
 
+use Time::HiRes;
 sub on_mouseup {
 	my ($self, $up_button, $up_mods, $x_stop_pixel, $y_stop_pixel) = @_;
 	
@@ -851,60 +855,46 @@ sub on_mouseup {
 			# Set the new min/max values:
 			$self->y->minmax($min_real, $max_real);
 		}
+		# Call the popup menu if it 'looks' like a right-click:
+		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
+			my $popup = Prima::Popup->new(
+				items => [
+					['~Save As...' => sub {
+							# Sleep for a quarter-second to clear the menu:	
+							Prima::Utils::post(\&Time::HiRes::usleep, 250_000);
+							Prima::Utils::post(\&save_to_file, $self)
+					}],
+					['~Autoscale' => sub {
+							$self->x->minmax(lm::Auto, lm::Auto);
+							$self->y->minmax(lm::Auto, lm::Auto);
+					}],
+				],
+			);
+		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
 }
 
+# A routine to save the current plot to a rasterized file:
+sub save_to_file {
+	# Get the filename as an argument or from a save-as dialog.
+	my ($self, $filename) = @_;
+	
+	# Get the image
+	my $image = $::application->get_image($self->client_to_screen($self->origin), $self->size);
+	
+	# If they didn't specify a filename, run a dialog to get it:
+	unless ($filename) {
+		my $dlg = Prima::ImageSaveDialog-> create;
+	
+		$dlg->save($image);
+		return;
+	}
+	
+	# If they specified a filename, simply save it:
+	$image-> save($filename) or
+		Prima::MsgBox::message("Unable to save plot to '$filename'", mb::Ok);
+}
+
 1;
-
-__END__
-
-	$self->onMouseClick( sub {
-		my (undef, $button, undef, $mouse_x, $mouse_y, $double_click) = @_;
-		if ($double_click and $button == mb::Left) {
-			my ($x_max_pixel, $y_max_pixel) = $self->size;
-			# Is this an auto-scale double-click?
-			if ($mouse_x < $x_max_pixel / 10) {
-				($ymin, $ymax) = $y->where(($xmin < $x) & ($x < $xmax))->minmax;
-				$self->notify("Paint");
-				$self->notify("PostMessage", 'new-range')
-			}
-			elsif ($mouse_y < $y_max_pixel / 10) {
-				($xmin, $xmax) = $x->minmax;
-				$self->notify("Paint");
-				$self->notify("PostMessage", 'new-range')
-			}
-			else {
-				# print location, and position relative to previous location
-				# store current real coordinates.
-				my $actualx = $mouse_x / (0.8*$x_max_pixel) * ($xmax - $xmin) + $xmin;
-				my $actualy = $mouse_y / (0.8*$y_max_pixel) * ($ymax - $ymin) + $ymin;
-				print "Coordinate ($actualx, $actualy) is (", $actualx - $previous_click[0]
-					, ", ", $actualy - $previous_click[1], ") from the last click\n";
-				
-				@previous_click = ($actualx, $actualy);
-			}
-		}
-	});
-	$self->onMouseUp( sub {
-			# Avoid double-click trouble:
-			if ($right_pixel - $left_pixel > 3
-				or $top_pixel - $bottom_pixel > 3) {
-				
-				my ($width, $height) = $self->size;
-				
-				# Rescale the coordinates:
-				my $xrange = $xmax - $xmin;
-				my $old_xmin = $xmin;
-				my $yrange = $ymax - $ymin;
-				my $old_ymin = $ymin;
-				$xmin = ($left_pixel - $width/10) / ($width * 0.8) * $xrange + $old_xmin;
-				$xmax = ($right_pixel - $width/10) / ($width * 0.8) * $xrange + $old_xmin;
-				$ymin = ($bottom_pixel - $height/10) / ($height  * 0.8) * $yrange + $old_ymin;
-				$ymax = ($top_pixel - $height/10) / ($height * 0.8) * $yrange + $old_ymin;
-				
-				# Redraw it
-				$self->notify("Paint");
-				$self->notify("PostMessage", 'new-range')
-			}
