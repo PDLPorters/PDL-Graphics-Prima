@@ -19,6 +19,7 @@ use PDL::Drawing::Prima;
 use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Axis;
 use PDL::Graphics::Prima::DataSet;
+use PDL::Graphics::Prima::BoundsDialog;
 
 =head1 NAME
 
@@ -857,8 +858,8 @@ sub on_mouseup {
 		}
 		# Call the popup menu if it 'looks' like a right-click:
 		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
-			my $popup = Prima::Popup->new(
-				items => [
+			my @items = (
+					['~Edit Bounds...' => sub { self->edit_bounds }],
 					['~Save As...' => sub {
 							# Sleep for a quarter-second to clear the menu:	
 							Prima::Utils::post(\&Time::HiRes::usleep, 250_000);
@@ -868,8 +869,9 @@ sub on_mouseup {
 							$self->x->minmax(lm::Auto, lm::Auto);
 							$self->y->minmax(lm::Auto, lm::Auto);
 					}],
-				],
 			);
+			# working here - add context-dependent items
+			my $popup = Prima::Popup->new(items => \@items);
 		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
@@ -895,6 +897,12 @@ sub save_to_file {
 	# If they specified a filename, simply save it:
 	$image-> save($filename) or
 		Prima::MsgBox::message("Unable to save plot to '$filename'", mb::Ok);
+}
+
+# A routine that pops up a modal dialog box for editing the plot's bounds:
+sub edit_bounds {
+	$current_plot_widget = shift;
+	my $result = PDL::Graphics::Prima::BoundsDialog->run($current_plot_widget);
 }
 
 1;
