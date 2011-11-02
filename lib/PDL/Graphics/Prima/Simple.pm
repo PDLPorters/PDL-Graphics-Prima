@@ -1,6 +1,7 @@
 package PDL::Graphics::Prima::Simple;
 use strict;
 use warnings;
+use Carp 'croak';
 
 # Import the symbols like pt::Lines and lm::Auto into the global symbol
 # table so the user can use them
@@ -31,6 +32,12 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  # Draw a line connecting each x/y pair:
  line_plot($x, $y);
  
+ 
+ # --( Super simple histogram )--
+ 
+ # PDL hist method returns x/y data
+ hist_plot(	$y->hist);
+ hist_plot($bin_centers, $heights);
  
  # --( Super simple matrix plots )--
  
@@ -72,6 +79,11 @@ takes two piddles, one for x and one for y, and makes a line plot with them
 =item blob_plot ($x, $y)
 
 takes two piddles, one for x and one for y, and makes a blob plot with them
+
+=item hist_plot ($x, $y)
+
+takes two piddles one for the bin centers and one for the heights, and plots
+a histogram
 
 =item matrix_plot ($xbounds, $ybounds, $matrix)
 
@@ -163,14 +175,32 @@ sub blob_plot {
 	plot(-data => [@_, plotType => pt::Blobs]);
 }
 
-=item matrix_plot ($xbounds, $ybounds, $matrix)
+=item hist_plot ($x, $y)
 
-Matrix plot takes three arguments. The first designates the x-bounds of the
-plot; the second designates the y-bounds of the plot, and the third
-specifies a matrix that you want to have plotted in grey-scale. The x-bounds
-and y-bounds arguments should either be two-element arrays or two-element 
-piddles designating the min and the max. (You can also pass arrays or
-piddles with more elements, but don't worry about that for now.)
+The C<hist_plot> function takes two arguments, the centers of the histogram
+bins and their heights. It plots the histogram as black-outined rectangles
+against a white background. As with the other functions, C<$x> and C<$y>
+must be thread-compatible.
+
+Any heights or positions that are bad values are skipped, leaving a gap in
+the histogram.
+
+=cut
+
+sub hist_plot {
+	croak("hist_plot expects two piddles, the bin-centers and the bin heights")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Histogram]);
+}
+
+=item matrix_plot ([$xbounds, $ybounds,] $matrix)
+
+Matrix plot takes either one or three arguments. The first designates the
+x-bounds of the plot; the second designates the y-bounds of the plot, and
+the third specifies a matrix that you want to have plotted in grey-scale.
+The x-bounds and y-bounds arguments should either be two-element arrays or
+two-element piddles designating the min and the max. (You can also pass
+arrays or piddles with more elements, but don't worry about that for now.)
 
 Bad values, if your data has any, are skipped. This means that you will have
 a white spot in its place (since the background is white), which is not
@@ -181,12 +211,19 @@ working here - document threading
 =cut
 
 sub matrix_plot {
-	croak("matrix_plot expects the x limits, y limits, and the image:\n"
-		. "matrix_plot ([x0, xf], [y0, yf], \$image)")
-		unless @_ == 3;
-	
-	# unpack the arguments:
-	my ($x, $y, $matrix) = @_;
+	my ($x, $y, $matrix);
+	if (@_ == 1) {
+		$x = [0, 1];
+		$y = [0, 1];
+		($matrix) = @_;
+	}
+	elsif (@_ == 3) {
+		($x, $y, $matrix) = @_;
+	}
+	else {
+		croak("matrix_plot expects an image, optionally preceeded by its x- and y-limits:\n"
+			. "matrix_plot ([x0, xf], [y0, yf], \$image)")
+	}
 	
 	plot(-image => [$x, $y, plotType => pt::ColorGrid(colors => $matrix)]);
 }
@@ -195,7 +232,7 @@ sub matrix_plot {
 
 =head1 PLOT FUNCTION
 
-working here - thorough documentation
+working here - thorough documentation needed
 
 =cut
 
@@ -287,12 +324,26 @@ element anonymous array:
  # default to 300 wide by 450 tall, import 'plot' function:
  use PDL::Graphics::Prima::Simple [300, 450], 'plot';
 
+Finally, the default behavior on a Unix-like system that supports proper
+forking (as discussed below) is to create a stand-alone plot window that you
+can manipulate while the rest of your script runs, and which persists
+afterwards. If you want the script to block after each function cal until
+the plot window closes, you can provide the C<-sequential> switch. You can
+freely mix the sequential switch into your other call parameters:
+
+ # force sequential (i.e. blocking) behavior
+ use PDL::Graphics::Prima::Simple -sequential;
+
+(If your goal is to create a script that runs B<identically> on all supported
+platforms, you should always use this switch, unless I figure out how to
+properly fork a seperate process under Windows.)
+
 =cut
 
 # import/export stuff:
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = our @EXPORT = qw(plot line_plot blob_plot matrix_plot);
+our @EXPORT_OK = our @EXPORT = qw(plot line_plot hist_plot blob_plot matrix_plot);
 
 our @default_sizes = (400, 400);
 
@@ -323,7 +374,8 @@ sub import {
 	
 	$package->export_to_level(1, $package, @args);
 
-	if($sequential or $^O =~ /MS/) {
+	# Set up Prima for sequential plotting if that's what they want/get
+	if(($sequential or $^O =~ /MS/)) {
 		# If this is windows, we'll use a single application that gets managed
 		# by the various plot commands:
 		require 'Prima.pm';
@@ -334,6 +386,24 @@ sub import {
 }
 
 1;
+
+=head1 BLOCKING AND NONBLOCKING PLOTTING
+
+Under Unix-like systems that support proper forking, namely Linux and Mac
+OSX, the default behavior is to fork a process that creates the plot window
+and immediately resumes the execution of your code. These windows remain
+open even after your script exits, which can be handy in a number of
+circumstances. It also allows for more sensible behavior with the perldl
+shell, in which case making plots with these commands will give you fully
+interactive plot windows and a fully working (i.e. non-blocked) shell.
+
+When run under Windows or if you supply the C<-sequential> argument when you
+C<use> this module, the plot commands will block until they are closed. This
+can be helpful if you want to view a series of plots and you want to enforce
+a no-clutter policy, but it does not play so well with the mental model
+underlying the perldl shell. Unfortuntely, I know of no way to get
+nonblocking behavior on Windows. Patches welcome!
+
 
 =head1 AUTHOR
 
