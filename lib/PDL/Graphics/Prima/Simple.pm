@@ -257,7 +257,7 @@ sub plot {
 			%args
 		);
 		
-		# have the widget minimize the window and then die out. Then restart it with 
+		# Create a plot window and block until the user closes it
 		$window->execute;
 		$window->destroy;
 	}
