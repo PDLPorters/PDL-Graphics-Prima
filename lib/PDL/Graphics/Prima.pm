@@ -1,6 +1,8 @@
 use strict;
 use warnings;
-$| = 1;
+
+package PDL::Graphics::Prima;
+our $VERSION = 0.01;
 
 package Prima::Plot;
 use PDL::Lite;
@@ -24,10 +26,51 @@ use PDL::Graphics::Prima::DataSet;
 
 PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
 
-=head1 SYNOPSIS
+=head1 SIMPLE SYNOPSIS
 
- use strict;
- use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ # Generate some data - a sine curve
+ my $x = sequence(100) / 20;
+ my $y = sin($x);
+ 
+ # Draw a point at each x/y pair:
+ blob_plot($x, $y);
+ 
+ # Draw a line connecting each x/y pair:
+ line_plot($x, $y);
+ 
+ # Draw a histogram:
+ my ($bin_centers, $heights) = $y->hist;
+ hist_plot($bin_centers, $heights);
+ hist_plot($y->hist);  # equivalent
+ 
+ 
+ # Generate some data - a wavy pattern
+ my $image = sin(sequence(100)/10)
+             + sin(sequence(100)/20)->transpose;
+ 
+ # Generate a greyscale image:
+ matrix_plot($image);
+ 
+ # Set the    left, right,  bottom, top
+ matrix_plot([0,    1],    [0,      2],  $image);
+ 
+ 
+ # Use the more general plot for multiple datasets
+ # and more plotting features:
+ my $colors = pal::Rainbow()->apply($x);
+ plot(
+     -lines       => [$x, $y],
+     -color_blobs => [$x, $y + 1, colors => $colors,
+                      plotType => pt::Blobs],
+     x => { label => 'Time' },
+     y => { label => 'Sine' },
+ );
+
+=head1 WIDGET SYNOPSIS
+
  use PDL;
  use Prima qw(Application);
  use PDL::Graphics::Prima;
@@ -44,10 +87,39 @@ PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
      -function => [\&PDL::exp, color => cl::Blue],
      -data => [$t_data, $y_data, color => cl::Red],
      pack => { fill => 'both', expand => 1},
- #   y => {scaling => sc::Log},
  );
  
  run Prima;
+
+=head1 IF YOU ARE NEW
+
+If you are new to C<PDL::Graphics::Prima>, you should begin by reading the
+documentation for L<PDL::Graphics::Prima::Simple>. This module provides a
+simplified interface for quickly dashing off a few plots and offers stepping
+stones to create more complex plots. Depending on your plotting needs, you may
+not need anything more complicated than L<PDL::Graphics::Prima::Simple>. However,
+C<PDL::Graphics::Prima> offers much greater flexibility and interactivity than
+the options available in the Simple interface, so once you feel comfortable,
+you should come back to this manual page and learn how to create and utelize
+Plot widgets in conjunction with the Prima GUI toolkit.
+
+=head1 DESCRIPTION
+
+PDL::Graphics::Prima is a plotting interface for creating and exploring 2D data
+visualizations. The core of this interace is a new Plot widget that can be
+incorporated into Prima applications. However, to make the learning curve as
+simple as possible, there is also a simpler interface.
+
+=over
+
+=item PDL::Graphics::Prima::Simple
+
+This module is particularly well suited to simple scripts in which you simply
+want to plot your data.
+
+=back
+
+
 
 =head1 OVERVIEW
 
@@ -58,8 +130,6 @@ that is only meant to be used internally is in parentheses
 At the moment, it is not quite accurate and needs updating. I'm Sory. :-(
 
  Plotting Widget
-  |- xLabel string
-  |- yLabel string
   |- title string
   |- backColor colorValue
   |- replotDuration float in milliseconds
@@ -929,3 +999,51 @@ sub copy_to_clipboard {
 }
 
 1;
+
+
+=head1 TODO
+
+This is not a perfect plotting library. Here are some of the particularly
+annoying issues with it, which I hope to resolve:
+
+adjustable right and bottom margins means mouse scroll-wheel action doesn't
+work exactly as advertised
+
+something's messed up with the x-ticks, and sometimes the left x-tick does not
+line-up with the edge of the horizontal axis line.
+
+linear tick scaling can switch the 'natural' major and minor ticks just by
+moving, which makes it seem jittery. The function for determining the major and
+minor ticks should be simplified and based only on the scale of interest.
+
+singular properties (like C<color>, as opposed to C<colors>) do not Do What You
+Mean. With PlotTypes, they often don't do anything at all. Although I could
+resolve this problem in this library, I would rather address this in
+L<PDL::Drawing::Prima>.
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
+
+=head1 SEE ALSO
+
+Both the L<Perl Data Language|PDL> and the L<Prima GUI Toolkit|Prima> are
+amazing and this module would have no reason for existence without both of them.
+
+This module serves as the motivation for L<PDL::Drawing::Prima>, and also would
+be unable to function with any efficiency without it.
+
+Other 2D plotting options include L<PDL::Graphics::PGPLOT>,
+L<PDL::Graphics::PLplot>, L<PDL::Graphics::Gnuplot>, L<PDL::Graphics::Asymptote>,
+and many others. Search CPAN for more.
+
+For 3D plotting, see L<PDL::Graphics::TriD>.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011 David Mertens. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=cut
