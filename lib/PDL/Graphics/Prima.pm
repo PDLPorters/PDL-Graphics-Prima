@@ -103,6 +103,9 @@ At the moment, it is not quite accurate and needs updating. I'm Sory. :-(
     |- $self->get_data_as_pixels($widget)
     |- $self->extremum($nane, $comperator, $widget)
   |- $self->compute_min_max_for($axis_name)
+  |- $self->get_image
+  |- $self->copy_to_clipboard
+  |- $self->save_to_file
 
 
 =cut
@@ -820,7 +823,6 @@ sub on_mousemove {
 	$self->{mouse_move_rel} = [$x_stop_rel, $y_stop_rel];
 }
 
-use Time::HiRes;
 sub on_mouseup {
 	my ($self, $up_button, $up_mods, $x_stop_pixel, $y_stop_pixel) = @_;
 	
@@ -859,10 +861,23 @@ sub on_mouseup {
 		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
 			my $popup = Prima::Popup->new(
 				items => [
+					['~Copy' => sub {
+						Prima::Timer->create(
+							timeout => 250,
+							onTick => sub {
+								$_[0]->stop;
+								$self->copy_to_clipboard;
+							},
+						)->start;
+					}],
 					['~Save As...' => sub {
-							# Sleep for a quarter-second to clear the menu:	
-							Prima::Utils::post(\&Time::HiRes::usleep, 250_000);
-							Prima::Utils::post(\&save_to_file, $self)
+						Prima::Timer->create(
+							timeout => 250,
+							onTick => sub {
+								$_[0]->stop;
+								$self->save_to_file;
+							},
+						)->start;
 					}],
 					['~Autoscale' => sub {
 							$self->x->minmax(lm::Auto, lm::Auto);
@@ -876,13 +891,18 @@ sub on_mouseup {
 	}
 }
 
+sub get_image {
+	my $self = shift;
+	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
+}
+
 # A routine to save the current plot to a rasterized file:
 sub save_to_file {
 	# Get the filename as an argument or from a save-as dialog.
 	my ($self, $filename) = @_;
 	
 	# Get the image
-	my $image = $::application->get_image($self->client_to_screen($self->origin), $self->size);
+	my $image = $self->get_image;
 	
 	# If they didn't specify a filename, run a dialog to get it:
 	unless ($filename) {
@@ -895,6 +915,17 @@ sub save_to_file {
 	# If they specified a filename, simply save it:
 	$image-> save($filename) or
 		Prima::MsgBox::message("Unable to save plot to '$filename'", mb::Ok);
+}
+
+sub copy_to_clipboard {
+	my $self = shift;
+	my $image = $self->get_image;
+	
+	my $clipboard = $::application->Clipboard;
+	$clipboard->open;
+	$clipboard->clear;
+	$clipboard->image($image);
+	$clipboard->close;
 }
 
 1;
