@@ -32,6 +32,9 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  # Draw a line connecting each x/y pair:
  line_plot($x, $y);
  
+ # Sketch a function:
+ func_plot(0, 10, \&PDL::sin);
+ 
  
  # --( Super simple histogram )--
  
@@ -84,6 +87,11 @@ takes two piddles, one for x and one for y, and makes a blob plot with them
 
 takes two piddles one for the bin centers and one for the heights, and plots
 a histogram
+
+=item func_plot ($x_min, $x_max, $func_ref, [$N_points])
+
+takes an initial plot min/max and a function reference and makes a line plot of
+the function; it can optionally take the number of points to plot as well
 
 =item matrix_plot ($xbounds, $ybounds, $matrix)
 
@@ -191,6 +199,75 @@ sub hist_plot {
 	croak("hist_plot expects two piddles, the bin-centers and the bin heights")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
 	plot(-data => [@_, plotType => pt::Histogram]);
+}
+
+=item func_plot ($x_min, $x_max, $func_ref, [$N_points])
+
+The C<func_plot> function takes three or four arguments and plots a function.
+The first two arguments are the initial x-bounds (min and max); the third
+argument is the function that you want to plot; the optional fourth argument is
+the number of points that you want to use in generating the sketch. 
+
+The function itself will be called whenever the plot needs to be redrawn. It
+will be passed a single argument: a piddle with sequential x-points at which
+the function should be evaluated. The function should return a piddle of
+y-points to be plotted. Here are some examples:
+
+ # Plot PDL's exponential function:
+ func_plot (1, 5, \&PDL::exp);
+ 
+ # Plot the tangent function:
+ func_plot (1, 5, sub {
+     my $xs = shift;
+     return 5 * ($xs / 4)->tan
+ });
+ # or equivalently, if you have imported PDL's tan function:
+ func_plot (1, 5, sub {
+     my $xs = shift;
+     return 5 * tan($xs / 4);
+ });
+
+Your function can return bad values, in which case they will not be drawn. For
+example, here is a function that plots a decaying exponential, but only for
+values of x greater than or equal to zero. It starts with an initial view of
+x running from 0 to 4:
+
+ func_plot (0, 4, sub {
+     my $xs = shift;
+     my $ys = exp(-$xs);
+     return $ys->setbadif($xs < 0);
+ });
+
+If you do not specify the number of points to draw, the equivalent L</plot>
+command is this:
+
+ plot(
+     -data => [$func_ref],
+     x => { min => $xmin, max => $xmax },
+ );
+
+If you do specify the number of points to draw, the equivalent L</plot> command
+is this:
+
+ plot(
+     -data => [$func_ref, N_points => $N_points],
+     x => { min => $xmin, max => $xmax },
+ );
+
+=cut
+
+sub func_plot {
+	croak("func_plot expects three or four arguments: the x min and max, the function reference,\n"
+		. "   and, optionally, the number of points to plot")
+		unless @_ == 3 or @_ == 4;
+	my ($xmin, $xmax, $func_ref, $N_points) = @_;
+	plot(
+		-data => [$func_ref, ($N_points ? (N_points => $N_points) : ())],
+		x => {
+			min => $xmin,
+			max => $xmax,
+		},
+	);
 }
 
 =item matrix_plot ([$xbounds, $ybounds,] $matrix)
@@ -343,7 +420,7 @@ properly fork a seperate process under Windows.)
 # import/export stuff:
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = our @EXPORT = qw(plot line_plot hist_plot blob_plot matrix_plot);
+our @EXPORT_OK = our @EXPORT = qw(plot line_plot hist_plot blob_plot matrix_plot func_plot);
 
 our @default_sizes = (400, 400);
 
