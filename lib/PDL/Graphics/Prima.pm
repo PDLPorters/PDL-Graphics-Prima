@@ -926,7 +926,7 @@ sub on_mouseup {
 		}
 		# Call the popup menu if it 'looks' like a right-click:
 		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
-			my $popup = Prima::Popup->new(
+			$self->popup(Prima::Popup->new(
 				items => [
 					['~Copy' => sub {
 						Prima::Timer->create(
@@ -951,7 +951,7 @@ sub on_mouseup {
 							$self->y->minmax(lm::Auto, lm::Auto);
 					}],
 				],
-			);
+			));
 		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
