@@ -423,18 +423,48 @@ sub get_data {
 	return ($xs, $dataset->{func}->($xs));
 }
 
-# working here - implement some sort of collation solution, and also allow
-# specification of x-bounds.
+# Function-based datasets need to return a collection of bad values for x-axis
+# requirements.
 
-sub extremum {
-	my ($self, $func_name, $comperator, $widget) = @_;
+sub compute_collated_min_max_for {
+	# Must get the collated min max for each plot type for this data:
+	my ($self, $axis_name, $pixel_extent) = @_;
 	
-	# Function-based datasets cannot compute their x extrema, so return undefs
-	# for those:
-	return (undef, 0) if $func_name =~ /^x/;
+	if ($axis_name eq 'x') {
+		return (
+			PDL->zeroes($pixel_extent+1)->setvaltobad(0),
+			PDL->zeroes($pixel_extent+1)->setvaltobad(0),
+		);
+	}
 	
-	# For y extrema, just use the parent class's implementation:
-	return $self->SUPER::extremum($func_name, $comperator, $widget);
+	# working here - this needs to be smarter, especially for the first round
+	# when *nothing* is known about the axis limits.
+	
+	my $widget = $self->{dataSets}->{widget};
+	
+	my (@min_collection, @max_collection);
+	foreach my $plotType (@{$self->{plotType}}) {
+		
+		# Accumulate all the collated results
+		my ($min, $max)
+		= $plotType->compute_collated_min_max_for($axis_name, $pixel_extent);
+		# The collated results are not required to be one dimensional.
+		# As such, I need to reduce them. I do this by moving the dimension
+		# with $pixel_extent entries to the back and then calling minimum
+		# until I have only one dimension remaining.
+		$min = $min->squeeze->mv(0,-1);
+		$min = $min->minimum while($min->ndims > 1);
+		$max = $max->squeeze->mv(0,-1);
+		$max = $max->maximum while($max->ndims > 1);
+		push @min_collection, $min;
+		push @max_collection, $max;
+	}
+	
+	# Merge all the data:
+	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
+	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
+	
+	return ($collated_min, $collated_max);
 }
 
 1;

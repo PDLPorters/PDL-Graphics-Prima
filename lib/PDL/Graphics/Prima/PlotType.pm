@@ -575,7 +575,7 @@ sub initialize {
 	$bars = $self->{y_upper_err} // $self->{y_err}; #/
 	$self->{upper_bars} = $bars->abs if defined $bars;
 	$bars = $self->{y_lower_err} // $self->{y_err}; #/
-	$self->{upper_bars} = $bars->abs if defined $bars;
+	$self->{lower_bars} = $bars->abs if defined $bars;
 }
 
 sub y_bars_present {
