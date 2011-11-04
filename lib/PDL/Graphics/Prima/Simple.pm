@@ -630,7 +630,7 @@ and use them unless you override those properties seperately.
 These examples are meant to work on any machine. That means that I cannot rely
 on data files, so I am going to synthesize data for each plot.
 
-A simple line plot with dots at each point:
+This first example is a simple line plot with dots at each point:
 
  use strict;
  use warnings;
@@ -651,8 +651,9 @@ A simple line plot with dots at each point:
      ],
  );
 
-Use random blob radii and colors. Notice that the lineWidth of 3
-obscures many of the blobs since their radii are between 5 and 1.
+Now for something more fun. This figure uses random blob radii and colors.
+Notice that the lineWidth of 3 obscures many of the blobs since their radii are
+between 1 and 5.
 
  use strict;
  use warnings;
@@ -679,16 +680,89 @@ obscures many of the blobs since their radii are between 5 and 1.
      ],
  );
 
-Get some linear data with noise and perform a least-squares fit to it:
+Here I use a black background and white foreground, and plot the blobs B<over>
+the line instead of under it. Also notice that I use the C<-sequential> flag,
+which I have to do in order to guarantee having Prima's color shortcuts.
 
  use strict;
  use warnings;
- use PDL::Graphics::Prima::Simple;
+ use PDL::Graphics::Prima::Simple -sequential;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ my $colors = pal::Rainbow->apply($y);
+ my $radius = 1 + $x->random*4;
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Lines (
+                 lineWidths => 3,
+             ),
+             pt::Blobs (
+                 radius => $radius,
+                 colors => $colors,
+             ),
+         ],
+     ],
+     backColor => cl::Black,
+     color => cl::White,
+ );
+
+I find the smaller points very difficult to see, so here's a version in which I
+'wrap' the points with a white radius. I achieve that by drawing two consecutive
+blobs, the first of which is the default color and which has a radius one larger
+than the colored radius. Of course, it might be better to use a plotType that
+makes open circles, but that's not (yet?) available.
+
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple -sequential;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ my $colors = pal::Rainbow->apply($y);
+ my $radius = 1 + $x->random*4;
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Lines (
+                 lineWidths => 3,
+             ),
+             pt::Blobs(
+                 radius => 1 + $radius,
+             ),
+             pt::Blobs (
+                 radius => $radius,
+                 colors => $colors,
+             ),
+         ],
+     ],
+     backColor => cl::Black,
+     color => cl::White,
+ );
+
+Here I generate some linear data with noise and perform a least-squares fit to
+it. In this case I perform the least-squares fit by hand, since not everybody
+will have Slatec installed. The important part is the C<use PDL::Graphics::Prima::Simple>
+line and beyond. Also notice that I construct the function color based on
+L<PDL::Drawing::Prima>'s C<rgb_to_colors> function so that I can run this code
+without needing to use Prima's constant C<cl::LightRed>.
+
+ use strict;
+ use warnings;
  use PDL;
  
  my $x = sequence(100)/10;
  my $y = $x/2 - 3 + $x->grandom*3;
- my $y_err = $x->grandom*3;
+ my $y_err = 2*$x->grandom->abs + 1;
  
  # Calculate the slope and intercept:
  my $S = sum(1/$y_err);
@@ -697,7 +771,10 @@ Get some linear data with noise and perform a least-squares fit to it:
  my $S_xx = sum($x*$x/$y_err);
  my $S_xy = sum($x*$y/$y_err);
  my $slope = ($S_xy * $S - $S_x * $S_y) / ($S_xx * $S - $S_x * $S_x);
- my $y0 = ($S_xy + $slope * $S_xx) / $S_x;
+ my $y0 = ($S_xy - $slope * $S_xx) / $S_x;
+ 
+ 
+ use PDL::Graphics::Prima::Simple;
  
  plot(
      -data => [
@@ -710,10 +787,49 @@ Get some linear data with noise and perform a least-squares fit to it:
      ],
      -func => [
          sub { $y0 + $slope * $_[0] },
+         lineWidth => 2,
+         color => pdl(255, 0, 0)->rgb_to_color,
      ],
  );
 
+Trying to extend the Simple interface with GUI methods is limited but can be
+very useful. It also gives you a first glimps into GUI-flavored programming. 
+Here's one way to track the mouse position:
 
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ # Turn on autoflush:
+ $|++;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Blobs,
+             pt::Lines,
+         ],
+     ],
+     onMouseMove => sub {
+     	# Get the widget and the coordinates:
+     	my ($self, $button_and_modifier, $x_pixel, $y_pixel) = @_;
+     	# Convert the pixel coordinates to real values:
+     	my $x = $self->x->pixels_to_reals($x_pixel);
+     	my $y = $self->y->pixels_to_reals($y_pixel);
+     	# Print the results:
+     	print "\r($x, $y)           ";
+     },
+ );
+
+However, if you find yourself trying to do anything nontrivial, such as monitor
+keyboard input, you would probaby be better served working with a Plot widget
+embedded in a full GUI program. For that, see L<PDL::Graphics::Prima>.
 
 =cut
 
