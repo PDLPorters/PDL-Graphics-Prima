@@ -436,7 +436,8 @@ In this case
 where N <= M, M < 20, and the return dimensions are N x whatever.
 
 =cut
-
+$|++;
+my $i = 0;
 sub compute_min_max_for {
 	my ($self, $axis_name) = @_;
 	
@@ -470,6 +471,11 @@ sub compute_min_max_for {
 	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
 	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
 	
+	# It could be the case that all the values are bad. In that case, insert
+	# an entry at zero-pixels corresponding to the current view limits:
+	$collated_min(0) .= $self->{$axis_name}->min if $collated_min->isbad->all;
+	$collated_max(0) .= $self->{$axis_name}->max if $collated_max->isbad->all;
+	
 	# Iterativelye pair down the set until we've found the minmax. At this
 	# point, we have two arrays with $pixel_extent elements each. Cat an
 	# index and what will eventually be a computed value onto the original
@@ -477,16 +483,16 @@ sub compute_min_max_for {
 	my $minima = $collated_min->cat($collated_min->sequence, $collated_min);
 	my $maxima = $collated_max->cat($collated_max->sequence, $collated_max);
 
-	# I should check this for sanity, like if none of the min or max are
-	# good. (In that case, I think they should both fail.) working here
+	# Get rid of all the bad values. We know that at least one good value will
+	# remain due to the min/max insertion a few lines up.
 	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
 	my $trimmed_maxima = $maxima->whereND($maxima(:,0;-)->isgood);
-
+	
 	my $min_mask = $trimmed_minima->trim_collated_min;
 	my $max_mask = $trimmed_maxima->trim_collated_max;
 	$trimmed_minima = $trimmed_minima->whereND($min_mask);
 	$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
-
+	
 	# Compute properly scaled extrema.
 	# min_pix and max_pix are the plain pixel paddings needed by the lowest
 	# element in the pyramid:
