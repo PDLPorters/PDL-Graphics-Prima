@@ -545,9 +545,9 @@ basic ones.
 
 You can also specify the width of the error bars in pixels:
 
- err_width   - width of both error bars
- x_err_width - width of x-error bars
- y_err_width - width of y-error bars
+ err_width   - width of both error caps
+ x_err_width - width of x-error caps
+ y_err_width - width of y-error caps
 
 Again, the more specific widths override the less specific ones.
 
