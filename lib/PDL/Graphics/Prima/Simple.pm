@@ -225,6 +225,13 @@ x-values:
  
  line_plot($x, $y);
 
+The x-values do not need to be sorted. For example, this plots a sine wave sine
+wave oscillating horizontally:
+
+ my $y = sequence(100)/10;
+ my $x = sin($y);
+ line_plot($x, $y);
+
 Bad values in your data, if they exist, will simply be skipped, inserting a
 gap into the line.
 
@@ -416,17 +423,297 @@ this function, using the actual widget in an interactive GUI script is simply a
 matter of understanding how to structure a GUI program.
 
 The C<plot> function takes options and dataset specifications as key/value
-pairs. 
+pairs. The basic usage of plot looks like this:
 
-datasets
- - plot styles
-axis specifications
- label
- scaling type
- bounds
-colors
-lineWidths
-lineStyles
+ plot(
+     -dataset1 => [$x1, $y1, ...options...],
+     x => {
+     	other => options,
+     },
+     -dataset2 => [$x2, $y2, ...options...],
+     y => {
+     	axis => options,
+     },
+     -mydata => [$data_a, $data_b, ...options...],
+     title => 'Title!',
+     titleSpace => 60,
+     -more_data => [$x_a, $y_a],
+     ... Prima Drawable options ...
+ );
+
+Notice that some of the keys begin with a dash while others do not. Any key
+that begins with a dash is a dataset. You can use any name that you wish for
+your datasets, the only requirement is that the name begins with a dash. The
+keys that do not begin with a dash are Plot options. The Plot widget has a
+handful of Plot-specific properties, but you can also specify any property of a
+L<Prima::Widget> object.
+
+In the world of C<PDL::Graphics::Prima>, the fundamental object is the Plot.
+Each plot can hold one or more L<PDL::Graphics::Prima::DataSet>s, and each
+DataSet is visualized using one or more L<PDL::Graphics::Prima::PlotType>s.
+This makes the plotType the simplest element to discuss, so I'll start there.
+
+=head2 Plot Types
+
+Each dataSet can have one or more plotTypes. If you only want to specify a
+single plotType, you can do so by specifying it after the plotType key for your
+dataset:
+
+ -data => [
+     ...
+     plotType => pt::Blobs,
+     ...
+ ]
+
+You can specify multiple plotTypes by passing them in an anonymous array:
+
+ -data => [
+     ...
+     plotType => [pt::Blobs, pt::Lines],
+     ...
+ ]
+
+All the plotTypes take key/value paired arguments. You can specify various
+L<Prima::Drawable> properties (like per-blob color using the C<colors> key)
+and some of the plotTypes have required arguments. For example, C<pt::ErrorBars>
+requires at least one sort of error bar. To create red blobs, you would use 
+something like this:
+
+ pt::Blobs(colors => cl::LightRed)
+
+To specify a 5-pixel line width for a Lines plotType, you would say
+
+ pt::Lines(lineWidths => 5)
+
+(Notice that these keys are identical to the properties listed in L<Prima::Drawable>,
+except that they are plural. Plural keys means you can specify a piddle for the
+values and it will thread over the piddle while it threads over the drawing.
+At the moment, singular keys do not work with plotTypes, though they should and
+it is planned.)
+
+When a dataset gets drawn, it draws the different plotTypes in the order
+specified. For example, suppose you specify C<cl::Black> blobs and C<cl::LightRed>
+lines. If the blobs are specified first, they will have red lines drawn through
+them, and if the blobs are second, the blobs will be drawn over the red lines.
+
+The default plot type is C<pt::Lines> so you do not need to specify that if you
+simply want lines drawn from one point to the next. The plotTypes are discussed
+thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
+
+ pt::Lines     - lines from point to point
+ pt::Blobs     - blobs with specifiable x- and y- radii
+ pt::Spikes    - spikes to (x,y) from a specified baseline
+ pt::Histogram - histograms
+ pt::ErrorBars - error bars with specified x/y errors
+ pt::ColorGrid - colored rectangles, i.e. images
+
+=head2 Data Sets
+
+You can plot one or more sets of data on a given Plot. You do this by specifying
+the dataset's name with a dash, followed by an anonymous array with the
+properties of your dataset (including the plotType, as already discussed).
+There are two kinds of datasets that you can specify: data-based and
+function-based. Data-based datasets are what you would use when you have
+explicit x/y data that needs to be visualized. Function-based datasets are what
+you would use when you want to visualize functions, such as fit functions:
+
+ -data => [ $x, $y, ... ],
+ -func => [ $func_ref, ... ],
+
+The difference between the two is that function-based datasets have a CODE
+reference as its first argument, while data-based datasets do not. In fact,
+data-based datasets do not need to have piddles for their first two arguments.
+Anything that can be converted to a piddle, including scalar numbers and
+anonymous arrays of values, can be specified as the first two arguments for
+data-based datasets. That means that the following are valid dataset
+specifications:
+
+ # Data based:
+ -data => [ sequence(10), sequence(10)->sin ]
+ -data => [ [1, 2, 3], [1, 4, 9] ]
+ -data => [ sequence(100), 5 ]
+ 
+ # Function based:
+ -data => [ sub {return 5} ]
+ -data => [ sub {return $_[0]**2} ]
+ -data => [ \&PDL::sin ]
+
+You don't have to sort the data that you use, but Lines, Histograms, and
+ColorGrids might look very strange if you don't. Then again, they may look
+exactly how you want them to look. It depends what you're trying to accomplish.
+
+Once you have specified the data or function that you want to plot, you can
+specify other options with key/value pairs. I discussed the
+plotType key already, but you can also specify any property in L<Prima::Drawable>.
+When you specify properties from L<Prima::Drawable>, these become the default
+parameters for all the plotTypes that belong to this dataset. For example, you
+can specify a default color as C<cl::LightRed>, and then the lines, blobs, and
+error bars will be drawn in red unless they override the colors themselves.
+Function-based datasets also recognize the C<N_points> key, which indicates the
+number of points to use in evaluating the function.
+
+To get an idea of how this works, suppose I have some data that I want to
+compare with a fit. In this case, I would have two datasets, the data (plotted
+using error bars) and the fit (plotted using a line). I would plot this data
+with code like so:
+
+ plot(
+     # The experimental data
+     -data => [
+         $x,
+         $y,
+         # I want error bars along with circles:
+         plotType => [
+             pt::ErrorBars(y_err => $y_errors),
+             pt::Blobs
+         ],
+     ],
+     
+     # The linear fit:
+     -fit => [
+         sub {
+             return $y_intercept + $slope * $_[0];
+         },
+         # Default plotType is lines, but I'll be explicit:
+         plotType => pt::Lines,
+     ],
+ );
+
+The part C<< -data => [...] >> specifies the details for how you want to plot
+the experimental data and the part C<< -fit >> specifies the details for how you
+want to plot the fit. 
+
+The datasets are plotted in ASCIIbetical order, which means that in the example
+above, the fit will be drawn over the error bars and blobs. If you want the data
+plotted over the fit curve, you should choose different names so that they sort
+the way you want. For example, using C<-curve> instead of C<-fit> might work.
+So would changing the names from C<-data> and C<-fit> to C<-b_data> and
+C<-a_fit>, respectively.
+
+=head2 Plot Options
+
+Finally we come to setting plot-wide properties. As already discussed, you can
+disperse datasets among your other Plot properties. Plot-wide properties include
+the title and the amount of room you want for the title (called titleSpace),
+the axis specifications, and any default L<Prima::Drawable> properties that you
+want applied to your plot.
+
+The text for your plot's title should be a simple Perl string. UTF8 characters
+are allowed, which means you can insert Greek or other symbols as you need them.
+However, L<Prima>, and therefore L<PDL::Graphics::Prima>, does not support fancy
+typesetting like subscripts or superscripts. (If you want that in the Plot
+library, you should probably consider petitioning for and helping add that
+functionality to Prima. Open-source is great like that!) The amount of space
+allocated for the title is currently set at 80 pixels. You can specify a
+different size if you prefer. (It should probably be calculated based on the
+current font-size---Prima makes it relatively easy to do that---but that's not 
+yet implemented.) Space is allocated for the title only when you specify one;
+if none is specified, you have more room for your plot.
+
+Axis labels have similar restrictions and capabilities as the title string, but
+are properties of the axes themselves, which additionally have specifiable
+bounds (min and max) and scaling type. At the moment, the only two scaling types
+are C<sc::Linear> and C<sc::Log>. The bounds can be set to a specific numeric
+value, or to C<lm::Auto> if you want the bounds automatically computed based on
+your data and plotTypes.
+
+Finally, this is essentially a widget constructor, and as such you can specify
+any L<Prima::Widget> properties that you like. These include all the properties in
+L<Prima::Drawable>. For example, the default background color is white, because
+I like white background on my plots. If you disagree, you can change the widget's
+background and foreground colors by specifying them. The dataSets and their
+plotTypes will inheret these properties (most importantly, the foreground color)
+and use them unless you override those properties seperately.
+
+=head2 Examples
+
+These examples are meant to work on any machine. That means that I cannot rely
+on data files, so I am going to synthesize data for each plot.
+
+A simple line plot with dots at each point:
+
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Blobs,
+             pt::Lines,
+         ],
+     ],
+ );
+
+Use random blob radii and colors. Notice that the lineWidth of 3
+obscures many of the blobs since their radii are between 5 and 1.
+
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ my $colors = pal::Rainbow->apply($y);
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Blobs (
+                 radius => 1 + $x->random*4,
+                 colors => $colors,
+             ),
+             pt::Lines (
+                 lineWidths => 3,
+             ),
+         ],
+     ],
+ );
+
+Get some linear data with noise and perform a least-squares fit to it:
+
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = $x/2 - 3 + $x->grandom*3;
+ my $y_err = $x->grandom*3;
+ 
+ # Calculate the slope and intercept:
+ my $S = sum(1/$y_err);
+ my $S_x = sum($x/$y_err);
+ my $S_y = sum($y/$y_err);
+ my $S_xx = sum($x*$x/$y_err);
+ my $S_xy = sum($x*$y/$y_err);
+ my $slope = ($S_xy * $S - $S_x * $S_y) / ($S_xx * $S - $S_x * $S_x);
+ my $y0 = ($S_xy + $slope * $S_xx) / $S_x;
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Blobs,
+             pt::ErrorBars(y_err => $y_err),
+         ],
+     ],
+     -func => [
+         sub { $y0 + $slope * $_[0] },
+     ],
+ );
+
+
 
 =cut
 
@@ -665,8 +952,45 @@ David Mertens (dcmertens.perl@gmail.com)
 
 =head1 SEE ALSO
 
-The full plot widget, upon which this module is built, is documented under
-L<PDL::Graphics::Prima>.
+This is a component of L<PDL::Graphics::Prima>. This library is composed of many
+modules, including:
+
+=over
+
+=item L<PDL::Graphics::Prima>
+
+Defines the Plot widget for use in Prima applications
+
+=item L<PDL::Graphics::Prima::Axis>
+
+Specifies the behavior of axes (but not the scaling)
+
+=item L<PDL::Graphics::Prima::DataSet>
+
+Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Limits>
+
+Defines the lm:: namespace
+
+=item L<PDL::Graphics::Prima::Palette>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::Scaling>
+
+Specifies different kinds of scaling, including linear and logarithmic
+
+=item L<PDL::Graphics::Prima::Simple>
+
+Defines a number of useful functions for generating simple and not-so-simple
+plots
+
+=back
 
 =head1 LICENSE AND COPYRIGHT
 

@@ -232,9 +232,10 @@ sub initialize {
 	eval {
 		$xs = topdl($xs);
 		$ys = topdl($ys);
-		# Set infinity and nan to bad values:
-		$xs->inplace->setnantobad;
-		$ys->inplace->setnantobad;
+# Unnecessary with the collation setup:
+#		# Set infinity and nan to bad values:
+#		$xs->inplace->setnantobad;
+#		$ys->inplace->setnantobad;
 		$dataset->{xs} = $xs;
 		$dataset->{ys} = $ys;
 	};
@@ -326,20 +327,6 @@ sub get_data_as_pixels {
 =head2 compute_collated_min_max_for
 
 working here
-
-Computes the requested extremum. The syntax looks like this:
-
- my ($xmin, $padding) = $dataset->extremum('xmin', $graph_widget);
-
-Warning: the following comments almost certainly lead to premature optimizations.
-
-Internally, this uses the comperator for the comparisons. If you write a
-function that also uses the comperator, you can save yourself a couple of
-compute cycles by passing in the value. That would be the last argument, and it
-would be -1 for minima and +1 for maxima. Thus, since I know that I will be
-computing a minimum in the previous example, I could rewrite it as
-
- my ($xmin, $padding) = $dataset->extremum('xmin', $graph_widget, -1);
 
 =cut
 
@@ -451,3 +438,62 @@ sub extremum {
 }
 
 1;
+
+=head1 TODO
+
+Add optional bounds to function-based DataSets.
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
+
+=head1 SEE ALSO
+
+This is a component of L<PDL::Graphics::Prima>. This library is composed of many
+modules, including:
+
+=over
+
+=item L<PDL::Graphics::Prima>
+
+Defines the Plot widget for use in Prima applications
+
+=item L<PDL::Graphics::Prima::Axis>
+
+Specifies the behavior of axes (but not the scaling)
+
+=item L<PDL::Graphics::Prima::DataSet>
+
+Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Limits>
+
+Defines the lm:: namespace
+
+=item L<PDL::Graphics::Prima::Palette>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::Scaling>
+
+Specifies different kinds of scaling, including linear and logarithmic
+
+=item L<PDL::Graphics::Prima::Simple>
+
+Defines a number of useful functions for generating simple and not-so-simple
+plots
+
+=back
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011 David Mertens. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=cut

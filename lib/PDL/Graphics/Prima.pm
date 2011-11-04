@@ -18,7 +18,6 @@ use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
 # I will need these graph-specific modules, too:
-use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Axis;
 use PDL::Graphics::Prima::DataSet;
 
@@ -576,15 +575,13 @@ sub get_edge_requirements {
 
 =head1 Properties
 
-=head2 xLabel, yLabel, title
+=head2 title, titleSpace
 
-Sets or gets the various strings for the axis labeling and the title.
+Sets or gets the string that contains the title and the space allocated for the
+title at the top of the plot.
 
 =cut
 
-# Setter that does not notify and sets the title spacing property as well
-# The constructor (init) must call this function, or initialize titleSpace
-# itself.
 sub _title {
 	$_[0]->{title} = $_[1];
 }
@@ -1020,6 +1017,20 @@ singular properties (like C<color>, as opposed to C<colors>) do not Do What You
 Mean. With PlotTypes, they often don't do anything at all. Although I could
 resolve this problem in this library, I would rather address this in
 L<PDL::Drawing::Prima>.
+
+multiple axes. In the constructor, any property that starts with x would be an
+x-axis (x1, x2, etc). You would have to specify an axes with a dataset, though
+the default would be the first axis when sorted asciibetically. Axes would have
+properties regarding if they are drawn on the top, the bottom, both, etc, and
+whether their tick labels are drawn on the top, bottom, etc.
+
+I am very proud of the automatic scaling. There are two drawbacks. (1) It's
+complicated and not yet well documented. That needs fixing. (2) It could be even
+more awesome. For example, it would be great to be able to specify a minimum 
+pixel padding, as well as an extra pixel padding. This would simply effect how
+collate_min_max_for_many works and should be a snap to implement.
+
+Handle the titleSpace in a more intelligent way
 
 =head1 AUTHOR
 

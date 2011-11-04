@@ -12,7 +12,7 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
 =head1 DESCRIPTION
 
 This module provides all of the different plot types that you can use in a
-PDL::Graphics::Prima widget. The documentation that follows is broken into three
+PDL::Graphics::Prima plot. The documentation that follows is broken into three
 parts:
 
 =over
@@ -37,6 +37,15 @@ too difficult. This section describes how to create custom plot types for your
 own needs.
 
 =back
+
+Many plural L<Prima::Drawable> properties (i.e. C<colors> rather than C<color>)
+can be specified when creating plot types. For example,
+
+ # Specify the color for each blob:
+ pt::Blobs(colors => $my_colors)
+ 
+ # Specify different line widths for each column in the histogram:
+ pt::Histogram(lineWidths => $the_widths)
 
 =cut
 
@@ -361,13 +370,6 @@ sub draw {
 	$self->widget->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
 		, %properties);
 }
-
-##########################################
-# PDL::Graphics::Prima::PlotType::Points #
-##########################################
-
-package PDL::Graphics::Prima::PlotType::Points;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 #############################################
 # PDL::Graphics::Prima::PlotType::Histogram #
@@ -735,7 +737,7 @@ sub draw {
 		# Convert from points to pixels:
 		$left_xs = $widget->x->reals_to_pixels($left_xs);
 		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+		my $local_ys = $widget->y->reals_to_pixels($ys);
 
 		# Draw the line from the point to the edge:
 		$widget->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
@@ -1043,14 +1045,14 @@ sub draw {
 ##########################################
 # Plots a matrix
 
-package PDL::Graphics::Prima::PlotType::Matrix;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
-
-=head2 Matrix
-
-Makes a simple visualization of a matrix. 
-
-=cut
+#package PDL::Graphics::Prima::PlotType::Matrix;
+#our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
+#
+#=head2 Matrix
+#
+#Makes a simple visualization of a matrix. 
+#
+#=cut
 
 ###############################################################################
 #                         Creating your own Plot Type                         #
@@ -1139,63 +1141,36 @@ sub initialize {
 	}
 }
 
-=head2 xmin, xmax, ymin, ymax
+=head2 compute_collated_min_max_for
 
-Note: these are likely to change in the future.
+This plotType function is called when the graph needs to determine automatic
+minima and maxima. It is hard to explain and will require some attention in
+the future to flesh out its documentation. My apologies for now.
 
-These plotType functions are called when the graph needs to determine automatic
-minima and maxima. Line plots simply return the data's minimum and maximum, but
-more complex plot types, such as those including error bars or blobs, need to
-take more details into consideration.
-
-These functions are always called with three arguments and should always return
-two values. The three arguments are:
+This function is called with three arguments and should always return
+two piddles. The return values should be of the sort described in
+L<PDL::Drawing::Prima::collate_min_max_wrt_many>. The three arguments are:
 
 =over
 
-=item plotType
+=item plotType object (or class name)
 
 This is whatever you created with your constructor; if you're following the
 example above, that would be an instance of the plotType. This passes in
 whatever the dataset was given for the plotType.
 
-=item dataset
+=item axis_name
 
-The dataset object associated with this particular plotting operation. You can
-access the actual data through this object.
+The axis for which we need to know the min and the max
 
-=item widget
+=item pixel_extent
 
-The graph widget on which the data is plotted. You will have to go through this
-object to get at the x- or y-axes, which contain the actual minima and maxima
-of the plot.
+The width into which the 
 
 =back
 
-The two values it should return are:
-
-=over
-
-=item extremum-value
-
-The actual minimum value needed to automatically display the data nicely. For
-line plots this is just the min or max of the dataset, but if you have error
-bars, for example, you would want a smaller minimum and a larger maximum to
-accomodate the width or height of the error bars.
-
-=item pixel-padding
-
-Any extra space needed to display the results nicely. For example, the width of
-blobs are specified in pixels. In that case, you would specify a minimum or
-maximum value corresponding to the dataset's extremum, and specify a padding
-corresponding to the blob's x- or y-radius, as appropriate.
-
-=back
-
-The x-version of these functions is never called by function-based datasets,
-since the x-values for such datsets are determined on-the-fly. If you cannot
-determine an extremum, or do not want to determine an extremum, you can return
-the undefined value and it will be ignored.
+If you cannot determine an extremum, or do not want to determine an extremum,
+you can return two piddles of size C<$pixel_extent> filled with bad values.
 
 =cut
 
@@ -1409,17 +1384,101 @@ sub draw {
 	croak('You must supply a code reference for your drawing code.');
 }
 
+1;
 
+=head1 TODO
 
+Docs: I need to explain how to use multiple plotTypes together in the DESCRIPTION.
+(For now, the best discussion is in L<PDL::Graphics::Prima::Simple>, in case
+you're looking.)
 
-=head1 AUTHOR, COPYRIGHT
+There are many, many plot types that are not yet supported, but should
+be. The plot-types that come to mind include:
 
-This module was written by David Mertens.
+=over
 
-Copyright 2011, David Mertens, all rights reserved. This library is free
-software; you can redistribute it and/or modify it under the same tersm as Perl
-itself.
+=item arbitrary polygons
+
+At the moment, if you want to draw data at points, you can only specify blobs.
+Not very exciting. It should be easy to draw triangles, squares, and all manner
+of othe shapes---even usef-specified shapes.
+
+=item triangles
+
+Draw triangles of various sizes, orientations, and fill-types.
+
+=item arrows
+
+Draw flow-fields with arrows of various sizes and orientations.
+
+=item error-bands
+
+I would really like to be able to draw error-bands around a best-fit function.
+
+=item box-and-whisker
+
+Box-and-whisker plots should be easy enough, a simple extension of error bars.
+
+=item simpler image support
+
+ColorGrid, while immensely flexible, is very slow. Prima has hooks for adding
+images to a Drawable object, but they have not yet been incorporated into
+L<PDL::Drawing::Prima>. Once that happens, fast and scalable image support will
+be possible.
+
+=back
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
+
+=head1 SEE ALSO
+
+This is a component of L<PDL::Graphics::Prima>. This library is composed of many
+modules, including:
+
+=over
+
+=item L<PDL::Graphics::Prima>
+
+Defines the Plot widget for use in Prima applications
+
+=item L<PDL::Graphics::Prima::Axis>
+
+Specifies the behavior of axes (but not the scaling)
+
+=item L<PDL::Graphics::Prima::DataSet>
+
+Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Limits>
+
+Defines the lm:: namespace
+
+=item L<PDL::Graphics::Prima::Palette>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::Scaling>
+
+Specifies different kinds of scaling, including linear and logarithmic
+
+=item L<PDL::Graphics::Prima::Simple>
+
+Defines a number of useful functions for generating simple and not-so-simple
+plots
+
+=back
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011 David Mertens. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =cut
-
-1;
