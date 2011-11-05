@@ -137,7 +137,7 @@ in L<PDL::Graphics::Prima>.
 
 =head1 INTERACTIVE PLOTTING
 
-Before we get to the plotting command themselves, I wanted to highlight that
+Before we get to the plotting commands themselves, I wanted to highlight that
 the L<PDL::Graphics::Prima> library is highly interactive. Whether you use the
 widget interface or this Simple interface, your plot responds to the following
 user interactions:
@@ -147,16 +147,15 @@ user interactions:
 =item right-click zooming
 
 Clicking and dragging your right mouse button will zoom into a specific region.
-You will see a zoom rectangle on the plot until you release the moust, at which
+You will see a zoom rectangle on the plot until you release the mouse, at which
 point the plot will be zoomed-in to the region that you selected.
 
 =item scroll-wheel zooming
 
-You can zoom-in and zoom-out using your scroll wheel. The zooming is designed to
+You can zoom-in and zoom-out using your scroll wheel (except on Windwos; I
+haven't figured out why it's not working on Windows). The zooming is designed to
 keep the data under the mouse at the same location as you zoom in and out.
-(Unfortunately, some recent changes have made this operation less than perfect.
-See the L<"WARTS"> section below. working here - make sure I have the correct
-link)
+Unfortunately, some recent changes have made this operation less than perfect.
 
 =item dragging/panning
 
@@ -630,7 +629,8 @@ and use them unless you override those properties seperately.
 These examples are meant to work on any machine. That means that I cannot rely
 on data files, so I am going to synthesize data for each plot.
 
-This first example is a simple line plot with dots at each point:
+This first example is a simple line plot with dots at each point. There's only
+one dataset, and it has only two plotTypes:
 
  use strict;
  use warnings;
@@ -651,9 +651,11 @@ This first example is a simple line plot with dots at each point:
      ],
  );
 
-Now for something more fun. This figure uses random blob radii and colors.
+Now for something more fun. This figure uses bright colors and random blob radii.
 Notice that the lineWidth of 3 obscures many of the blobs since their radii are
-between 1 and 5.
+between 1 and 5. This has only one dataset and two plotTypes like the
+previous example. In contrast to the previous example, it specifies a number of
+properties for the plotTypes:
 
  use strict;
  use warnings;
@@ -681,7 +683,8 @@ between 1 and 5.
  );
 
 Here I use a black background and white foreground, and plot the blobs B<over>
-the line instead of under it. Also notice that I use the C<-sequential> flag,
+the line instead of under it. I achieve this by changing the order of the
+plotTypes---Lines then Blobs. Also notice that I use the C<-sequential> flag,
 which I have to do in order to guarantee having Prima's color shortcuts.
 
  use strict;
@@ -749,12 +752,49 @@ makes open circles, but that's not (yet?) available.
      color => cl::White,
  );
 
+Here I use PDL threading to achieve the same ends as the previous example, but
+only using one Blobs plotType instead of two.
+
+ use strict;
+ use warnings;
+ use PDL::Graphics::Prima::Simple -sequential;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ my $rainbow_colors = pal::Rainbow->apply($y);
+ my $whites = $y->ones * cl::White;
+ my $colors = cat($whites, $rainbow_colors);
+ my $inner_radius = 1 + $x->random*4;
+ my $radius = cat($inner_radius + 1, $inner_radius);
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Lines (
+                 lineWidths => 3,
+             ),
+             pt::Blobs(
+                 radius => $radius,
+                 colors => $colors,
+             ),
+         ],
+     ],
+     backColor => cl::Black,
+     color => cl::White,
+ );
+
 Here I generate some linear data with noise and perform a least-squares fit to
 it. In this case I perform the least-squares fit by hand, since not everybody
 will have Slatec installed. The important part is the C<use PDL::Graphics::Prima::Simple>
 line and beyond. Also notice that I construct the function color based on
 L<PDL::Drawing::Prima>'s C<rgb_to_colors> function so that I can run this code
 without needing to use Prima's constant C<cl::LightRed>.
+
+This example demonstrates the use of multiple data sets, the use of the
+ErrorBars plotType and the use of function-based data sets.
 
  use strict;
  use warnings;
@@ -793,8 +833,16 @@ without needing to use Prima's constant C<cl::LightRed>.
  );
 
 Trying to extend the Simple interface with GUI methods is limited but can be
-very useful. It also gives you a first glimps into GUI-flavored programming. 
-Here's one way to track the mouse position:
+very useful. The next example gives you a first glimps into GUI-flavored
+programming by overriding the onMouseMove method for this Prima widget. There
+are many ways of setting, overriding, or adding callbacks in relation to all
+sorts of GUI events, but when using the C<plot> command, your only option is to
+specify it as OnEventName.
+
+In this example, I add (that's B<add>, not override, becaus Prima rocks) a
+method that prints out the mouse position to the console. I also use logarithmic
+scaling in the x direction (and specify x- and y-axes labels) to make things
+interesting:
 
  use strict;
  use warnings;
@@ -804,7 +852,7 @@ Here's one way to track the mouse position:
  # Turn on autoflush:
  $|++;
  
- my $x = sequence(100)/10;
+ my $x = sequence(100)/10 + 1;
  my $y = sin($x);
  
  plot(
@@ -817,19 +865,28 @@ Here's one way to track the mouse position:
          ],
      ],
      onMouseMove => sub {
-     	# Get the widget and the coordinates:
-     	my ($self, $button_and_modifier, $x_pixel, $y_pixel) = @_;
-     	# Convert the pixel coordinates to real values:
-     	my $x = $self->x->pixels_to_reals($x_pixel);
-     	my $y = $self->y->pixels_to_reals($y_pixel);
-     	# Print the results:
-     	print "\r($x, $y)           ";
+         # Get the widget and the coordinates:
+         my ($self, $button_and_modifier, $x_pixel, $y_pixel) = @_;
+         # Convert the pixel coordinates to real values:
+         my $x = $self->x->pixels_to_reals($x_pixel);
+         my $y = $self->y->pixels_to_reals($y_pixel);
+         # Print the results:
+         print "\r($x, $y)           ";
      },
+     x => {
+         label => 'time (s)',
+         scaling => sc::Log,
+     },
+     y => {
+         label => 'displacement (m)',
+     }
  );
 
-However, if you find yourself trying to do anything nontrivial, such as monitor
-keyboard input, you would probaby be better served working with a Plot widget
-embedded in a full GUI program. For that, see L<PDL::Graphics::Prima>.
+This kind of immediate feedbck can be very useful. It is even possible to
+capture keyboard events and respond to user interaction this way. But B<please>,
+don't do that. If you need any substantial amount of user interaction, you
+would do much better to learn to create a Prima application with buttons, lists,
+and input lines, along with the Plot widget. For that, see L<PDL::Graphics::Prima>.
 
 =cut
 
@@ -1068,8 +1125,10 @@ David Mertens (dcmertens.perl@gmail.com)
 
 =head1 SEE ALSO
 
-This is a component of L<PDL::Graphics::Prima>. This library is composed of many
-modules, including:
+For an introduction to L<Prima> see L<Prima::tutorial>.
+
+This is a component of L<PDL::Graphics::Prima>, a library composed of many
+modules:
 
 =over
 
