@@ -305,14 +305,23 @@ sub pt::Blobs {
 	PDL::Graphics::Prima::PlotType::Blobs->new(@_);
 }
 
-# The blobs initializer defaults to a radius of 5 pixels
+# The blobs initializer defaults to a radius of 3 pixels
 sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	
 	# They could have passed an xradius, a yradius, or a radius.
-	my $x_radius = $self->{xRadius} // $self->{radius} // pdl(3);
-	my $y_radius = $self->{yRadius} // $self->{radius} // pdl(3);
+	#					if this is defined...			  use it
+	my $x_radius	=	defined $self->{xRadius}		? $self->{xRadius}
+					:	defined $self->{radius}			? $self->{radius}
+					:	pdl(3);
+	my $y_radius	=	defined $self->{yRadius}		? $self->{yRadius}
+					:	defined $self->{radius}			? $self->{radius}
+					:	pdl(3);
+
+#	Oh, if only I could assume 5.10  :-(
+#	my $x_radius = $self->{xRadius} // $self->{radius} // pdl(3);
+#	my $y_radius = $self->{yRadius} // $self->{radius} // pdl(3);
 	
 	# make sure the radii are piddles and croak if something goes wrong:
 	eval {
@@ -322,7 +331,7 @@ sub initialize {
 	} or croak('Radii must be piddles, or values that can be interpreted by the pdl constructor');
 	
 	croak('Radii must be greater than or equal to 1')
-		unless PDL::all($x_radius > 1) and PDL::all($y_radius > 1);
+		unless PDL::all($x_radius >= 1) and PDL::all($y_radius >= 1);
 	
 	# Set the internal representation of the radii to the massaged values:
 	$self->{xRadius} = $x_radius;
@@ -370,6 +379,203 @@ sub draw {
 	$self->widget->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
 		, %properties);
 }
+
+#########################################
+# PDL::Graphics::Prima::PlotType::NGons #
+#########################################
+
+=head2 NGons
+
+Lets you draw open or filled regular polygons. You can specify the size (radius),
+number of points, orientation, and whether or not you want the polygon filled.
+The specific arguments are:
+
+ size        - radius, from center to a point, in pixels
+ filled      - boolean (1 or 0)
+ N_points    - >= 3, a byte-size integer
+ orientation - angle in degrees
+
+If the orientation is not specified, the polygon will start with a point at the
+top. This means that 4gons are drawn as diamonds, not squares. (But see
+L</Squares>)
+
+Note: This is currently achieved using lots of Perl-level code, and would be
+much better served by some PP code.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::NGons;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+use PDL::Core ':Internal';
+use Carp 'croak';
+use PDL;
+
+# Install the short name constructor:
+sub pt::NGons {
+	PDL::Graphics::Prima::PlotType::NGons->new(@_);
+}
+
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	
+	#					if this is defined...			  use it
+	my $orientation	=	defined $self->{orientation}	? $self->{orientation}
+					:	0;
+	my $filled		=	defined $self->{filled}			? $self->{filled}
+					:	0;
+	my $N_points	=	defined $self->{N_points}		? $self->{N_points}
+					:	5;
+	my $size		=	defined $self->{size}			? $self->{size}
+					:	defined $self->{radius}			? $self->{radius}
+					:	5;
+	
+	# Make sure everything is piddles and croak if something goes wrong:
+	eval {
+		$orientation = topdl($orientation);
+		$filled = topdl($filled);
+		$N_points = topdl($N_points);
+		$size = topdl($size);
+		1;
+	} or croak('NGons arguments must be piddles, or values that can be interpreted by the pdl constructor');
+	
+	croak('Sizes must be greater than or equal to 1') unless PDL::all($size >= 1);
+	croak('N_points must be greater than or equal to 3 and less than 256')
+		unless PDL::all(($N_points >= 3) & ($N_points < 256));
+	croak('filled must be either 1 or zero')
+		unless PDL::all(($filled == 0) | ($filled == 1));
+	
+	# Set the internal representation of the parameters to the massaged values:
+	$self->{size} = $size;
+	$self->{orientation} = $orientation;
+	$self->{N_points} = $N_points->byte;
+	$self->{filled} = $filled;
+}
+
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::fillpolys_props);
+	my @extras = values %properties;
+	
+	my $size = $self->{size};
+	my $to_check;
+	my ($xs, $ys) = $self->dataset->get_data;
+	
+	# working here - make this take the orientation of each polygon into account
+#	my ($min_points, $max_points);
+	if ($axis_name eq 'x') {
+#		# compute the min_points and max_points
+		$to_check = $xs;
+		push @extras, $ys;
+	}
+	else {
+#		# compute the min_points and max_points
+		$to_check = $ys;
+		push @extras, $xs;
+	}
+	
+	# Return the collated results:
+	return PDL::collate_min_max_wrt_many($to_check, $size, $to_check, $size
+		, $pixel_extent, @extras);
+}
+
+sub draw {
+	my ($self) = @_;
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %fill_props = $self->generate_properties(@PDL::Drawing::Prima::fillpolys_props);
+	my %unfill_props = $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+	my $N_points = $self->{N_points};
+	my $orientation = $self->{orientation};
+	my $size = $self->{size};
+	
+	# The dimenion of the points to draw must be one larger than the combined
+	# dimensions of $x + $y:
+	my $ndims = 0;
+	my @xdims = $xs->dims;
+	my @ydims = $ys->dims;
+	my @pdims = $N_points->dims;
+	my @odims = $orientation->dims;
+	my @sdims = $size->dims;
+	for (my $i = 0; defined $xdims[$i] or defined $ydims[$i] or defined $sdims[$i]
+			or defined $pdims[$i] or defined $odims[$i]; $i++) {
+		my $dim = 1;
+		if (defined $xdims[$i] and $xdims[$i] > 1) {
+			$dim = $xdims[$i];
+		}
+		elsif (defined $ydims[$i] and $ydims[$i] > 1) {
+			croak("y's ${i}th dimension ($ydims[$i]) is not thread-compatible "
+				. "with x's ${i}th dimension ($xdims[$i])")
+				if $dim > 1 and $dim != $ydims[$i];
+			$dim = $ydims[$i];
+		}
+		elsif (defined $pdims[$i] and $pdims[$i] > 1) {
+			croak("N_points' ${i}th dimension ($pdims[$i]) is not thread-"
+				. "compatible with other piddles' dimensions ("
+				. join(', ', map {defined $_ ? $_ : ()} ($xdims[$i], $ydims[$i]))
+				. ')')
+				if $dim > 1 and $dim != $pdims[$i];
+			
+			$dim = $pdims[$i];
+		}
+		elsif (defined $odims[$i] and $odims[$i] > 1) {
+			croak("orientation's ${i}th dimension ($odims[$i]) is not thread-"
+				. "compatible with other piddles' dimensions ("
+				. join(', ', map {defined $_ ? $_ : ()}
+						($xdims[$i], $ydims[$i], $pdims[$i]))
+				. ')')
+				if $dim > 1 and $dim != $odims[$i];
+			$dim = $odims[$i];
+		}
+		elsif (defined $sdims[$i] and $sdims[$i] > 1) {
+			croak("size's ${i}th dimension ($sdims[$i]) is not thread-"
+				. "compatible with other piddles' dimensions ("
+				. join(', ', map {defined $_ ? $_ : ()}
+						($xdims[$i], $ydims[$i], $pdims[$i], $odims[$i]))
+				. ')')
+				if $dim > 1 and $dim != $sdims[$i];
+			$dim = $sdims[$i];
+		}
+		else {
+			$dim = 1;
+		}
+		
+		$ndims++;
+	}
+	
+	my $sequence = sequence((1) x $ndims, $N_points->max + 1);
+	my $two_pi = 8 * atan2(1,1);
+	my $angles = ($orientation/360 + $sequence / $N_points) * $two_pi;
+	
+	# Create the array that will hold the points:
+	my $x_points = ($xs + $size * cos($angles));
+	my $y_points = ($ys + $size * sin($angles));
+	
+	my ($x_filled, $y_filled) = whereND($x_points, $y_points, $self->{filled} == 1);
+	$x_filled = $x_filled->mv(-1,0);
+	$y_filled = $y_filled->mv(-1,0);
+	$self->widget->pdl_fillpolys(
+		$x_filled, $y_filled,
+		map {$_ => $fill_props{$_}->dummy(0)} keys %fill_props
+	);
+	
+	my ($x_open, $y_open) = whereND($x_points, $y_points, $self->{filled} == 0);
+	$x_open = $x_open->mv(-1,0);
+	$y_open = $y_open->mv(-1,0);
+	$self->widget->pdl_polylines(
+		$x_open, $y_open,
+		map {$_ => $unfill_props{$_}->dummy(0)} keys %unfill_props
+	);
+}
+
 
 #############################################
 # PDL::Graphics::Prima::PlotType::Histogram #
@@ -1397,6 +1603,10 @@ be. The plot-types that come to mind include:
 
 =over
 
+=item pt::Triangles, pt::Squares, pt::NGons
+
+Args: orientation, size (i.e. radius), filled, N_points (for NGons)
+
 =item arbitrary polygons
 
 At the moment, if you want to draw data at points, you can only specify blobs.
@@ -1410,6 +1620,7 @@ Draw triangles of various sizes, orientations, and fill-types.
 =item arrows
 
 Draw flow-fields with arrows of various sizes and orientations.
+Args: orientation, style => head, tail (ORable?), filled, length
 
 =item error-bands
 
