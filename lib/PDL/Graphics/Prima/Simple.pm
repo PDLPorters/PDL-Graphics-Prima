@@ -20,14 +20,20 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  use PDL;
  
  
- # --( Super simple line and blob plots )--
+ # --( Super simple line and symbol plots )--
  
  # Generate some data - a sine curve
  my $x = sequence(100) / 20;
  my $y = sin($x);
  
- # Draw a point at each x/y pair:
- blob_plot($x, $y);
+ # Draw a symbol at each x/y pair:
+ circle_plot($x, $y);
+ triangle_plot($x, $y);
+ square_plot($x, $y);
+ diamond_plot($x, $y);
+ X_plot($x, $y);
+ cross_plot($x, $y);
+ asterisk_plot($x, $y);
  
  # Draw a line connecting each x/y pair:
  line_plot($x, $y);
@@ -63,11 +69,11 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  # multiple datasets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines       => [$x, $y],
-     -color_blobs => [$x, $y + 1, colors => $colors,
-                      plotType => pt::Blobs],
-     x => { label => 'Time' },
-     y => { label => 'Sine' },
+     -lines         => [$x, $y],
+     -color_squares => [$x, $y + 1, colors => $colors,
+                      plotType => pt::Squares(filled => 1)],
+     x => { label   => 'Time' },
+     y => { label   => 'Sine' },
  );
 
 =head1 DESCRIPTION
@@ -84,9 +90,10 @@ plotting, including
 
 =over
 
-=item blob_plot ($x, $y)
+=item <symbol>_plot ($x, $y)
 
-takes two piddles, one for x and one for y, and makes a blob plot with them
+takes two piddles (one for x and one for y) and plots the symbol at the
+given points
 
 =item line_plot ($x, $y)
 
@@ -170,6 +177,9 @@ into, say, Microsoft's PowerPoint or LibreOffice's Impress), and saving the
 current plot image to a file. The supported output file formats depend on the
 codecs that L<Prima> was able to install, so are system- and machine-dependent.
 
+For reasons not clear to me, copying the plot does not appear to work on
+Macs. I'm not sure why, and it's something I intend to solve soon.
+
 =back
 
 =head1 SIMPLEST FUNCTIONS
@@ -178,31 +188,179 @@ These functions are bare-bones means for visualizing your data
 that are no more than simple wrappers around the more powerful
 L<plot|/"PLOT FUNCTION"> function. If you just want to have a quick look at your data, you
 should probably start with these. See L<plot|/"PLOT FUNCTION"> if you need more control
-over your plot, such as plotting multiple data sets, using multiple plot
-types, controlling the axis scaling, or setting the title or axis labels.
+over your plot, such as plotting multiple data sets, using variable or
+advanced symbols, using multiple plot types, controlling the axis scaling,
+using colors, or setting the title or axis labels.
+
+In all of these plots, bad values in x and y are simply omitted.
 
 =over
 
-=item blob_plot ($x, $y)
+=item circle_plot ($x, $y)
 
-The C<blob_plot> function
-takes two arguments, your x-data and your y-data. It then plots black dots
-against a white background. See the Synopsis for a simple example, and see
-the L<line_plot> example for how to plot multidimensional data.
-
-Bad values in your data are simply omitted from the plot.
-
-The equivalent L<plot|/"PLOT FUNCTION"> command is:
+Plots filled circles at (x, y). Equivalent L<plot|/"PLOT FUNCTION"> commands
+include:
 
  plot(-data => [$x, $y, plotType => pt::Blobs]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         filled => 'yes',
+         N_pionts => 0,
+     ),
+ ]);
 
 =cut
 
-sub blob_plot {
-	croak("blob_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+sub circle_plot {
+	croak("circle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
 	plot(-data => [@_, plotType => pt::Blobs]);
 }
+
+=item triangle_plot ($x, $y)
+
+Plots filled upright triangles at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Triangles(filled => 1)]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         filled => 'yes',
+         N_pionts => 3,
+         orientation => 'up',
+     ),
+ ]);
+
+=cut
+
+sub triangle_plot {
+	croak("triangle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Triangles(filled => 1)]);
+}
+
+=item square_plot ($x, $y)
+
+Plots filled squares at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Squares(filled => 1)]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         filled => 'yes',
+         N_pionts => 4,
+         orientation => 45,
+     ),
+ ]);
+
+=cut
+
+sub square_plot {
+	croak("square_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Squares(filled => 1)]);
+}
+
+=item diamond_plot ($x, $y)
+
+Plots filled diamonds at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Diamonds(filled => 1)]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         filled => 'yes',
+         N_pionts => 4,
+     ),
+ ]);
+
+=cut
+
+sub diamond_plot {
+	croak("diamond_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Diamonds(filled => 1)]);
+}
+
+=item cross_plot ($x, $y)
+
+Plots crosses (i.e. plus symbols) at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Crosses]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         N_pionts => 4,
+         skip => 0,
+     ),
+ ]);
+
+=cut
+
+sub cross_plot {
+	croak("cross_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Crosses]);
+}
+
+=item X_plot ($x, $y)
+
+Plots X symbols at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Xs]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         N_pionts => 4,
+         skip => 0,
+         orientation => 45,
+     ),
+ ]);
+
+=cut
+
+sub X_plot {
+	croak("X_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Xs]);
+}
+
+=item asterisk_plot ($x, $y)
+
+Plots five-pointed asterisks at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+commands include:
+
+ plot(-data => [$x, $y, plotType => pt::Asterisks(N_points => 5)]);
+ plot(-data => [
+     $x,
+     $y,
+     plotType => pt::Symbol(
+         N_pionts => 5,
+         skip => 0,
+         orientation => 'up',
+     ),
+ ]);
+
+=cut
+
+sub asterisk_plot {
+	croak("asterisk_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => [@_, plotType => pt::Asterisks(N_pionts => 5)]);
+}
+
 
 =item line_plot ($x, $y)
 
@@ -460,7 +618,7 @@ dataset:
 
  -data => [
      ...
-     plotType => pt::Blobs,
+     plotType => pt::Squares,
      ...
  ]
 
@@ -468,14 +626,17 @@ You can specify multiple plotTypes by passing them in an anonymous array:
 
  -data => [
      ...
-     plotType => [pt::Blobs, pt::Lines],
+     plotType => [pt::Triangles, pt::Lines],
      ...
  ]
 
 All the plotTypes take key/value paired arguments. You can specify various
-L<Prima::Drawable> properties (like per-blob color using the C<colors> key)
-and some of the plotTypes have required arguments. For example, C<pt::ErrorBars>
-requires at least one sort of error bar. To create red blobs, you would use 
+L<Prima::Drawable> properties like line-width using the C<lineWidths> key
+or color using the C<colors> key; you can pass plotType-specific options
+like symbol size (for C<pt::Symbol> and it derivatives) using the C<size> key
+or the baseline height for C<pt::Histogram> using the C<baseline> key; and
+some of the plotTypes have required arguments, such as at least one error bar
+specification with C<pt::ErrorBars>. To create red blobs, you would use
 something like this:
 
  pt::Blobs(colors => cl::LightRed)
@@ -487,23 +648,38 @@ To specify a 5-pixel line width for a Lines plotType, you would say
 (Notice that these keys are identical to the properties listed in L<Prima::Drawable>,
 except that they are plural. Plural keys means you can specify a piddle for the
 values and it will thread over the piddle while it threads over the drawing.
-At the moment, singular keys do not work with plotTypes, though they should and
-it is planned.)
+At the moment, singular keys do not work with plotTypes.)
 
 When a dataset gets drawn, it draws the different plotTypes in the order
-specified. For example, suppose you specify C<cl::Black> blobs and C<cl::LightRed>
-lines. If the blobs are specified first, they will have red lines drawn through
-them, and if the blobs are second, the blobs will be drawn over the red lines.
+specified. For example, suppose you specify C<cl::Black> filled triangles and
+C<cl::LightRed> lines. If the triangles are specified first, they will have red
+lines drawn through them, and if the triangles are second, the triangles will
+be drawn over the red lines.
 
 The default plot type is C<pt::Lines> so you do not need to specify that if you
 simply want lines drawn from one point to the next. The plotTypes are discussed
 thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
 
  pt::Lines     - lines from point to point
- pt::Blobs     - blobs with specifiable x- and y- radii
- pt::Spikes    - spikes to (x,y) from a specified baseline
- pt::Histogram - histograms
- pt::ErrorBars - error bars with specified x/y errors
+ pt::Blobs     - blobs (filled ellipses) with specifiable x- and y- radii
+ pt::Symbols   - open or filled regular geometric shapes with many options:
+                 size, orientation, number of points, skip pattern, and fill
+ pt::Triangles - open or filled triangles with  specifiable
+               - orientations and sizes
+ pt::Squares   - open or filled squares with specifiable sizes
+ pt::Diamonds  - open or filled diamonds with specifiable sizes
+ pt::Stars     - open or filled star shapes with specifiable sizes,
+                 orientations, and number of points
+ pt::Asterisks - asterisk shapes with specifiable size, orientation, and
+                 number of points
+ pt::Xs        - four-point asterisks that look like xs, with specifiable
+                 sizes
+ pt::Crosses   - four-pint asterisks that look like + signs, with
+                 specifiable sizes
+ pt::Spikes    - spikes to (x,y) from a specified vertical or horizontal
+                 baseline
+ pt::Histogram - histograms with specifiable baseline and top padding
+ pt::ErrorBars - error bars with specified x/y errors and cap sizes
  pt::ColorGrid - colored rectangles, i.e. images
 
 =head2 Data Sets
@@ -561,10 +737,10 @@ with code like so:
      -data => [
          $x,
          $y,
-         # I want error bars along with circles:
+         # I want error bars along with squares:
          plotType => [
              pt::ErrorBars(y_err => $y_errors),
-             pt::Blobs
+             pt::Squares(filled => 1),
          ],
      ],
      
@@ -583,7 +759,7 @@ the experimental data and the part C<< -fit >> specifies the details for how you
 want to plot the fit. 
 
 The datasets are plotted in ASCIIbetical order, which means that in the example
-above, the fit will be drawn over the error bars and blobs. If you want the data
+above, the fit will be drawn over the error bars and squares. If you want the data
 plotted over the fit curve, you should choose different names so that they sort
 the way you want. For example, using C<-curve> instead of C<-fit> might work.
 So would changing the names from C<-data> and C<-fit> to C<-b_data> and
@@ -619,17 +795,14 @@ your data and plotTypes.
 Finally, this is essentially a widget constructor, and as such you can specify
 any L<Prima::Widget> properties that you like. These include all the properties in
 L<Prima::Drawable>. For example, the default background color is white, because
-I like white background on my plots. If you disagree, you can change the widget's
+I like a white background on my plots. If you disagree, you can change the widget's
 background and foreground colors by specifying them. The dataSets and their
-plotTypes will inheret these properties (most importantly, the foreground color)
+plotTypes will inherit these properties (most importantly, the foreground color)
 and use them unless you override those properties seperately.
 
 =head2 Examples
 
-These examples are meant to work on any machine. That means that I cannot rely
-on data files, so I am going to synthesize data for each plot.
-
-This first example is a simple line plot with dots at each point. There's only
+This first example is a simple line plot with triangles at each point. There's only
 one dataset, and it has only two plotTypes:
 
  use strict;
@@ -645,14 +818,14 @@ one dataset, and it has only two plotTypes:
          $x,
          $y,
          plotType => [
-             pt::Blobs,
+             pt::Triangles,
              pt::Lines,
          ],
      ],
  );
 
-Now for something more fun. This figure uses bright colors and random blob radii.
-Notice that the lineWidth of 3 obscures many of the blobs since their radii are
+Now for something more fun. This figure uses bright colors and random circle radii.
+Notice that the lineWidth of 3 obscures many of the circles since their radii are
 between 1 and 5. This has only one dataset and two plotTypes like the
 previous example. In contrast to the previous example, it specifies a number of
 properties for the plotTypes:
@@ -682,7 +855,7 @@ properties for the plotTypes:
      ],
  );
 
-Here I use a black background and white foreground, and plot the blobs B<over>
+Here I use a black background and white foreground, and plot the circles B<over>
 the line instead of under it. I achieve this by changing the order of the
 plotTypes---Lines then Blobs. Also notice that I use the C<-sequential> flag,
 which I have to do in order to guarantee having Prima's color shortcuts.
@@ -821,7 +994,7 @@ ErrorBars plotType and the use of function-based data sets.
          $x,
          $y,
          plotType => [
-             pt::Blobs,
+             pt::Diamonds(filled => 'yes'),
              pt::ErrorBars(y_err => $y_err),
          ],
      ],
@@ -860,7 +1033,7 @@ interesting:
          $x,
          $y,
          plotType => [
-             pt::Blobs,
+             pt::Xs,
              pt::Lines,
          ],
      ],
@@ -882,7 +1055,7 @@ interesting:
      }
  );
 
-This kind of immediate feedbck can be very useful. It is even possible to
+This kind of immediate feedback can be very useful. It is even possible to
 capture keyboard events and respond to user interaction this way. But B<please>,
 don't do that. If you need any substantial amount of user interaction, you
 would do much better to learn to create a Prima application with buttons, lists,

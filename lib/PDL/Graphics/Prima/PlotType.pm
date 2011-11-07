@@ -380,31 +380,71 @@ sub draw {
 		, %properties);
 }
 
-#########################################
-# PDL::Graphics::Prima::PlotType::NGons #
-#########################################
+###########################################
+# PDL::Graphics::Prima::PlotType::Symbols #
+###########################################
 
-=head2 NGons
+=head2 Symbols
 
-Lets you draw open or filled regular polygons. You can specify the size (radius),
-number of points, orientation, and whether or not you want the polygon filled.
-The specific arguments are:
+Lets you draw various geometric symbols, mostly based on regular polygons.
+This function inspired the creation of L<PDL::Drawing::Prima/pdl_symbols>,
+so you should acquaint yourself with that function's terminology if you
+want to understand the meaning of the options here.
 
- size        - radius, from center to a point, in pixels
- filled      - boolean (1 or 0)
- N_points    - >= 3, a byte-size integer
- orientation - angle in degrees
+For each of your symbols, you can specify the size (radius), number of
+points, orientation, skip, and whether or not you want the symbol filled.
+These are the allowed arguments:
 
-If the orientation is not specified, the polygon will start with a point at the
-top. This means that 4gons are drawn as diamonds, not squares. (But see
-L</Squares>)
+=over
 
-Note: This is currently achieved using lots of Perl-level code, and would be
-much better served by some PP code.
+=item size
+
+The symbols are drawn with a fixed size in pixels. This size is the radius
+of a circle that would inscribe the symbol. The default size is 5 pixels.
+
+=item filled
+
+You can draw filled symbols or open symbols. Filled symbols do not have
+a border. You can specify a per-symbol value of 0 or 1, or you can specify
+a plotType-wide value of 0, 1, 'yes', or 'no'. The default setting is
+unfilled.
+
+=item N_points
+
+The number of points in your symbol. Values of zero and one are interpreted
+as circles; values of 2 are interpreted as line segments; values of three or
+more are interpreted as regular polygons with the specified number of
+points. The number of points is an integer and must be less than 256. The
+default value is 5.
+
+=item orientation
+
+The angle in degrees. An orientation of zero points to the right, and the
+angle increases in a counterclockwise fashion. You can also use the following
+descriptive (case insensitive) strings:
+
+ up    - 90 degrees
+ left  - 180 degrees
+ down  - 270 degrees
+ right - 0 degrees, or 360 degrees
+
+If the orientation is not specified, the polygon will be drawn 'right'.
+This means that 4gons are drawn as diamonds, not squares, and triangels will
+look tilted. (But see L</Triangles> and L</Squares>.)
+
+=item skip
+
+The default skip is 1 and leads to normal regular polygons, like a pentagon.
+However, what if you want to draw a five-pointed star instead of a pentagon?
+In that case, you would specify a skip of 2. This means I<draw a shape
+connecting every B<other> point>. Higher values of skip are allowed, though
+I am not sure how useful they would be.
+
+=back
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::NGons;
+package PDL::Graphics::Prima::PlotType::Symbols;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 use PDL::Core ':Internal';
@@ -412,8 +452,8 @@ use Carp 'croak';
 use PDL;
 
 # Install the short name constructor:
-sub pt::NGons {
-	PDL::Graphics::Prima::PlotType::NGons->new(@_);
+sub pt::Symbols {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_);
 }
 
 sub initialize {
@@ -422,14 +462,32 @@ sub initialize {
 	
 	#					if this is defined...			  use it
 	my $orientation	=	defined $self->{orientation}	? $self->{orientation}
-					:	0;
+														:	'right';
 	my $filled		=	defined $self->{filled}			? $self->{filled}
-					:	0;
+														:	0;
 	my $N_points	=	defined $self->{N_points}		? $self->{N_points}
-					:	5;
+														:	5;
 	my $size		=	defined $self->{size}			? $self->{size}
 					:	defined $self->{radius}			? $self->{radius}
-					:	5;
+														:	5;
+	my $skip		=	defined $self->{skip}			? $self->{skip}
+														: 1;
+	
+	# Replace descriptive strings with meaningful numerical values:
+	unless (ref $orientation) {
+		#                if string looks like...		use value...
+		$orientation	= $orientation =~ /^up$/i		? 90
+						: $orientation =~ /^left$/i	? 180
+						: $orientation =~ /^down$/i	? 270
+						: $orientation =~ /^right$/i	? 0
+														: $orientation;
+	}
+	unless (ref $filled) {
+		#        if string matches...   use value...
+		$filled	= $filled =~ /^yes$/i	? 1
+				: $filled =~ /^no$/i	? 0
+										: $filled;
+	}
 	
 	# Make sure everything is piddles and croak if something goes wrong:
 	eval {
@@ -437,20 +495,23 @@ sub initialize {
 		$filled = topdl($filled);
 		$N_points = topdl($N_points);
 		$size = topdl($size);
+		$skip = topdl($skip);
 		1;
-	} or croak('NGons arguments must be piddles, or values that can be interpreted by the pdl constructor');
+	} or croak('Symbls arguments must be piddles, or values that can be interpreted by the pdl constructor');
 	
 	croak('Sizes must be greater than or equal to 1') unless PDL::all($size >= 1);
-	croak('N_points must be greater than or equal to 3 and less than 256')
-		unless PDL::all(($N_points >= 3) & ($N_points < 256));
+	croak('N_points must be greater than or equal to 0 and less than 256')
+		unless PDL::all(($N_points >= 0) & ($N_points < 256));
 	croak('filled must be either 1 or zero')
 		unless PDL::all(($filled == 0) | ($filled == 1));
+	croak('skip must be greater than or equal to zero') unless PDL::all($skip >= 0);
 	
 	# Set the internal representation of the parameters to the massaged values:
 	$self->{size} = $size;
 	$self->{orientation} = $orientation;
 	$self->{N_points} = $N_points->byte;
-	$self->{filled} = $filled;
+	$self->{filled} = $filled->byte;
+	$self->{skip} = $skip->byte;
 }
 
 # The collation code:
@@ -488,94 +549,124 @@ sub draw {
 	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %fill_props = $self->generate_properties(@PDL::Drawing::Prima::fillpolys_props);
-	my %unfill_props = $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	my %props = $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
 	
 	# Retrieve the data from the dataset:
 	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
-	my $N_points = $self->{N_points};
-	my $orientation = $self->{orientation};
-	my $size = $self->{size};
-	
-	# The dimenion of the points to draw must be one larger than the combined
-	# dimensions of $x + $y:
-	my $ndims = 0;
-	my @xdims = $xs->dims;
-	my @ydims = $ys->dims;
-	my @pdims = $N_points->dims;
-	my @odims = $orientation->dims;
-	my @sdims = $size->dims;
-	for (my $i = 0; defined $xdims[$i] or defined $ydims[$i] or defined $sdims[$i]
-			or defined $pdims[$i] or defined $odims[$i]; $i++) {
-		my $dim = 1;
-		if (defined $xdims[$i] and $xdims[$i] > 1) {
-			$dim = $xdims[$i];
-		}
-		elsif (defined $ydims[$i] and $ydims[$i] > 1) {
-			croak("y's ${i}th dimension ($ydims[$i]) is not thread-compatible "
-				. "with x's ${i}th dimension ($xdims[$i])")
-				if $dim > 1 and $dim != $ydims[$i];
-			$dim = $ydims[$i];
-		}
-		elsif (defined $pdims[$i] and $pdims[$i] > 1) {
-			croak("N_points' ${i}th dimension ($pdims[$i]) is not thread-"
-				. "compatible with other piddles' dimensions ("
-				. join(', ', map {defined $_ ? $_ : ()} ($xdims[$i], $ydims[$i]))
-				. ')')
-				if $dim > 1 and $dim != $pdims[$i];
-			
-			$dim = $pdims[$i];
-		}
-		elsif (defined $odims[$i] and $odims[$i] > 1) {
-			croak("orientation's ${i}th dimension ($odims[$i]) is not thread-"
-				. "compatible with other piddles' dimensions ("
-				. join(', ', map {defined $_ ? $_ : ()}
-						($xdims[$i], $ydims[$i], $pdims[$i]))
-				. ')')
-				if $dim > 1 and $dim != $odims[$i];
-			$dim = $odims[$i];
-		}
-		elsif (defined $sdims[$i] and $sdims[$i] > 1) {
-			croak("size's ${i}th dimension ($sdims[$i]) is not thread-"
-				. "compatible with other piddles' dimensions ("
-				. join(', ', map {defined $_ ? $_ : ()}
-						($xdims[$i], $ydims[$i], $pdims[$i], $odims[$i]))
-				. ')')
-				if $dim > 1 and $dim != $sdims[$i];
-			$dim = $sdims[$i];
-		}
-		else {
-			$dim = 1;
-		}
-		
-		$ndims++;
-	}
-	
-	my $sequence = sequence((1) x $ndims, $N_points->max + 1);
-	my $two_pi = 8 * atan2(1,1);
-	my $angles = ($orientation/360 + $sequence / $N_points) * $two_pi;
-	
-	# Create the array that will hold the points:
-	my $x_points = ($xs + $size * cos($angles));
-	my $y_points = ($ys + $size * sin($angles));
-	
-	my ($x_filled, $y_filled) = whereND($x_points, $y_points, $self->{filled} == 1);
-	$x_filled = $x_filled->mv(-1,0);
-	$y_filled = $y_filled->mv(-1,0);
-	$self->widget->pdl_fillpolys(
-		$x_filled, $y_filled,
-		map {$_ => $fill_props{$_}->dummy(0)} keys %fill_props
-	);
-	
-	my ($x_open, $y_open) = whereND($x_points, $y_points, $self->{filled} == 0);
-	$x_open = $x_open->mv(-1,0);
-	$y_open = $y_open->mv(-1,0);
-	$self->widget->pdl_polylines(
-		$x_open, $y_open,
-		map {$_ => $unfill_props{$_}->dummy(0)} keys %unfill_props
-	);
+	$self->widget->pdl_symbols($xs, $ys, $self->{N_points}
+		, $self->{orientation}, $self->{filled}, $self->{size}
+		, $self->{skip}, %props);
 }
 
+#######################################################
+# PDL::Graphics::Prima::PlotType::Symbols Derivatives #
+#######################################################
+
+=pod
+
+In addition, there are many nicely named derivatives of pt::Symbols. These
+give descriptive names to many common symbols and include:
+
+=over
+
+=item Sticks
+
+C<pt::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
+that is, sticks. This can be very useful to visualize flow-fields, for
+example. You can specify the orientation and the size; you can also specify
+N_points and filled, but those will be ignored.
+
+=item Triangles
+
+C<pt::Triangles> is a wrapper around the Symbols plotType that draws 3-point regular
+polygons. It takes the same options as Symbols, except that if you specify
+N_points, it will be overridden by the value 3. Also, the default orientation
+which you B<can> override, is 'up'.
+
+=item Squares
+
+C<pt::Squares> is a wrapper around Symbols that draws 4-point regular polygon with an
+orientation that makes it look like a square (instead of a diamond). You can
+specify vales for N_points and orientation, but they will be ignored.
+
+=item Diamonds
+
+C<pt::Diamonds> is just like Squares, but rotated by 45
+degrees. Again, you can specify N_points and orientation, but those will be
+ignored.
+
+=item Stars
+
+C<pt::Stars> creates open or filled star shapes. These only look right when
+you have five or more C<N_points>, though it will plot something with four
+and fewer. The default orientation is 'up' but that can be overridden. The
+C<skip> of two, however, cannot be overridden. You can also specify the fill
+state and the orientation, in addition to all the other Drawable parameters,
+of course.
+
+=item Asterisks
+
+C<pt::Asterisks> creates N-sided asterisks. It does this by forcing a skip
+of zero that cannot be overridden. As with Stars, the default orientation is
+'up' but that can be overridden. You can also specify the fill
+state and the orientation.
+
+=item Xs
+
+C<pt::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
+arguments, so you don't need to specify Symbol-specific options.
+
+=item Crosses
+
+C<pt::Crosses> creates cross-shaped symbols. Again, you don't need to
+specify any options for this constructor.
+
+=back
+
+=cut
+
+# Install the short name constructor:
+sub pt::Sticks {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 2, filled => 'no');
+}
+
+sub pt::Triangles {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 'up', @_, N_points => 3);
+}
+
+sub pt::Squares {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45);
+}
+
+sub pt::Diamonds {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0);
+}
+
+sub pt::Stars {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 2);
+}
+
+sub pt::Asterisks {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 0);
+}
+
+sub pt::Xs {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
+}
+
+sub pt::Crosses {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
+}
+
+##########################################
+# PDL::Graphics::Prima::PlotType::Slopes #
+##########################################
+#
+#=head2 Slopes
+#
+#This plot type visualizes derivatives, i.e. slopes. 
+#
+#=cut
 
 #############################################
 # PDL::Graphics::Prima::PlotType::Histogram #
@@ -1260,6 +1351,8 @@ sub draw {
 #
 #=cut
 
+# working here - consider adding counter lines
+
 ###############################################################################
 #                         Creating your own Plot Type                         #
 ###############################################################################
@@ -1603,9 +1696,9 @@ be. The plot-types that come to mind include:
 
 =over
 
-=item pt::Triangles, pt::Squares, pt::NGons
+=item pt::Triangles, pt::Squares, pt::Symbols
 
-Args: orientation, size (i.e. radius), filled, N_points (for NGons)
+Args: orientation, size (i.e. radius), filled, N_points (for Symbols)
 
 =item arbitrary polygons
 
