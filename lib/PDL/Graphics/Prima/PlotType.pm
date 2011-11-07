@@ -674,9 +674,50 @@ sub pt::Crosses {
 
 =head2 Histogram
 
-working here - document
+Draws a histogram with bin-centers at the data's x-values and heights at the
+data's y-values. Both positive and negative y-values are allowed.
 
-keys: topPadding, baseline
+Histogram assumes linear bin spacing and simply takes the space between the
+first and second x-values to be the bin width. If you are plotting a
+histogram with different spacing, such as quadratic or logarithmic, you will
+need to compute the spacing on your own and specify the spacing using the
+binEdges key:
+
+ pt::Histogram(binEdges => $bin_edges)
+
+Note that binEdges should have one more element compared with your y-data,
+that is, if you have 20 heights, you'll need 21 binEdges. Unfortunately,
+specifying bin edges in this way does not work very well with having a
+function-based dataset.
+
+Options for this plotType include:
+
+=over
+
+=item baseline
+
+The histogram is plotted as a series of rectangles. The height of the bottom
+of these rectangles is zero, but you can set a different heigh using this
+key.
+
+=item binEdges
+
+Sets the location of the bin edges; useful if your histogram does not have
+identical spacing.
+
+=item topPadding
+
+Histograms whose tallest column runs to the top of the graph are very
+confusing. This plotType includes a little bit of padding to ensure that
+the top of the highest histogram is plotted below the top axis when you use
+autoscaling. The same logic is applied to negative columns if you have any.
+
+=back
+
+The histogram plotType works decently well, but it needs improvement. Don't
+be surprised if this plotType changes in the near future. Potential areas
+for improvement might be the inclusion of a Scaling property as well as
+filled/unfilled specifications (as in Symbols).
 
 =cut
 
@@ -768,9 +809,12 @@ sub compute_collated_min_max_for {
 	my ($xs, $ys) = $self->dataset->get_data;
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
-		my $padding = $self->{topPadding};
-		return PDL::collate_min_max_wrt_many($ys, $lineWidths
-			, $ys, $lineWidths + $padding, $pixel_extent
+		my $top_padding = $lineWidths;
+		$top_padding += $self->{topPadding} if any $ys > $self->{baseline};
+		my $bottom_padding = $lineWidths;
+		$bottom_padding += $self->{topPadding} if any $ys < $self->{baseline};
+		return PDL::collate_min_max_wrt_many($ys, $bottom_padding
+			, $ys, $top_padding, $pixel_extent
 			, $xs, values %properties);
 	}
 	# For the x min/max, get the bin edges and collate by line width:
