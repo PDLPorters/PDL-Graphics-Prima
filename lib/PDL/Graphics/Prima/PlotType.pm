@@ -661,12 +661,110 @@ sub pt::Crosses {
 ##########################################
 # PDL::Graphics::Prima::PlotType::Slopes #
 ##########################################
-#
-#=head2 Slopes
-#
-#This plot type visualizes derivatives, i.e. slopes. 
-#
-#=cut
+
+=head2 Slopes
+
+This plot type visualizes derivatives, i.e. slopes. It has one required key,
+C<slopes>. In addition to all the L<Prima::Drawable> line properties, you
+can also specify a C<size> for the slopes (the length of the dash marks) in
+pixels.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Slopes;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+use PDL::Core ':Internal';
+use Carp 'croak';
+use PDL;
+
+# Install the short name constructor:
+sub pt::Slopes {
+	PDL::Graphics::Prima::PlotType::Slopes->new(@_);
+}
+
+# The initializer computes the orientations from the given slopes
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	
+	# They must pass a slopes key:
+	croak('Slopes plotType requires a slopes key')
+		unless exists $self->{slopes};
+	my $slopes = $self->{slopes};
+	
+	# They could have passed a size:
+	#				if this is defined...		  use it
+	my $size	=	defined $self->{size}		? $self->{size}
+												: 5;
+	
+	# make sure the size and slopes are piddles and croak if something goes wrong:
+	eval {
+		$slopes = topdl($slopes);
+		$size = topdl($size);
+		1;
+	} or croak('Arguments to pt::Slopes must be piddles, or values that can be interpreted by the pdl constructor');
+	
+	croak('Size must be greater than or equal to 1')
+		unless PDL::all($size >= 1);
+	
+	# Set the internal representation of the sizes and slopes
+	$self->{size} = $size;
+	$self->{slope} = $slopes;
+}
+
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
+	my @extras = values %properties;
+	
+	my $size = $self->{size};
+	my $to_check;
+	my ($xs, $ys) = $self->dataset->get_data;
+	
+	# working here - make this take the orientation of each polygon into account
+#	my ($min_points, $max_points);
+	if ($axis_name eq 'x') {
+#		# compute the min_points and max_points
+		$to_check = $xs;
+		push @extras, $ys;
+	}
+	else {
+#		# compute the min_points and max_points
+		$to_check = $ys;
+		push @extras, $xs;
+	}
+	
+	# Return the collated results:
+	return PDL::collate_min_max_wrt_many($to_check, $size, $to_check, $size
+		, $pixel_extent, @extras);
+}
+
+sub draw {
+	my ($self) = @_;
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
+	
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+
+	# Calculate the orientation:
+	my $two_pi = atan2(1,1) * 8.0;
+	my $orientation = $self->{slopes}->atan / $two_pi * 360;
+
+#print "Got slopes of ", $self->{slopes}, " and orientations of $orientation\n";
+
+	# plot it:
+	$self->widget->pdl_symbols($xs, $ys,
+	#   N_points, orientation, filled, size,          skip
+		2,        $orientation, 0,     $self->{size}, 1,    %properties);
+}
+
 
 #############################################
 # PDL::Graphics::Prima::PlotType::Histogram #
