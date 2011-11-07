@@ -520,7 +520,7 @@ sub compute_collated_min_max_for {
 	
 	# Get the list of properties for which we need to look for bad values:
 	my %properties
-		= $self->generate_properties(@PDL::Drawing::Prima::fillpolys_props);
+		= $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
 	my @extras = values %properties;
 	
 	my $size = $self->{size};
