@@ -26,6 +26,9 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  my $x = sequence(100) / 20;
  my $y = sin($x);
  
+ # Draw a line connecting each x/y pair:
+ line_plot($x, $y);
+ 
  # Draw a symbol at each x/y pair:
  circle_plot($x, $y);
  triangle_plot($x, $y);
@@ -34,9 +37,6 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  X_plot($x, $y);
  cross_plot($x, $y);
  asterisk_plot($x, $y);
- 
- # Draw a line connecting each x/y pair:
- line_plot($x, $y);
  
  # Sketch a function:
  func_plot(0, 10, \&PDL::sin);
@@ -90,14 +90,14 @@ plotting, including
 
 =over
 
+=item line_plot ($x, $y)
+
+takes two piddles, one for x and one for y, and makes a line plot with them
+
 =item <symbol>_plot ($x, $y)
 
 takes two piddles (one for x and one for y) and plots the symbol at the
 given points
-
-=item line_plot ($x, $y)
-
-takes two piddles, one for x and one for y, and makes a line plot with them
 
 =item func_plot ($x_min, $x_max, $func_ref, [$N_points])
 
@@ -144,7 +144,7 @@ in L<PDL::Graphics::Prima>.
 
 =head1 INTERACTIVE PLOTTING
 
-Before we get to the plotting commands themselves, I wanted to highlight that
+Before we get to the plotting commands themselves, I want to highlight that
 the L<PDL::Graphics::Prima> library is highly interactive. Whether you use the
 widget interface or this Simple interface, your plot responds to the following
 user interactions:
@@ -159,10 +159,12 @@ point the plot will be zoomed-in to the region that you selected.
 
 =item scroll-wheel zooming
 
-You can zoom-in and zoom-out using your scroll wheel (except on Windwos; I
-haven't figured out why it's not working on Windows). The zooming is designed to
+You can zoom-in and zoom-out using your scroll wheel.* The zooming is designed to
 keep the data under the mouse at the same location as you zoom in and out.
 Unfortunately, some recent changes have made this operation less than perfect.
+
+* This is not working on Windows; I haven't figured out why, but I suspect
+it's a Prima thing.
 
 =item dragging/panning
 
@@ -172,13 +174,14 @@ dragging with your left mouse button, much like an interactive map.
 =item context menu
 
 Right-clicking on the plot will bring up a context menu with options including
-restoring auto-scaling, copying the current plot image (to be pasted directly
+restoring auto-scaling, copying the current plot image* (to be pasted directly
 into, say, Microsoft's PowerPoint or LibreOffice's Impress), and saving the
 current plot image to a file. The supported output file formats depend on the
 codecs that L<Prima> was able to install, so are system- and machine-dependent.
 
-For reasons not clear to me, copying the plot does not appear to work on
-Macs. I'm not sure why, and it's something I intend to solve soon.
+* For reasons not clear to me, copying the plot to the clipboard does not
+work on Macs. Again, I believe this is a Prima thing and I hope to resolve
+it soon becuase I work regularly on a Mac.
 
 =back
 
@@ -195,6 +198,47 @@ using colors, or setting the title or axis labels.
 In all of these plots, bad values in x and y are simply omitted.
 
 =over
+
+=item line_plot ($x, $y)
+
+The C<line_plot> function takes two arguments---a piddle with your x data and
+a piddle with your y data---and plots them by drawing black lines on a white
+background from one point to the next. Usually C<$x> and C<$y> will have the
+same dimensions, but you can use any data that are PDL-thread compatible. For
+example, here's a way to compare three sets of data that have the exact same
+x-values:
+
+ my $x = sequence(100)/10;
+ my $y = sequence(3)->transpose + sin($x);
+ 
+ # Add mild linear trends to the first and second:
+ use PDL::NiceSlice;
+ $y(:, 0) += $x/5;
+ $y(:, 1) -= $x/6;
+ 
+ line_plot($x, $y);
+
+The x-values do not need to be sorted. For example, this plots a sine wave sine
+wave oscillating horizontally:
+
+ my $y = sequence(100)/10;
+ my $x = sin($y);
+ line_plot($x, $y);
+
+Bad values in your data, if they exist, will simply be skipped, inserting a
+gap into the line.
+
+To generate the same plot using the L<plot|/"PLOT FUNCTION"> command, you would type this:
+
+ plot(-data => [$x, $y]);
+
+=cut
+
+sub line_plot {
+	croak("line_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
+		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
+	plot(-data => \@_);
+}
 
 =item circle_plot ($x, $y)
 
@@ -361,48 +405,6 @@ sub asterisk_plot {
 	plot(-data => [@_, plotType => pt::Asterisks(N_pionts => 5)]);
 }
 
-
-=item line_plot ($x, $y)
-
-Like the L<blob_plot> function just discussed, the C<line_plot> function takes
-two arguments---a piddle with your x data and
-a piddle with your y data---and plots them by drawing black lines on a white
-background from one point to the next. Usually C<$x> and C<$y> will have the
-same dimensions, but you can use any data that are PDL-thread compatible. For
-example, here's a way to compare three sets of data that have the exact same
-x-values:
-
- my $x = sequence(100)/10;
- my $y = sequence(3)->transpose + sin($x);
- 
- # Add mild linear trends to the first and second:
- use PDL::NiceSlice;
- $y(:, 0) += $x/5;
- $y(:, 1) -= $x/6;
- 
- line_plot($x, $y);
-
-The x-values do not need to be sorted. For example, this plots a sine wave sine
-wave oscillating horizontally:
-
- my $y = sequence(100)/10;
- my $x = sin($y);
- line_plot($x, $y);
-
-Bad values in your data, if they exist, will simply be skipped, inserting a
-gap into the line.
-
-To generate the same plot using the L<plot|/"PLOT FUNCTION"> command, you would type this:
-
- plot(-data => [$x, $y]);
-
-=cut
-
-sub line_plot {
-	croak("line_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => \@_);
-}
 
 =item func_plot ($x_min, $x_max, $func_ref, [$N_points])
 
@@ -633,7 +635,7 @@ You can specify multiple plotTypes by passing them in an anonymous array:
 All the plotTypes take key/value paired arguments. You can specify various
 L<Prima::Drawable> properties like line-width using the C<lineWidths> key
 or color using the C<colors> key; you can pass plotType-specific options
-like symbol size (for C<pt::Symbol> and it derivatives) using the C<size> key
+like symbol size (for C<pt::Symbol> and itsd derivatives) using the C<size> key
 or the baseline height for C<pt::Histogram> using the C<baseline> key; and
 some of the plotTypes have required arguments, such as at least one error bar
 specification with C<pt::ErrorBars>. To create red blobs, you would use
@@ -1137,7 +1139,7 @@ sub plot {
 
 First, don't C<use Prima> in scripts that use C<PDL::Graphics::Prima::Simple>.
 That might make things blow up. I wish I knew what goes wrong so I could guard
-against it, but I haven't figure dit out yet.
+against it, but I haven't figured it out yet.
 
 There are a couple of ways to call this module. The first is just a simple
 use statement:
@@ -1169,7 +1171,11 @@ element anonymous array:
 Finally, the default behavior on a Unix-like system that supports proper
 forking (as discussed L<below|/"BLOCKING, NONBLOCKING, AND PRIMA CONSTANTS">)
 is to create a stand-alone plot window that you can manipulate while the rest
-of your script runs, and which persists even after your script exits. If you
+of your script runs, and which persists even after your script exits.
+Unfortunately, Prima doesn't like forking, so although this works well with
+pdl shell usage, it comes with the caviate that you do not have access to
+any Prima constants, most importantly, the color constants. If you need
+access to these constants, or if you
 want the script to block after each function call until the plot window closes,
 you can provide the C<-sequential> switch:
 
@@ -1316,6 +1322,11 @@ Specifies the behavior of axes (but not the scaling)
 =item L<PDL::Graphics::Prima::DataSet>
 
 Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Internals>
+
+A dumping ground for my partial documentation of some of the more complicated
+stuff. It's not organized, so you probably shouldn't read it.
 
 =item L<PDL::Graphics::Prima::Limits>
 
