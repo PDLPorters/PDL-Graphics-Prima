@@ -1197,7 +1197,8 @@ properly fork a seperate process under Windows.)
 # import/export stuff:
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = our @EXPORT = qw(plot line_plot hist_plot blob_plot matrix_plot func_plot);
+our @EXPORT_OK = our @EXPORT = qw(plot line_plot circle_plot triangle_plot
+	square_plot diamond_plot cross_plot X_plot asterisk_plot hist_plot matrix_plot func_plot);
 
 our @default_sizes = (400, 400);
 
