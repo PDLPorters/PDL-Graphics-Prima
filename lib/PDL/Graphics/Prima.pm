@@ -1,6 +1,8 @@
 use strict;
 use warnings;
-$| = 1;
+
+package PDL::Graphics::Prima;
+our $VERSION = 0.01;
 
 package Prima::Plot;
 use PDL::Lite;
@@ -16,7 +18,6 @@ use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
 # I will need these graph-specific modules, too:
-use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Axis;
 use PDL::Graphics::Prima::DataSet;
 use PDL::Graphics::Prima::BoundsDialog;
@@ -25,10 +26,51 @@ use PDL::Graphics::Prima::BoundsDialog;
 
 PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
 
-=head1 SYNOPSIS
+=head1 SIMPLE SYNOPSIS
 
- use strict;
- use warnings;
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ # Generate some data - a sine curve
+ my $x = sequence(100) / 20;
+ my $y = sin($x);
+ 
+ # Draw a point at each x/y pair:
+ blob_plot($x, $y);
+ 
+ # Draw a line connecting each x/y pair:
+ line_plot($x, $y);
+ 
+ # Draw a histogram:
+ my ($bin_centers, $heights) = $y->hist;
+ hist_plot($bin_centers, $heights);
+ hist_plot($y->hist);  # equivalent
+ 
+ 
+ # Generate some data - a wavy pattern
+ my $image = sin(sequence(100)/10)
+             + sin(sequence(100)/20)->transpose;
+ 
+ # Generate a greyscale image:
+ matrix_plot($image);
+ 
+ # Set the    left, right,  bottom, top
+ matrix_plot([0,    1],    [0,      2],  $image);
+ 
+ 
+ # Use the more general plot for multiple datasets
+ # and more plotting features:
+ my $colors = pal::Rainbow()->apply($x);
+ plot(
+     -lines       => [$x, $y],
+     -color_blobs => [$x, $y + 1, colors => $colors,
+                      plotType => pt::Blobs],
+     x => { label => 'Time' },
+     y => { label => 'Sine' },
+ );
+
+=head1 WIDGET SYNOPSIS
+
  use PDL;
  use Prima qw(Application);
  use PDL::Graphics::Prima;
@@ -45,66 +87,27 @@ PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
      -function => [\&PDL::exp, color => cl::Blue],
      -data => [$t_data, $y_data, color => cl::Red],
      pack => { fill => 'both', expand => 1},
- #   y => {scaling => sc::Log},
  );
  
  run Prima;
 
-=head1 OVERVIEW
+=head1 IF YOU ARE NEW
 
-Here is an overview of the plotting infrastructure to help keep your head
-straight. The data types are indicated after the datatype and information
-that is only meant to be used internally is in parentheses
+If you are new to C<PDL::Graphics::Prima>, you should begin by reading the
+documentation for L<PDL::Graphics::Prima::Simple>. This module provides a
+simplified interface for quickly dashing off a few plots and offers stepping
+stones to create more complex plots. Depending on your plotting needs, you may
+not need anything more complicated than L<PDL::Graphics::Prima::Simple>. However,
+C<PDL::Graphics::Prima> offers much greater flexibility and interactivity than
+the options available in the Simple interface, so once you feel comfortable,
+you should come back to this manual page and learn how to create and utelize
+Plot widgets in conjunction with the Prima GUI toolkit.
 
-At the moment, it is not quite accurate and needs updating. I'm Sory. :-(
+=head1 DESCRIPTION
 
- Plotting Widget
-  |- xLabel string
-  |- yLabel string
-  |- title string
-  |- backColor colorValue
-  |- replotDuration float in milliseconds
-  |- x and y axes
-    |- min float
-    |- max float
-    |- lowerEdge integer
-    |- upperEdge integer
-    |- scaling, a class name or an object
-      |- $self->compute_ticks($min, $max)
-      |- $self->transform($min, $max, $data)
-      |- $self->inv_transform($min, $max, $data)
-      |- $self->sample_evently($min, $max, $N_values)
-      |- $self->is_valid_extremum($value)
-    |- (minValue float)
-    |- (minAuto boolean)
-    |- (maxValue float)
-    |- (maxAuto boolean)
-#   |- (pixel_extent int)
-#   |- $self->pixel_extent([$new_extent])
-?   |- $self->recompute_min_auto()
-?   |- $self->recompute_max_auto()
-    |- $self->update_edges()
-?   |- $self->minmax_with_padding($data)
-    |- $self->reals_to_relatives($data)
-    |- $self->relatives_to_reals($data)
-    |- $self->pixels_to_relatives($data)
-    |- $self->relatives_to_pixels($data)
-    |- $self->reals_to_pixels($data)
-    |- $self->pixels_to_reals($data)
-  |- dataSets (name => data)
-    |- xs (floats)
-    |- ys (floats)
-    |- plotType
-      |- type-specific data
-      |- $self->xmin($dataset, $widget)
-      |- $self->xmax($dataset, $widget)
-      |- $self->ymin($dataset, $widget)
-      |- $self->ymax($dataset, $widget)
-      |- $self->draw($dataset, $widget)
-    |- $self->get_data_as_pixels($widget)
-    |- $self->extremum($nane, $comperator, $widget)
-  |- $self->compute_min_max_for($axis_name)
-
+PDL::Graphics::Prima is a plotting interface for creating and exploring 2D data
+visualizations. The core of this interace is a new Plot widget that can be
+incorporated into Prima applications. 
 
 =cut
 
@@ -190,182 +193,6 @@ sub on_size {
 
 my $inf = -PDL->new(0)->log->at(0);
 
-=for details
-XXX working here
-XXX see also: Axis.pm recompute_max_auto, recompute_min_auto
-
-=for motivation
-The major issue with determining automatic scaling is that I consider two
-distinct units of measure, the scale of the data being one of them and the other
-being screen pixels. Furthermore, large padding on one side can impact the
-scaling on the other. Determining the correct min and max so that the pixel
-padding gets respected is, to the best of my knowledge, not a simple matter of 
-linear algebra.
-
-=for first-naive-implementation
-The first naive implementation, which was the implementation I used as my first
-shot at solving the problem of automatic scaling, is to get the min/max of the
-data, as well as the min/max padding. You do this for all the datasets and then
-take the most extreme values as your guess. The problem with this approach is
-that it could lead to overestimates of the extrema (i.e. guesses that are too
-wide), leading to plots that are not ideal. For example, suppose you have two
-datasets, one being a line plot with a wide range and the other being a blob
-plot with a very narrow range but a large blob size (i.e. 40 pixels). Using this
-method, you would allow for a 40-pixel padding on the most extreme data for the
-line plot, which could lead to extra and unnecessary white space. However, it is
-quite fast compared with the second naive implementation. The complexity for
-this method is about O(n), where n is the number of data points.
-
-=for second-naive-implementation
-The second naive implementation is an iterative approach in which you guess at
-the min and max that will display all of the data and plot types. You then run
-through all the data points and see if any of them do not fit within the
-min/max. If you find anything that doesn't fit, you widen your bounds and repeat
-the search. Although the whitespace padding would be correctly computed using
-this algorithm, this method is computationally inefficient and could be terribly
-slow for very large datasets. In the worst case, I believe that this algorithm
-would be O(n**2) or maybe even O(n**3), or it would make use of data structures
-of size O(n).
-
-=for better-implementation-analysis
-My proposed algorithm is a sort of combination of both naive implementations. It
-is slower than the first naive implementation but will almost always be as fast
-as or faster than the second naive implementation and with much, much better
-scaling properties. For large datasets, the computational complexity goes as
-O(n) while keeping the memory footprint small. However, it should give the
-bounds with accuracy as good as the second naive implementation and much better
-than the worst-case bounds using the first method.
-
-=for better-implementation-overview
-Upon inspetion of the second naive implementation, it becomes clear that we can
-greatly reduce the amount of time spent checking our guesses of the min and the
-max by noting that we only need to keep track of the most extreme values for a 
-given amount of padding. In other words, if we have many data points that need a
-padding of 10 pixels, we only need to keep track of their minimum and maximum
-values. For example, suppose we have three blobs all with radii 10 pixels and
-with x-values of 10, 12, 13, and 17. We know that if we determine a plotting
-minimum that can accomodate the left edge of point with x = 10, the certainly
-the point at x = 12 will fit within that minimum because we know it has the same
-padding. Similarly, we only need to know that the maximum x-value of the set is
-17. If we can accomodate a max of 17, the others will certainly fit within those
-bounds. Coming back to the implementation, I can scan through all the data
-keeping track of the minimum and maximum values for each value of pixel-padding.
-That is, I keep track of the min and max x-values for a padding of 10 pixels,
-and I seperately track the min and max x-values for a padding of 11, 12, 20, or
-200 pixels as they arise. In the end, I have no more than a few hundred extrema
-for different pixel paddings that I need to combine properly. Since I could
-potentially try to plot millions of data points, this reduces the amount of data
-that needs to be processed from millions of data points to only a few hundred.
-
-=for better-implementation-collection
-The better implementation works as follows. First choose a maximum padding that
-you care about for the purposes of determining the scaling. 500 pixels seems
-like a reasonable number but 2000 is just as feasable for the purposes of the
-algorithm. Allocate two arrays with as many elements for the min and max values,
-respectively. Then run through all the datasets. For each data point, get that
-point's requested pixel padding as well as its value. Use the padding value as
-the array offset and look up the currently known minimum and maximum values for
-that pixel padding. If the point is more extreme, replace the old extremum with
-the current value. This is only slightly slower than computing the min/max
-values required in both naive implementations, and requires very little memory.
-
-=for better-implementation-first-pruning
-The next step is optional but will likely speed-up the iterative process. It is
-likely that the plot will only have a handful of pixel-paddings, so running
-through all 500 (or however many you allocated) is a waste of time. As such, the
-next step of the process is to find the largest pixel padding representated in
-the collection and then find all smaller pixel padding values for which the
-extremum is more extreme than the extrema of the higher paddings. In the end,
-you have a collection of extrema which you can think of as being in a pyramid:
-the lowest pixel-padding is associated with the largest extremum, and the
-highest pixel-padding is associated with the least extreme value.
-
-=for better-implementation-iterating
-XXX working here
-
-Work with arrays, in which case the index itself is equal to the needed
-padding. Build a doubly-linked list with a structure patterned after
-
- padding => number    # padding of interest
- data => float        # min/max for this padding
- curr_value => float  # computed extent
- next => pointer      # next (smaller) padding
-
-Also, keep track of the tail, the current min, and the current max.
-
-The linked list is initially assembled in order of decreasing padding
-(largest padding on top). Here's something that's important, which you will
-need to get your head around, and which I will illustrate with an example.
-Suppose we have two paddings, 10 pixels and 5 pixels, and we're trying to
-compute the minimum. If the minimum data value with a pixel padding of 5 is
-2.2 and the minimum data value with a pixel padding of 10 is 2.1, we know
-that the pixel padding of 10 must lead to a smaller minimum than the pixel
-padding of 5. As such, we can remove the pixel padding of 5 from the
-list. I call this weeding out the values. The result is that as we go
-through the list in order of decreasing padding, the data values will become
-more extreme, like a pyramid.
-
-The argument I just made about the paddings for 5 and 10 pixels only took
-their data values and the sort order of the padding into account. It did not
-take the actual values of the paddings into account. In the next stage,
-which is iterative, I will begin to account for the effect of the different
-padding values.
-
-With the pyramid in hand, examine the tail values for both the min and the
-max. Each of these will have a padding associated with them. Estimate the
-min and max by assuming that the tail values, together with their padding,
-represent the most extreme values of the data set, which is a conservative
-estimate. With this estimate in hand, run through the list and compute the
-min or max associated with each list element, taking the padding and current
-scaling into account, and storing the result in curr_value. Then weed out
-the list using curr_value and iterate the procedure of this last paragraph
-until the tail of both the min and the max lists does not change.
-
-An important feature of this algorithm is that the min/max values begin with
-very conservative estimates and become more extreme with each round.
-
-Furthermore, the pyramid data structure is arranged so that with each round
-the width of the top end of the pyramid grows more than the width of the
-bottom end.
-
-To actually implement this scheme, I will require that datasets monitor
-their own data and report a data/padding list upon request. How the datasets
-monitor their data is entirely up to them. (I am considering using an
-on_change slice, which I secretly insert over the user's piddle by modifying
-the @_ argument array, to efficiently monitor changes.)
-
-In order to properly handle bad values, I need to write a function that can
-look for bad values over many piddles, tens of piddles. I believe I can
-achieve this by writing a function that takes, say, 20 piddles, and wrapping
-it in Perl code that supplies null piddles when you only need to call the
-function for 10 piddles. The funcion would be called collate_min_max_for_many
-and the calling convention for it would look like this:
-
- ($min, $max) = collate_min_max_for_many(N_to_return, N_buckets, $index, $p1, $p2, ...)
-
-This is best illustrated with the blobs plot type, since it would use a
-nontrivial value for index. If I wanted to compute the collated min and max
-for the x-data, taking potential bad values for y, xradii, yradii, and
-colors into account, I would call the function like so:
-
- my ($blob_x_min, $blob_x_max)
-     = collate_min_max_for_many(
-         1,              # return min/max for $x
-         $widget->width, # only need the number of pixels corresponding to the widget
-         $xRadii,        # the index
-         $x,             # x-data for which to find min/max
-         $y,             # \
-         $yRadii,        #  |- ignore x-values if any of these are bad
-         $colors,        # /
-     )
-         
-
-In this case
-
-where N <= M, M < 20, and the return dimensions are N x whatever.
-
-=cut
-
 sub compute_min_max_for {
 	my ($self, $axis_name) = @_;
 	
@@ -399,6 +226,11 @@ sub compute_min_max_for {
 	my $collated_min = PDL::cat(@min_collection)->mv(-1,0)->minimum;
 	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
 	
+	# It could be the case that all the values are bad. In that case, insert
+	# an entry at zero-pixels corresponding to the current view limits:
+	$collated_min(0) .= $self->{$axis_name}->min if $collated_min->isbad->all;
+	$collated_max(0) .= $self->{$axis_name}->max if $collated_max->isbad->all;
+	
 	# Iterativelye pair down the set until we've found the minmax. At this
 	# point, we have two arrays with $pixel_extent elements each. Cat an
 	# index and what will eventually be a computed value onto the original
@@ -406,16 +238,16 @@ sub compute_min_max_for {
 	my $minima = $collated_min->cat($collated_min->sequence, $collated_min);
 	my $maxima = $collated_max->cat($collated_max->sequence, $collated_max);
 
-	# I should check this for sanity, like if none of the min or max are
-	# good. (In that case, I think they should both fail.) working here
+	# Get rid of all the bad values. We know that at least one good value will
+	# remain due to the min/max insertion a few lines up.
 	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
 	my $trimmed_maxima = $maxima->whereND($maxima(:,0;-)->isgood);
-
+	
 	my $min_mask = $trimmed_minima->trim_collated_min;
 	my $max_mask = $trimmed_maxima->trim_collated_max;
 	$trimmed_minima = $trimmed_minima->whereND($min_mask);
 	$trimmed_maxima = $trimmed_maxima->whereND($max_mask);
-
+	
 	# Compute properly scaled extrema.
 	# min_pix and max_pix are the plain pixel paddings needed by the lowest
 	# element in the pyramid:
@@ -504,15 +336,13 @@ sub get_edge_requirements {
 
 =head1 Properties
 
-=head2 xLabel, yLabel, title
+=head2 title, titleSpace
 
-Sets or gets the various strings for the axis labeling and the title.
+Sets or gets the string that contains the title and the space allocated for the
+title at the top of the plot.
 
 =cut
 
-# Setter that does not notify and sets the title spacing property as well
-# The constructor (init) must call this function, or initialize titleSpace
-# itself.
 sub _title {
 	$_[0]->{title} = $_[1];
 }
@@ -591,9 +421,15 @@ You can send notifications and tie callbacks for the following events:
 
 =head2 ChangeTitle
 
+Called when the title of titleSpace gets changed
+
 =head2 Replot
 
+Called when the widget needs to replot
+
 =head2 ChangeData
+
+Called when the dataSet changes
 
 =cut
 
@@ -821,7 +657,6 @@ sub on_mousemove {
 	$self->{mouse_move_rel} = [$x_stop_rel, $y_stop_rel];
 }
 
-use Time::HiRes;
 sub on_mouseup {
 	my ($self, $up_button, $up_mods, $x_stop_pixel, $y_stop_pixel) = @_;
 	
@@ -858,24 +693,42 @@ sub on_mouseup {
 		}
 		# Call the popup menu if it 'looks' like a right-click:
 		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
-			my @items = (
-					['~Edit Bounds...' => sub { self->edit_bounds }],
+			$self->popup(Prima::Popup->new(
+				items => [
+					['~Copy' => sub {
+						Prima::Timer->create(
+							timeout => 250,
+							onTick => sub {
+								$_[0]->stop;
+								$self->copy_to_clipboard;
+							},
+						)->start;
+					}],
 					['~Save As...' => sub {
-							# Sleep for a quarter-second to clear the menu:	
-							Prima::Utils::post(\&Time::HiRes::usleep, 250_000);
-							Prima::Utils::post(\&save_to_file, $self)
+						Prima::Timer->create(
+							timeout => 250,
+							onTick => sub {
+								$_[0]->stop;
+								$self->save_to_file;
+							},
+						)->start;
 					}],
 					['~Autoscale' => sub {
 							$self->x->minmax(lm::Auto, lm::Auto);
 							$self->y->minmax(lm::Auto, lm::Auto);
 					}],
-			);
-			# working here - add context-dependent items
-			my $popup = Prima::Popup->new(items => \@items);
+					['~Edit Bounds...' => sub { self->edit_bounds }],
+				],
+			));
 		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
+}
+
+sub get_image {
+	my $self = shift;
+	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
 }
 
 # A routine to save the current plot to a rasterized file:
@@ -884,7 +737,7 @@ sub save_to_file {
 	my ($self, $filename) = @_;
 	
 	# Get the image
-	my $image = $::application->get_image($self->client_to_screen($self->origin), $self->size);
+	my $image = $self->get_image;
 	
 	# If they didn't specify a filename, run a dialog to get it:
 	unless ($filename) {
@@ -899,10 +752,131 @@ sub save_to_file {
 		Prima::MsgBox::message("Unable to save plot to '$filename'", mb::Ok);
 }
 
+<<<<<<< HEAD
 # A routine that pops up a modal dialog box for editing the plot's bounds:
 sub edit_bounds {
 	$current_plot_widget = shift;
 	my $result = PDL::Graphics::Prima::BoundsDialog->run($current_plot_widget);
+=======
+sub copy_to_clipboard {
+	my $self = shift;
+	my $image = $self->get_image;
+	
+	my $clipboard = $::application->Clipboard;
+	$clipboard->open;
+	$clipboard->clear;
+	$clipboard->image($image);
+	$clipboard->close;
+>>>>>>> master
 }
 
 1;
+
+
+=head1 TODO
+
+This is not a perfect plotting library. Here are some of the particularly
+annoying issues with it, which I hope to resolve:
+
+adjustable right and bottom margins means mouse scroll-wheel action doesn't
+work exactly as advertised
+
+something's messed up with the x-ticks, and sometimes the left x-tick does not
+line-up with the edge of the horizontal axis line.
+
+linear tick scaling can switch the 'natural' major and minor ticks just by
+moving, which makes it seem jittery. The function for determining the major and
+minor ticks should be simplified and based only on the scale of interest.
+
+singular properties (like C<color>, as opposed to C<colors>) do not Do What You
+Mean. With PlotTypes, they often don't do anything at all. Although I could
+resolve this problem in this library, I would rather address this in
+L<PDL::Drawing::Prima>.
+
+Shouldn't singular names => scalars, plural names => piddles be consistent
+across the board? It's not, at least not with the plotTypes.
+
+multiple axes. In the constructor, any property that starts with x would be an
+x-axis (x1, x2, etc). You would have to specify an axes with a dataset, though
+the default would be the first axis when sorted asciibetically. Axes would have
+properties regarding if they are drawn on the top, the bottom, both, etc, and
+whether their tick labels are drawn on the top, bottom, etc.
+
+I am very proud of the automatic scaling. There are two drawbacks. (1) It's
+complicated and not yet well documented. That needs fixing. (2) It could be even
+more awesome. For example, it would be great to be able to specify a minimum 
+pixel padding, as well as an extra pixel padding. This would simply effect how
+collate_min_max_for_many works and should be a snap to implement.
+
+Handle the titleSpace in a more intelligent way
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
+
+=head1 SEE ALSO
+
+Both the L<Perl Data Language|PDL> and the L<Prima GUI Toolkit|Prima> are
+amazing and this module would have no reason for existence without both of them.
+
+This module serves as the motivation for L<PDL::Drawing::Prima>, and also would
+be unable to function with any efficiency without it.
+
+Other 2D plotting options include L<PDL::Graphics::PGPLOT>,
+L<PDL::Graphics::PLplot>, L<PDL::Graphics::Gnuplot>, L<PDL::Graphics::Asymptote>,
+and many others. Search CPAN for more.
+
+For 3D plotting, see L<PDL::Graphics::TriD>.
+
+Here is the full list of modules in this distribution:
+
+=over
+
+=item L<PDL::Graphics::Prima>
+
+Defines the Plot widget for use in Prima applications
+
+=item L<PDL::Graphics::Prima::Axis>
+
+Specifies the behavior of axes (but not the scaling)
+
+=item L<PDL::Graphics::Prima::DataSet>
+
+Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Internals>
+
+A dumping ground for my partial documentation of some of the more complicated
+stuff. It's not organized, so you probably shouldn't read it.
+
+=item L<PDL::Graphics::Prima::Limits>
+
+Defines the lm:: namespace
+
+=item L<PDL::Graphics::Prima::Palette>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::Scaling>
+
+Specifies different kinds of scaling, including linear and logarithmic
+
+=item L<PDL::Graphics::Prima::Simple>
+
+Defines a number of useful functions for generating simple and not-so-simple
+plots
+
+=back
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011 David Mertens. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=cut

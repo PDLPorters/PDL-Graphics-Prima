@@ -9,10 +9,46 @@ use warnings;
 
 PDL::Graphics::Prima::PlotType - a collection of plot types
 
+=head1 SYNOPSIS
+
+ use PDL;
+ use PDL::Graphics::Prima::Simple -sequential;
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ 
+ # A lines+diamonds plot
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Lines,
+             pt::Diamonds,
+         ],
+     ],
+ );
+ 
+ # Dandelions:
+ $x = random(10);
+ $y = random(10) + 0.5;
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Spikes(colors => cl::Green, lineWidths => 2),
+             pt::Asterisks(N_points => 11, colors => cl::White),
+         ],
+     ],
+     backColor => cl::LightBlue,
+     color => cl::White,
+ );
+ 
+
 =head1 DESCRIPTION
 
 This module provides all of the different plot types that you can use in a
-PDL::Graphics::Prima widget. The documentation that follows is broken into three
+PDL::Graphics::Prima plot. The documentation that follows is broken into three
 parts:
 
 =over
@@ -38,6 +74,15 @@ own needs.
 
 =back
 
+Many plural L<Prima::Drawable> properties (i.e. C<colors> rather than C<color>)
+can be specified when creating plot types. For example,
+
+ # Specify the color for each blob:
+ pt::Blobs(colors => $my_colors)
+ 
+ # Specify different line widths for each column in the histogram:
+ pt::Histogram(lineWidths => $the_widths)
+
 =cut
 
 ################################################################################
@@ -53,6 +98,10 @@ own needs.
 #########################################
 
 =head2 Lines
+
+=for ref
+
+ pt::Lines( options )
 
 Draws the x/y data as lines. This lets you draw each curve with an individual
 color and line style; it does not let you specify a color and/or line style for
@@ -125,6 +174,10 @@ sub draw {
 # padding should be part of the general class, not this specific one
 
 =head2 Spikes
+
+=for ref
+
+ pt::Spikes( [x_baseline | y_baseline => PDL], options )
 
 Draws x/y data as a collection of vertical or horizontal lines. In the default
 behavior, for each (x, y) data point, it draws a line from (x, 0) to (x, y). You
@@ -278,6 +331,11 @@ sub draw {
 
 =head2 Blobs
 
+=for ref
+
+ pt::Blobs( [radius => PDL], [xRadius => PDL],
+            [yRadius => PDL], options )
+
 Lets you draw filled ellipses with per-point x- and y- pixel radii. If you
 specify the key C<radius>, it draws filled circles with the given radius. The
 more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
@@ -296,14 +354,23 @@ sub pt::Blobs {
 	PDL::Graphics::Prima::PlotType::Blobs->new(@_);
 }
 
-# The blobs initializer defaults to a radius of 5 pixels
+# The blobs initializer defaults to a radius of 3 pixels
 sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	
 	# They could have passed an xradius, a yradius, or a radius.
-	my $x_radius = $self->{xRadius} // $self->{radius} // pdl(3);
-	my $y_radius = $self->{yRadius} // $self->{radius} // pdl(3);
+	#					if this is defined...			  use it
+	my $x_radius	=	defined $self->{xRadius}		? $self->{xRadius}
+					:	defined $self->{radius}			? $self->{radius}
+					:	pdl(3);
+	my $y_radius	=	defined $self->{yRadius}		? $self->{yRadius}
+					:	defined $self->{radius}			? $self->{radius}
+					:	pdl(3);
+
+#	Oh, if only I could assume 5.10  :-(
+#	my $x_radius = $self->{xRadius} // $self->{radius} // pdl(3);
+#	my $y_radius = $self->{yRadius} // $self->{radius} // pdl(3);
 	
 	# make sure the radii are piddles and croak if something goes wrong:
 	eval {
@@ -313,7 +380,7 @@ sub initialize {
 	} or croak('Radii must be piddles, or values that can be interpreted by the pdl constructor');
 	
 	croak('Radii must be greater than or equal to 1')
-		unless PDL::all($x_radius > 1) and PDL::all($y_radius > 1);
+		unless PDL::all($x_radius >= 1) and PDL::all($y_radius >= 1);
 	
 	# Set the internal representation of the radii to the massaged values:
 	$self->{xRadius} = $x_radius;
@@ -362,12 +429,353 @@ sub draw {
 		, %properties);
 }
 
-##########################################
-# PDL::Graphics::Prima::PlotType::Points #
-##########################################
+###########################################
+# PDL::Graphics::Prima::PlotType::Symbols #
+###########################################
 
-package PDL::Graphics::Prima::PlotType::Points;
+=head2 Symbols
+
+=for ref
+
+ pt::Symbols( [size => PDL], [filled => PDL::Byte],
+              [N_points => PDL::Byte], [orientation => PDL],
+              [skip => PDL::Byte], options )
+
+Lets you draw various geometric symbols, mostly based on regular polygons.
+This function inspired the creation of L<PDL::Drawing::Prima/pdl_symbols>,
+so you should acquaint yourself with that function's terminology if you
+want to understand the meaning of the options here. There are also a number
+of derived Symbol plot types, as discussed below.
+
+For each of your symbols, you can specify the size (radius), number of
+points, orientation, skip, and whether or not you want the symbol filled.
+These are the allowed arguments:
+
+=over
+
+=item size
+
+The symbols are drawn with a fixed size in pixels. This size is the radius
+of a circle that would inscribe the symbol. The default size is 5 pixels.
+
+=item filled
+
+You can draw filled symbols or open symbols. Filled symbols do not have
+a border. You can specify a per-symbol value of 0 or 1, or you can specify
+a plotType-wide value of 0, 1, 'yes', or 'no'. The default setting is
+unfilled. Note that the filling takes winding number into account, so for
+example, a five-sided star (skip=2) will have a hollow center. This, perhaps,
+should be changed. I'm still debating about that.
+
+=item N_points
+
+The number of points in your symbol. Values of zero and one are interpreted
+as circles; values of 2 are interpreted as line segments; values of three or
+more are interpreted as regular polygons with the specified number of
+points. The number of points is an integer and must be less than 256. The
+default value is 5.
+
+=item orientation
+
+The angle in degrees. An orientation of zero points to the right, and the
+angle increases in a counterclockwise fashion. You can also use the following
+descriptive (case insensitive) strings:
+
+ up    - 90 degrees
+ left  - 180 degrees
+ down  - 270 degrees
+ right - 0 degrees, or 360 degrees
+
+If the orientation is not specified, the polygon will be drawn 'right'.
+This means that 4gons are drawn as diamonds, not squares, and triangels will
+look tilted. (But see L</Triangles> and L</Squares>.)
+
+=item skip
+
+The default skip is 1 and leads to normal regular polygons, like a pentagon.
+However, what if you want to draw a five-pointed star instead of a pentagon?
+In that case, you would specify a skip of 2. This means I<draw a shape
+connecting every B<other> point>. Higher values of skip are allowed, though
+I am not sure how useful they would be.
+
+=back
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Symbols;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+use PDL::Core ':Internal';
+use Carp 'croak';
+use PDL;
+
+# Install the short name constructor:
+sub pt::Symbols {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_);
+}
+
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	
+	#					if this is defined...			  use it
+	my $orientation	=	defined $self->{orientation}	? $self->{orientation}
+														:	'right';
+	my $filled		=	defined $self->{filled}			? $self->{filled}
+														:	0;
+	my $N_points	=	defined $self->{N_points}		? $self->{N_points}
+														:	5;
+	my $size		=	defined $self->{size}			? $self->{size}
+					:	defined $self->{radius}			? $self->{radius}
+														:	5;
+	my $skip		=	defined $self->{skip}			? $self->{skip}
+														: 1;
+	
+	# Replace descriptive strings with meaningful numerical values:
+	unless (ref $orientation) {
+		#                if string looks like...		use value...
+		$orientation	= $orientation =~ /^up$/i		? 90
+						: $orientation =~ /^left$/i	? 180
+						: $orientation =~ /^down$/i	? 270
+						: $orientation =~ /^right$/i	? 0
+														: $orientation;
+	}
+	unless (ref $filled) {
+		#        if string matches...   use value...
+		$filled	= $filled =~ /^yes$/i	? 1
+				: $filled =~ /^no$/i	? 0
+										: $filled;
+	}
+	
+	# Make sure everything is piddles and croak if something goes wrong:
+	eval {
+		$orientation = topdl($orientation);
+		$filled = topdl($filled);
+		$N_points = topdl($N_points);
+		$size = topdl($size);
+		$skip = topdl($skip);
+		1;
+	} or croak('Symbls arguments must be piddles, or values that can be interpreted by the pdl constructor');
+	
+	croak('Sizes must be greater than or equal to 1') unless PDL::all($size >= 1);
+	croak('N_points must be greater than or equal to 0 and less than 256')
+		unless PDL::all(($N_points >= 0) & ($N_points < 256));
+	croak('filled must be either 1 or zero')
+		unless PDL::all(($filled == 0) | ($filled == 1));
+	croak('skip must be greater than or equal to zero') unless PDL::all($skip >= 0);
+	
+	# Set the internal representation of the parameters to the massaged values:
+	$self->{size} = $size;
+	$self->{orientation} = $orientation;
+	$self->{N_points} = $N_points->byte;
+	$self->{filled} = $filled->byte;
+	$self->{skip} = $skip->byte;
+}
+
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
+	my @extras = values %properties;
+	
+	my $size = $self->{size};
+	my $to_check;
+	my ($xs, $ys) = $self->dataset->get_data;
+	
+	# working here - make this take the orientation of each polygon into account
+#	my ($min_points, $max_points);
+	if ($axis_name eq 'x') {
+#		# compute the min_points and max_points
+		$to_check = $xs;
+		push @extras, $ys;
+	}
+	else {
+#		# compute the min_points and max_points
+		$to_check = $ys;
+		push @extras, $xs;
+	}
+	
+	# Return the collated results:
+	return PDL::collate_min_max_wrt_many($to_check, $size, $to_check, $size
+		, $pixel_extent, @extras);
+}
+
+sub draw {
+	my ($self) = @_;
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %props = $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
+	
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+	$self->widget->pdl_symbols($xs, $ys, $self->{N_points}
+		, $self->{orientation}, $self->{filled}, $self->{size}
+		, $self->{skip}, %props);
+}
+
+#######################################################
+# PDL::Graphics::Prima::PlotType::Symbols Derivatives #
+#######################################################
+
+=pod
+
+In addition, there are many nicely named derivatives of pt::Symbols. These
+give descriptive names to many common symbols and include:
+
+=over
+
+=item Sticks
+
+=for ref
+
+ pt::Sticks( [size => PDL], [orientation => PDL], options )
+
+C<pt::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
+that is, sticks. This can be very useful to visualize flow-fields, for
+example. You can specify the orientation and the size; you can also specify
+N_points and filled, but those will be ignored.
+
+=cut
+
+sub pt::Sticks {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 2, filled => 'no');
+}
+
+=item Triangles
+
+=for ref
+
+ pt::Triangles( [size => PDL], [filled => PDL::Byte],
+                [orientation => PDL], options )
+
+C<pt::Triangles> is a wrapper around the Symbols plotType that draws 3-point regular
+polygons. It takes the same options as Symbols, except that if you specify
+N_points, it will be overridden by the value 3. Also, the default orientation
+which you B<can> override, is 'up'.
+
+=cut
+
+sub pt::Triangles {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 'up', @_, N_points => 3);
+}
+
+=item Squares
+
+=for ref
+
+ pt::Squares( [size => PDL], [filled => PDL::Byte], options )
+
+C<pt::Squares> is a wrapper around Symbols that draws 4-point regular polygon with an
+orientation that makes it look like a square (instead of a diamond). You can
+specify vales for N_points and orientation, but they will be ignored.
+
+=cut
+
+sub pt::Squares {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45);
+}
+
+=item Diamonds
+
+=for ref
+
+ pt::Diamonds( [size => PDL], [filled => PDL::Byte], options )
+
+C<pt::Diamonds> is just like Squares, but rotated by 45
+degrees. Again, you can specify N_points and orientation, but those will be
+ignored.
+
+=cut
+
+sub pt::Diamonds {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0);
+}
+
+=item Stars
+
+=for ref
+
+ pt::Stars( [size => PDL], [N_points => PDL::Byte],
+            [orientation => PDL], options )
+
+C<pt::Stars> creates open or filled star shapes. These only look right when
+you have five or more C<N_points>, though it will plot something with four
+and fewer. The default orientation is 'up' but that can be overridden. The
+C<skip> of two, however, cannot be overridden. You can also specify the fill
+state and the orientation, in addition to all the other Drawable parameters,
+of course.
+
+=cut
+
+sub pt::Stars {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 2);
+}
+
+=item Asterisks
+
+=for ref
+
+ pt::Asterisks( [size => PDL], [N_points => PDL::Byte],
+                [orientation => PDL], options )
+
+
+C<pt::Asterisks> creates N-sided asterisks. It does this by forcing a skip
+of zero that cannot be overridden. As with Stars, the default orientation is
+'up' but that can be overridden. You can also specify the fill state, but
+that will not be used.
+
+=cut
+
+sub pt::Asterisks {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 0);
+}
+
+=item Xs
+
+=for ref
+
+ pt::Xs( [size => PDL], options )
+
+C<pt::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
+arguments except the size.
+
+=cut
+
+sub pt::Xs {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
+}
+
+=item Crosses
+
+=for ref
+
+ pt::Crosses( [size => PDL], options )
+
+C<pt::Crosses> creates cross-shaped symbols. Again, you are free to set the
+size, but all other Symbol options are set for you.
+
+=cut
+
+sub pt::Crosses {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
+}
+
+=back
+
+=cut
+
+##########################################
+# PDL::Graphics::Prima::PlotType::Slopes #
+##########################################
+#
+#=head2 Slopes
+#
+#This plot type visualizes derivatives, i.e. slopes. 
+#
+#=cut
 
 #############################################
 # PDL::Graphics::Prima::PlotType::Histogram #
@@ -375,9 +783,55 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =head2 Histogram
 
-working here - document
+=for ref
 
-keys: topPadding, baseline
+ pt::Histogram( [binEdges => PDL], [baseline => SCALAR],
+                [topPadding => SCALAR], options )
+
+Draws a histogram with bin-centers at the data's x-values and heights at the
+data's y-values. Both positive and negative y-values are allowed.
+
+Histogram assumes linear bin spacing and simply takes the space between the
+first and second x-values to be the bin width. If you are plotting a
+histogram with different spacing, such as quadratic or logarithmic, you will
+need to compute the spacing on your own and specify the spacing using the
+binEdges key:
+
+ pt::Histogram(binEdges => $bin_edges)
+
+Note that binEdges should have one more element compared with your y-data,
+that is, if you have 20 heights, you'll need 21 binEdges. Unfortunately,
+specifying bin edges in this way does not work very well with having a
+function-based dataset.
+
+Options for this plotType include:
+
+=over
+
+=item baseline
+
+The histogram is plotted as a series of rectangles. The height of the bottom
+of these rectangles is zero, but you can set a different heigh using this
+key.
+
+=item binEdges
+
+Sets the location of the bin edges; useful if your histogram does not have
+identical spacing.
+
+=item topPadding
+
+Histograms whose tallest column runs to the top of the graph are very
+confusing. This plotType includes a little bit of padding to ensure that
+the top of the highest histogram is plotted below the top axis when you use
+autoscaling. The same logic is applied to negative columns if you have any.
+
+=back
+
+The histogram plotType works decently well, but it needs improvement. Don't
+be surprised if this plotType changes in the near future. Potential areas
+for improvement might be the inclusion of a Scaling property as well as
+filled/unfilled specifications (as in Symbols).
 
 =cut
 
@@ -469,9 +923,12 @@ sub compute_collated_min_max_for {
 	my ($xs, $ys) = $self->dataset->get_data;
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
-		my $padding = $self->{topPadding};
-		return PDL::collate_min_max_wrt_many($ys, $lineWidths
-			, $ys, $lineWidths + $padding, $pixel_extent
+		my $top_padding = $lineWidths;
+		$top_padding += $self->{topPadding} if any $ys > $self->{baseline};
+		my $bottom_padding = $lineWidths;
+		$bottom_padding += $self->{topPadding} if any $ys < $self->{baseline};
+		return PDL::collate_min_max_wrt_many($ys, $bottom_padding
+			, $ys, $top_padding, $pixel_extent
 			, $xs, values %properties);
 	}
 	# For the x min/max, get the bin edges and collate by line width:
@@ -522,9 +979,15 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =head2 ErrorBars
 
-You create an error bars plotType objet with C<pt::ErrorBars>:
+=for ref
 
- pt::ErrorBars(x_err => 10);
+ pt::ErrorBars( [x_err => PDL], [y_err => PDL]
+                [x_left_err => PDL], [x_right_err => PDL],
+                [y_upper_err => PDL], [y_lower_err => PDL],
+                [x_err_width => PDL], [y_err_width => PDL],
+                [err_width => PDL], options );
+
+You create an error bars plotType objet with C<pt::ErrorBars>:
 
 You must specify at least one sort of error bar to plot, though you can mix and
 match as you wish. Each error specification must be a piddle or something that
@@ -543,9 +1006,9 @@ basic ones.
 
 You can also specify the width of the error bars in pixels:
 
- err_width   - width of both error bars
- x_err_width - width of x-error bars
- y_err_width - width of y-error bars
+ err_width   - width of both error caps
+ x_err_width - width of x-error caps
+ y_err_width - width of y-error caps
 
 Again, the more specific widths override the less specific ones.
 
@@ -573,7 +1036,7 @@ sub initialize {
 	$bars = $self->{y_upper_err} // $self->{y_err}; #/
 	$self->{upper_bars} = $bars->abs if defined $bars;
 	$bars = $self->{y_lower_err} // $self->{y_err}; #/
-	$self->{upper_bars} = $bars->abs if defined $bars;
+	$self->{lower_bars} = $bars->abs if defined $bars;
 }
 
 sub y_bars_present {
@@ -735,7 +1198,7 @@ sub draw {
 		# Convert from points to pixels:
 		$left_xs = $widget->x->reals_to_pixels($left_xs);
 		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+		my $local_ys = $widget->y->reals_to_pixels($ys);
 
 		# Draw the line from the point to the edge:
 		$widget->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
@@ -843,6 +1306,11 @@ use Carp 'croak';
 
 =head2 ColorGrid
 
+=for ref
+
+ pt::ColorGrid( colors => PDL, [palette => PDL::Graphics::Prima::Palette],
+                [xs => PDL], [ys => PDL], options )
+
 This plot type lets you specify colors or values on a grid, primarily for making
 color contour plots (as opposed to line contour plots). Put differently, it lets
 you visualize a two-dimensional histogram by using colors. It also forms the
@@ -850,6 +1318,11 @@ basis for the Matrix and Func2D plot types. This plot type uses the colors, x,
 and y piddles a bit differently than the other plot types---in particular, it
 requires that you supply a value for colors. However, you can safely mix it with
 other plot types if you wish.
+
+The default palette is a greyscale one. However, you can specify whichever
+palette you like. See L<PDL::Graphics::Prima::Palette>. In particular, if
+the piddle holding your colors are already converted to Prima color values,
+you should explicitly specify an undefined value for the paletter.
 
 ColorGrid (and its derivatives) uses the x and y data to determine the grid
 dimensions. In the simplest use case, the x and y piddles each contain two
@@ -861,9 +1334,10 @@ N + 1 values for y.
 
 At this point, you should see the potential pitfalls of mixing this plot type
 with others. If you plot a quadratic function and include a ColorGrid plot type,
-the ColorGrid will interpret the x and y values as being 
-
-working here: document the palette key, especially undef => 
+the ColorGrid will interpret the x and y values as being the spacings for
+the ColorGrid. For this reason, I am considering pulling ColorGrid and all
+other such plotTypes out and creating a new dataSet that works with grid
+data.
 
 =cut
 
@@ -1043,14 +1517,16 @@ sub draw {
 ##########################################
 # Plots a matrix
 
-package PDL::Graphics::Prima::PlotType::Matrix;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
+#package PDL::Graphics::Prima::PlotType::Matrix;
+#our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
+#
+#=head2 Matrix
+#
+#Makes a simple visualization of a matrix. 
+#
+#=cut
 
-=head2 Matrix
-
-Makes a simple visualization of a matrix. 
-
-=cut
+# working here - consider adding counter lines
 
 ###############################################################################
 #                         Creating your own Plot Type                         #
@@ -1139,63 +1615,36 @@ sub initialize {
 	}
 }
 
-=head2 xmin, xmax, ymin, ymax
+=head2 compute_collated_min_max_for
 
-Note: these are likely to change in the future.
+This plotType function is called when the graph needs to determine automatic
+minima and maxima. It is hard to explain and will require some attention in
+the future to flesh out its documentation. My apologies for now.
 
-These plotType functions are called when the graph needs to determine automatic
-minima and maxima. Line plots simply return the data's minimum and maximum, but
-more complex plot types, such as those including error bars or blobs, need to
-take more details into consideration.
-
-These functions are always called with three arguments and should always return
-two values. The three arguments are:
+This function is called with three arguments and should always return
+two piddles. The return values should be of the sort described in
+L<PDL::Drawing::Prima::collate_min_max_wrt_many>. The three arguments are:
 
 =over
 
-=item plotType
+=item plotType object (or class name)
 
 This is whatever you created with your constructor; if you're following the
 example above, that would be an instance of the plotType. This passes in
 whatever the dataset was given for the plotType.
 
-=item dataset
+=item axis_name
 
-The dataset object associated with this particular plotting operation. You can
-access the actual data through this object.
+The axis for which we need to know the min and the max
 
-=item widget
+=item pixel_extent
 
-The graph widget on which the data is plotted. You will have to go through this
-object to get at the x- or y-axes, which contain the actual minima and maxima
-of the plot.
+The width into which the 
 
 =back
 
-The two values it should return are:
-
-=over
-
-=item extremum-value
-
-The actual minimum value needed to automatically display the data nicely. For
-line plots this is just the min or max of the dataset, but if you have error
-bars, for example, you would want a smaller minimum and a larger maximum to
-accomodate the width or height of the error bars.
-
-=item pixel-padding
-
-Any extra space needed to display the results nicely. For example, the width of
-blobs are specified in pixels. In that case, you would specify a minimum or
-maximum value corresponding to the dataset's extremum, and specify a padding
-corresponding to the blob's x- or y-radius, as appropriate.
-
-=back
-
-The x-version of these functions is never called by function-based datasets,
-since the x-values for such datsets are determined on-the-fly. If you cannot
-determine an extremum, or do not want to determine an extremum, you can return
-the undefined value and it will be ignored.
+If you cannot determine an extremum, or do not want to determine an extremum,
+you can return two piddles of size C<$pixel_extent> filled with bad values.
 
 =cut
 
@@ -1409,17 +1858,97 @@ sub draw {
 	croak('You must supply a code reference for your drawing code.');
 }
 
+1;
 
+=head1 TODO
 
+Docs: I need to explain how to use multiple plotTypes together in the DESCRIPTION.
+(For now, the best discussion is in L<PDL::Graphics::Prima::Simple>, in case
+you're looking.)
 
-=head1 AUTHOR, COPYRIGHT
+There are many, many plot types that are not yet supported, but should
+be. The plot-types that come to mind include:
 
-This module was written by David Mertens.
+=over
 
-Copyright 2011, David Mertens, all rights reserved. This library is free
-software; you can redistribute it and/or modify it under the same tersm as Perl
-itself.
+=item arrows
+
+Draw flow-fields with arrows of various sizes and orientations.
+Args: orientation, style => head, tail (ORable?), filled, length
+
+=item error-bands
+
+I would really like to be able to draw error-bands around a best-fit function.
+
+=item box-and-whisker
+
+Box-and-whisker plots should be easy enough, a simple extension of error bars.
+
+=item simpler image support
+
+ColorGrid, while immensely flexible, is very slow. Prima has hooks for adding
+images to a Drawable object, but they have not yet been incorporated into
+L<PDL::Drawing::Prima>. Once that happens, fast and scalable image support will
+be possible.
+
+=back
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
+
+=head1 SEE ALSO
+
+This is a component of L<PDL::Graphics::Prima>. This library is composed of many
+modules, including:
+
+=over
+
+=item L<PDL::Graphics::Prima>
+
+Defines the Plot widget for use in Prima applications
+
+=item L<PDL::Graphics::Prima::Axis>
+
+Specifies the behavior of axes (but not the scaling)
+
+=item L<PDL::Graphics::Prima::DataSet>
+
+Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Internals>
+
+A dumping ground for my partial documentation of some of the more complicated
+stuff. It's not organized, so you probably shouldn't read it.
+
+=item L<PDL::Graphics::Prima::Limits>
+
+Defines the lm:: namespace
+
+=item L<PDL::Graphics::Prima::Palette>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::Scaling>
+
+Specifies different kinds of scaling, including linear and logarithmic
+
+=item L<PDL::Graphics::Prima::Simple>
+
+Defines a number of useful functions for generating simple and not-so-simple
+plots
+
+=back
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011 David Mertens. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =cut
-
-1;

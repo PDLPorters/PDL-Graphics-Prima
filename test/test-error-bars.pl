@@ -13,7 +13,7 @@ my $wDisplay = Prima::MainWindow->create(
 
 $wDisplay->insert('Plot',
 	-data => [
-		3*grandom(30), 3*grandom(30),
+		3 * grandom(30), 3 * grandom(30),
 		plotType => [
 			pt::ErrorBars(y_err => grandom(30), colors => cl::LightRed,
 				x_left_err => grandom(30), x_err => grandom(30)),
