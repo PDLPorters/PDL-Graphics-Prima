@@ -236,6 +236,113 @@ In this case
 
 where N <= M, M < 20, and the return dimensions are N x whatever.
 
+
+=head1 RESPONSIVE PP CODE
+
+If you create a long-running piece of code and you want your GUI to remain
+responsive, you have a couple of options. Here's how you would call Prima's
+yield function from within your C code:
+
+	Coce => q{
+		/* Need this to keep the app responsive */
+		SV * Prima_app = get_sv("::application", 0);
+		
+		...
+		
+		threadloop %{
+			
+			...
+			
+			/* Keep the system responsive */
+			if (Prima_app != NULL) {
+				dSP;
+				ENTER;
+				SAVETMPS;
+				
+				PUSHMARK(SP);
+				XPUSHs(sv_2mortal(newSVpv("Prima::Application", 18)));
+				PUTBACK;
+				call_pv("Prima::Application::yield", G_DISCARD|G_NOARGS);
+				FREETMPS;
+				LEAVE;
+			}
+		%}
+	}
+					
+
+
+
+Alternatively, you could explicitly require a callback method from your user,
+in which case you would have an OtherPars section. In this example, I pass the
+current progress as the first argument of the function call, and I actually
+take the return value of the callback into account: if the callback returned
+zero, it quits the PDL function immediately:
+
+	OtherPars => 'SV * code_ref',
+	Code => q{
+		int k;
+		int total_count;
+		int total_expected;
+		
+		...
+		
+		threadloop %{
+			
+			...
+			
+			calculate total_expected and track total_count
+			
+			...
+	
+			/* execute the callback */
+			if (Prima_app != NULL) {
+				dSP;
+				ENTER;
+				SAVETMPS;
+				
+				PUSHMARK(SP);
+				XPUSHs(sv_2mortal(newSVnv((double) total_count / (double) total_expected)));
+				PUTBACK;
+				
+				k = call_sv($COMP(code_ref), G_SCALAR);
+				
+				SPAGAIN;
+				
+				if (k != 1) croak ("How did I get more than one arg returned?");
+				
+				k = POPi;
+				if (k == 0) goto QUIT;
+				
+				PUTBACK;
+				FREETMPS;
+				LEAVE;
+			}
+
+		%}
+	
+		QUIT: k++;
+	}, # close the Code block
+
+Here's a use of that function that lets Prima call its update functioin and
+which quits the function if it takes more than five seconds:
+
+use Time::HiRes qw(gettimeofday tv_internal);
+
+my $start_time = [gettimeofday];
+
+my_pp_func(... args ..., sub {
+	# Update the UI:
+	$::application->yield;
+	
+	# Croak if it's taking too long
+	return 0 if tv_internal($start_time, [gettimeofday]) > 5;
+	return 1;
+});
+
+This is a general callback that takes note of your response. If your callback
+returns zero, it quits immediately (and, since you told the function to quit,
+it's your job to ignore the return result). The callback function itself would
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)
