@@ -47,6 +47,11 @@ Specifies the behavior of axes (but not the scaling)
 
 Specifies the behavior of DataSets
 
+=item L<PDL::Graphics::Prima::Internals>
+
+A dumping ground for my partial documentation of some of the more complicated
+stuff. It's not organized, so you probably shouldn't read it.
+
 =item L<PDL::Graphics::Prima::Limits>
 
 Defines the lm:: namespace

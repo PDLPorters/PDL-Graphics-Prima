@@ -9,6 +9,42 @@ use warnings;
 
 PDL::Graphics::Prima::PlotType - a collection of plot types
 
+=head1 SYNOPSIS
+
+ use PDL;
+ use PDL::Graphics::Prima::Simple -sequential;
+ my $x = sequence(100)/10;
+ my $y = sin($x);
+ 
+ # A lines+diamonds plot
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Lines,
+             pt::Diamonds,
+         ],
+     ],
+ );
+ 
+ # Dandelions:
+ $x = random(10);
+ $y = random(10) + 0.5;
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Spikes(colors => cl::Green, lineWidths => 2),
+             pt::Asterisks(N_points => 11, colors => cl::White),
+         ],
+     ],
+     backColor => cl::LightBlue,
+     color => cl::White,
+ );
+ 
+
 =head1 DESCRIPTION
 
 This module provides all of the different plot types that you can use in a
@@ -62,6 +98,10 @@ can be specified when creating plot types. For example,
 #########################################
 
 =head2 Lines
+
+=for ref
+
+ pt::Lines( options )
 
 Draws the x/y data as lines. This lets you draw each curve with an individual
 color and line style; it does not let you specify a color and/or line style for
@@ -134,6 +174,10 @@ sub draw {
 # padding should be part of the general class, not this specific one
 
 =head2 Spikes
+
+=for ref
+
+ pt::Spikes( [x_baseline | y_baseline => PDL], options )
 
 Draws x/y data as a collection of vertical or horizontal lines. In the default
 behavior, for each (x, y) data point, it draws a line from (x, 0) to (x, y). You
@@ -287,6 +331,11 @@ sub draw {
 
 =head2 Blobs
 
+=for ref
+
+ pt::Blobs( [radius => PDL], [xRadius => PDL],
+            [yRadius => PDL], options )
+
 Lets you draw filled ellipses with per-point x- and y- pixel radii. If you
 specify the key C<radius>, it draws filled circles with the given radius. The
 more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
@@ -386,10 +435,17 @@ sub draw {
 
 =head2 Symbols
 
+=for ref
+
+ pt::Symbols( [size => PDL], [filled => PDL::Byte],
+              [N_points => PDL::Byte], [orientation => PDL],
+              [skip => PDL::Byte], options )
+
 Lets you draw various geometric symbols, mostly based on regular polygons.
 This function inspired the creation of L<PDL::Drawing::Prima/pdl_symbols>,
 so you should acquaint yourself with that function's terminology if you
-want to understand the meaning of the options here.
+want to understand the meaning of the options here. There are also a number
+of derived Symbol plot types, as discussed below.
 
 For each of your symbols, you can specify the size (radius), number of
 points, orientation, skip, and whether or not you want the symbol filled.
@@ -407,7 +463,9 @@ of a circle that would inscribe the symbol. The default size is 5 pixels.
 You can draw filled symbols or open symbols. Filled symbols do not have
 a border. You can specify a per-symbol value of 0 or 1, or you can specify
 a plotType-wide value of 0, 1, 'yes', or 'no'. The default setting is
-unfilled.
+unfilled. Note that the filling takes winding number into account, so for
+example, a five-sided star (skip=2) will have a hollow center. This, perhaps,
+should be changed. I'm still debating about that.
 
 =item N_points
 
@@ -571,31 +629,77 @@ give descriptive names to many common symbols and include:
 
 =item Sticks
 
+=for ref
+
+ pt::Sticks( [size => PDL], [orientation => PDL], options )
+
 C<pt::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
 that is, sticks. This can be very useful to visualize flow-fields, for
 example. You can specify the orientation and the size; you can also specify
 N_points and filled, but those will be ignored.
 
+=cut
+
+sub pt::Sticks {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 2, filled => 'no');
+}
+
 =item Triangles
+
+=for ref
+
+ pt::Triangles( [size => PDL], [filled => PDL::Byte],
+                [orientation => PDL], options )
 
 C<pt::Triangles> is a wrapper around the Symbols plotType that draws 3-point regular
 polygons. It takes the same options as Symbols, except that if you specify
 N_points, it will be overridden by the value 3. Also, the default orientation
 which you B<can> override, is 'up'.
 
+=cut
+
+sub pt::Triangles {
+	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 'up', @_, N_points => 3);
+}
+
 =item Squares
+
+=for ref
+
+ pt::Squares( [size => PDL], [filled => PDL::Byte], options )
 
 C<pt::Squares> is a wrapper around Symbols that draws 4-point regular polygon with an
 orientation that makes it look like a square (instead of a diamond). You can
 specify vales for N_points and orientation, but they will be ignored.
 
+=cut
+
+sub pt::Squares {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45);
+}
+
 =item Diamonds
+
+=for ref
+
+ pt::Diamonds( [size => PDL], [filled => PDL::Byte], options )
 
 C<pt::Diamonds> is just like Squares, but rotated by 45
 degrees. Again, you can specify N_points and orientation, but those will be
 ignored.
 
+=cut
+
+sub pt::Diamonds {
+	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0);
+}
+
 =item Stars
+
+=for ref
+
+ pt::Stars( [size => PDL], [N_points => PDL::Byte],
+            [orientation => PDL], options )
 
 C<pt::Stars> creates open or filled star shapes. These only look right when
 you have five or more C<N_points>, though it will plot something with four
@@ -604,59 +708,64 @@ C<skip> of two, however, cannot be overridden. You can also specify the fill
 state and the orientation, in addition to all the other Drawable parameters,
 of course.
 
-=item Asterisks
-
-C<pt::Asterisks> creates N-sided asterisks. It does this by forcing a skip
-of zero that cannot be overridden. As with Stars, the default orientation is
-'up' but that can be overridden. You can also specify the fill
-state and the orientation.
-
-=item Xs
-
-C<pt::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
-arguments, so you don't need to specify Symbol-specific options.
-
-=item Crosses
-
-C<pt::Crosses> creates cross-shaped symbols. Again, you don't need to
-specify any options for this constructor.
-
-=back
-
 =cut
-
-# Install the short name constructor:
-sub pt::Sticks {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 2, filled => 'no');
-}
-
-sub pt::Triangles {
-	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 'up', @_, N_points => 3);
-}
-
-sub pt::Squares {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45);
-}
-
-sub pt::Diamonds {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0);
-}
 
 sub pt::Stars {
 	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 2);
 }
 
+=item Asterisks
+
+=for ref
+
+ pt::Asterisks( [size => PDL], [N_points => PDL::Byte],
+                [orientation => PDL], options )
+
+
+C<pt::Asterisks> creates N-sided asterisks. It does this by forcing a skip
+of zero that cannot be overridden. As with Stars, the default orientation is
+'up' but that can be overridden. You can also specify the fill state, but
+that will not be used.
+
+=cut
+
 sub pt::Asterisks {
 	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 0);
 }
+
+=item Xs
+
+=for ref
+
+ pt::Xs( [size => PDL], options )
+
+C<pt::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
+arguments except the size.
+
+=cut
 
 sub pt::Xs {
 	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
 }
 
+=item Crosses
+
+=for ref
+
+ pt::Crosses( [size => PDL], options )
+
+C<pt::Crosses> creates cross-shaped symbols. Again, you are free to set the
+size, but all other Symbol options are set for you.
+
+=cut
+
 sub pt::Crosses {
 	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
 }
+
+=back
+
+=cut
 
 ##########################################
 # PDL::Graphics::Prima::PlotType::Slopes #
@@ -771,6 +880,11 @@ sub draw {
 #############################################
 
 =head2 Histogram
+
+=for ref
+
+ pt::Histogram( [binEdges => PDL], [baseline => SCALAR],
+                [topPadding => SCALAR], options )
 
 Draws a histogram with bin-centers at the data's x-values and heights at the
 data's y-values. Both positive and negative y-values are allowed.
@@ -963,9 +1077,15 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =head2 ErrorBars
 
-You create an error bars plotType objet with C<pt::ErrorBars>:
+=for ref
 
- pt::ErrorBars(x_err => 10);
+ pt::ErrorBars( [x_err => PDL], [y_err => PDL]
+                [x_left_err => PDL], [x_right_err => PDL],
+                [y_upper_err => PDL], [y_lower_err => PDL],
+                [x_err_width => PDL], [y_err_width => PDL],
+                [err_width => PDL], options );
+
+You create an error bars plotType objet with C<pt::ErrorBars>:
 
 You must specify at least one sort of error bar to plot, though you can mix and
 match as you wish. Each error specification must be a piddle or something that
@@ -1284,6 +1404,11 @@ use Carp 'croak';
 
 =head2 ColorGrid
 
+=for ref
+
+ pt::ColorGrid( colors => PDL, [palette => PDL::Graphics::Prima::Palette],
+                [xs => PDL], [ys => PDL], options )
+
 This plot type lets you specify colors or values on a grid, primarily for making
 color contour plots (as opposed to line contour plots). Put differently, it lets
 you visualize a two-dimensional histogram by using colors. It also forms the
@@ -1291,6 +1416,11 @@ basis for the Matrix and Func2D plot types. This plot type uses the colors, x,
 and y piddles a bit differently than the other plot types---in particular, it
 requires that you supply a value for colors. However, you can safely mix it with
 other plot types if you wish.
+
+The default palette is a greyscale one. However, you can specify whichever
+palette you like. See L<PDL::Graphics::Prima::Palette>. In particular, if
+the piddle holding your colors are already converted to Prima color values,
+you should explicitly specify an undefined value for the paletter.
 
 ColorGrid (and its derivatives) uses the x and y data to determine the grid
 dimensions. In the simplest use case, the x and y piddles each contain two
@@ -1302,9 +1432,10 @@ N + 1 values for y.
 
 At this point, you should see the potential pitfalls of mixing this plot type
 with others. If you plot a quadratic function and include a ColorGrid plot type,
-the ColorGrid will interpret the x and y values as being 
-
-working here: document the palette key, especially undef => 
+the ColorGrid will interpret the x and y values as being the spacings for
+the ColorGrid. For this reason, I am considering pulling ColorGrid and all
+other such plotTypes out and creating a new dataSet that works with grid
+data.
 
 =cut
 
@@ -1838,20 +1969,6 @@ be. The plot-types that come to mind include:
 
 =over
 
-=item pt::Triangles, pt::Squares, pt::Symbols
-
-Args: orientation, size (i.e. radius), filled, N_points (for Symbols)
-
-=item arbitrary polygons
-
-At the moment, if you want to draw data at points, you can only specify blobs.
-Not very exciting. It should be easy to draw triangles, squares, and all manner
-of othe shapes---even usef-specified shapes.
-
-=item triangles
-
-Draw triangles of various sizes, orientations, and fill-types.
-
 =item arrows
 
 Draw flow-fields with arrows of various sizes and orientations.
@@ -1896,6 +2013,11 @@ Specifies the behavior of axes (but not the scaling)
 =item L<PDL::Graphics::Prima::DataSet>
 
 Specifies the behavior of DataSets
+
+=item L<PDL::Graphics::Prima::Internals>
+
+A dumping ground for my partial documentation of some of the more complicated
+stuff. It's not organized, so you probably shouldn't read it.
 
 =item L<PDL::Graphics::Prima::Limits>
 
