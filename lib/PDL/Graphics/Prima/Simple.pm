@@ -157,6 +157,8 @@ Clicking and dragging your right mouse button will zoom into a specific region.
 You will see a zoom rectangle on the plot until you release the mouse, at which
 point the plot will be zoomed-in to the region that you selected.
 
+* This works on all platforms, but the rectangle is not drawn on Cygwin.
+
 =item scroll-wheel zooming
 
 You can zoom-in and zoom-out using your scroll wheel.* The zooming is designed to
@@ -170,6 +172,8 @@ it's a Prima thing.
 
 Once you have zoomed into a region, you can examine nearby data by clicking and
 dragging with your left mouse button, much like an interactive map.
+
+* This works on all platforms except Cygwin. Bummer. :-(
 
 =item context menu
 
@@ -1230,7 +1234,7 @@ sub import {
 	$package->export_to_level(1, $package, @args);
 
 	# Set up Prima for sequential plotting if that's what they want/get
-	if($sequential or defined $::application or $^O =~ /MS/) {
+	if($sequential or defined $::application or $^O =~ /MS/ or $^O eq 'cygwin') {
 		# If this is windows, we'll use a single application that gets managed
 		# by the various plot commands:
 		require 'Prima.pm';
