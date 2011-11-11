@@ -597,6 +597,9 @@ sub draw {
 When drawing, I need to have the axes query the Scaling to see if any special
 drawing needs to happen. I am thinking at the moment about broken axes.
 
+Add abs_min, abs_max, etc, which means "*Never* make this axis less than than
+(or greater than) specified value.
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)

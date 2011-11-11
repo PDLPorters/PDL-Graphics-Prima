@@ -205,6 +205,7 @@ sub compute_min_max_for {
 	else {
 		$pixel_extent = $self->height - $top - $bottom;
 	}
+	return if $pixel_extent <= 0;
 	
 	my $datasets = $self->{dataSets};
 	my (@min_collection, @max_collection);
@@ -521,6 +522,10 @@ sub on_paint {
 	}
 }
 
+# working here - the InputLine widget uses Prima::MouseScroller from IntUtils
+# to handle things, and it appears to work. Maybe this can give me something
+# that works better cross-platform.
+
 # For mousewheel events, we zoom in or out. However, if they're over the axes,
 # only zoom in or out for that axis.
 sub on_mousewheel {
@@ -765,6 +770,11 @@ sub copy_to_clipboard {
 
 
 =head1 TODO
+
+Idea: set the ability to buffer replot notifications, so that you can fiddle
+with datasets without triggering a replot. That should improve performance when
+multiple datasets are dynamically added and removed. Then again, this is likely
+to be a problem only with very large datasets.
 
 This is not a perfect plotting library. Here are some of the particularly
 annoying issues with it, which I hope to resolve:
