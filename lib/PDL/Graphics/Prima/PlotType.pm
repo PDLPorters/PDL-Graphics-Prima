@@ -219,7 +219,6 @@ sub draw {
 	my %properties = $self->generate_properties(@prop_list);
 
 	# Retrieve the data from the dataset:
-
 	my ($xs, $ys) = $self->get_data_as_pixels;
 	
 	if ($self->{thread_like} eq 'points') {
@@ -1933,12 +1932,50 @@ sub draw {
 
 =head1 TODO
 
-Docs: I need to explain how to use multiple plotTypes together in the DESCRIPTION.
+I have lots of things that need to happen to improve this library.
+
+=over
+
+=item Some plot types are characteristically different
+
+I need to split the plotTypes up based upon the nature of the data.
+For example, ColorGrids fundamentally works with gridded 2d data, and
+should be put into a different group from Lines, which fundamentally works
+with 1d time series. This also suggests a collection of plot types for 0d data,
+by which I guess I mean sets of numbers. In that situation, cumulative
+distibution plots and probability distribution plots (i.e. histograms)
+would be good.
+
+here's a potential naming scheme for the different plot types that I can
+think of:
+
+ pdist::CDF - plot distribution, cumulative distribution function
+ pseq::Lines - plot sequence, Lines
+ pgrid::Colors - plot grid, Colors (ColorGrid)
+
+This would then be associated with different dataSets, which would have
+constructor names like:
+
+ ds::Dist
+ ds::Seq
+ ds::Grid
+
+=item Add support for 3d Plots
+
+Dmitry has written a proof-of-concept widget that uses openGL and it should
+be possible to make many of these plotTypes work with 3d data just as well
+as with 2d data.
+
+=item Documentation on Combining
+
+I need to explain how to use multiple plotTypes together in the DESCRIPTION.
 (For now, the best discussion is in L<PDL::Graphics::Prima::Simple>, in case
 you're looking.)
 
+=item New Plot Types
+
 There are many, many plot types that are not yet supported, but should
-be. The plot-types that come to mind include:
+be. Time-series plot-types that come to mind include:
 
 =over
 
@@ -1954,6 +1991,10 @@ I would really like to be able to draw error-bands around a best-fit function.
 =item box-and-whisker
 
 Box-and-whisker plots should be easy enough, a simple extension of error bars.
+
+=back
+
+
 
 =item simpler image support
 
