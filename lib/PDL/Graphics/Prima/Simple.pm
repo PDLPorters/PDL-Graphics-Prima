@@ -666,27 +666,30 @@ The default plot type is C<pt::Lines> so you do not need to specify that if you
 simply want lines drawn from one point to the next. The plotTypes are discussed
 thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
 
- pt::Lines     - lines from point to point
- pt::Blobs     - blobs (filled ellipses) with specifiable x- and y- radii
- pt::Symbols   - open or filled regular geometric shapes with many options:
-                 size, orientation, number of points, skip pattern, and fill
- pt::Triangles - open or filled triangles with  specifiable
-               - orientations and sizes
- pt::Squares   - open or filled squares with specifiable sizes
- pt::Diamonds  - open or filled diamonds with specifiable sizes
- pt::Stars     - open or filled star shapes with specifiable sizes,
-                 orientations, and number of points
- pt::Asterisks - asterisk shapes with specifiable size, orientation, and
-                 number of points
- pt::Xs        - four-point asterisks that look like xs, with specifiable
-                 sizes
- pt::Crosses   - four-pint asterisks that look like + signs, with
-                 specifiable sizes
- pt::Spikes    - spikes to (x,y) from a specified vertical or horizontal
-                 baseline
- pt::Histogram - histograms with specifiable baseline and top padding
- pt::ErrorBars - error bars with specified x/y errors and cap sizes
- pt::ColorGrid - colored rectangles, i.e. images
+ pt::Lines      - lines from point to point
+ pt::TrendLines - a linear fit to the data
+ pt::Blobs      - blobs (filled ellipses) with specifiable x- and y- radii
+ pt::Symbols    - open or filled regular geometric shapes with many options:
+                  size, orientation, number of points, skip pattern, and fill
+ pt::Triangles  - open or filled triangles with  specifiable
+                - orientations and sizes
+ pt::Squares    - open or filled squares with specifiable sizes
+ pt::Diamonds   - open or filled diamonds with specifiable sizes
+ pt::Stars      - open or filled star shapes with specifiable sizes,
+                  orientations, and number of points
+ pt::Asterisks  - asterisk shapes with specifiable size, orientation, and
+                  number of points
+ pt::Xs         - four-point asterisks that look like xs, with specifiable
+                  sizes
+ pt::Crosses    - four-pint asterisks that look like + signs, with
+                  specifiable sizes
+ pt::Spikes     - spikes to (x,y) from a specified vertical or horizontal
+                  baseline
+ pt::Histogram  - histograms with specifiable baseline and top padding
+ pt::ErrorBars  - error bars with specified x/y errors and cap sizes
+ 
+ # This is likely to be removed, or placed into a different category:
+ pt::ColorGrid  - colored rectangles, i.e. images
 
 =head2 Data Sets
 
@@ -752,9 +755,7 @@ with code like so:
      
      # The linear fit:
      -fit => [
-         sub {
-             return $y_intercept + $slope * $_[0];
-         },
+         \&my_fit_function,
          # Default plotType is lines, but I'll be explicit:
          plotType => pt::Lines,
      ],
@@ -1010,6 +1011,39 @@ ErrorBars plotType and the use of function-based data sets.
          color => pdl(255, 0, 0)->rgb_to_color,
      ],
  );
+
+That example used a function-based dataset, but we could just as easily have
+used C<pt::TrendLines> to compute the fit for us. The only difference between
+the last example and the one below is that the trendline for this next example
+does not extend out to infinity in the x-direction but terminates at the
+end of the data.
+
+ use strict;
+ use warnings;
+ use PDL;
+ 
+ my $x = sequence(100)/10;
+ my $y = $x/2 - 3 + $x->grandom*3;
+ my $y_err = 2*$x->grandom->abs + 1;
+ 
+ use PDL::Graphics::Prima::Simple;
+ 
+ plot(
+     -data => [
+         $x,
+         $y,
+         plotType => [
+             pt::Diamonds(filled => 'yes'),
+             pt::ErrorBars(y_err => $y_err),
+             pt::TrendLines(
+                 weights => $y_err,
+                 lineWidths => 2,
+                 colors => pdl(255, 0, 0)->rgb_to_color,
+             ),
+         ],
+     ],
+ );
+
 
 Trying to extend the Simple interface with GUI methods is limited but can be
 very useful. The next example gives you a first glimps into GUI-flavored

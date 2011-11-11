@@ -238,6 +238,80 @@ sub draw {
 	}
 }
 
+##############################################
+# PDL::Graphics::Prima::PlotType::Trendlines #
+##############################################
+
+=head2 Trendlines
+
+=for ref
+
+ pt::Trendlines( [full_threading => BOOLEAN,] [weights => PDL,]
+                 [along_dim => INTEGER,] options )
+
+Draws linear fits to the x/y data as lines. This is a descendent of
+C<pt::Lines>, so you can specify the style of threading you want employed.
+You can also specify the weights that you want used for your fitting. The
+default is equal weights.
+
+If you are using multidimensional data, the fit is performed along the first
+dimension by default. However, if you need to perform the fit along some
+other dimension, you can specify that with the C<along_dim> key.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::TrendLines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Lines);
+use strict;
+use warnings;
+use PDL;
+
+# Install the short name constructor:
+sub pt::TrendLines {
+	PDL::Graphics::Prima::PlotType::TrendLines->new(@_);
+}
+
+# Allow the user to specify fit weights:
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	$self->{weights} = 1 unless defined $self->{weights};
+	
+}
+
+sub get_data {
+	my $self = shift;
+	
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $self->dataset->get_data;
+	my $weights = $self->{weights};
+	
+	# Recompute the $ys as the fit values:
+	# working here - this seems to be erroneous and it blows up when 
+	# S_x is close to zero
+	my $S = sumover($xs->ones/$weights);
+	my $S_x = sumover($xs/$weights);
+	my $S_y = sumover($ys/$weights);
+	my $S_xx = sumover($xs*$xs/$weights);
+	my $S_xy = sumover($xs*$ys/$weights);
+	my $slope = ($S_xy * $S - $S_x * $S_y) / ($S_xx * $S - $S_x * $S_x);
+	my $y0 = ($S_xy - $slope * $S_xx) / $S_x;
+	
+	# Store these values in case the user wants to retrieve them
+	# (I need to create a method for this, and a means for getting at the
+	# plotType object)
+	$self->{slope} = $slope;
+	$self->{intercept} = $y0;
+	
+	# make a new set of ys that are the linear fits:
+	$ys = $y0 + $slope * $xs;
+	
+	return ($xs, $ys);
+}
+
 ##########################################
 # PDL::Graphics::Prima::PlotType::Spikes #
 ##########################################
