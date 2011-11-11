@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use PDL::NiceSlice;
 
 # Note: The base class is defined near the bottom of the file because I wanted
 # to write the documentation for creating new derived classes in the same space
@@ -101,11 +102,43 @@ can be specified when creating plot types. For example,
 
 =for ref
 
- pt::Lines( options )
+ pt::Lines( [thread_like => STRING,] options )
 
-Draws the x/y data as lines. This lets you draw each curve with an individual
-color and line style; it does not let you specify a color and/or line style for
-each segment.
+Draws the x/y data as lines, connecting each pair of points with a line
+segment. The behavior of the line drawing depends on what kind of threading
+you want. You can specify that the threading behave like lines:
+
+ pt::Lines(thread_like => 'lines', ...)
+
+which is the default, or like points:
+
+ pt::Lines(thread_like => 'points', ...)
+
+Threading like lines does not play well with the many point-based plotTypes.
+For all of those plotTypes, you can specify one property per point (like
+C<colors> and C<lineWidths>), but doing so could lead to thread index
+mismatch and an error in C<collate_min_max_wrt_many>:
+
+ Index mismatch in collate_min_max_wrt_many ...
+
+So, if you want a line with continually changing thicknesses, or continually
+changing colors, you should specify that it thread like C<points>.
+
+However, threading like points has one major drawback, which is that it does
+not properly handle line styles. For example, if you wanted a dashed curve,
+you would specify
+
+ pt::Lines(..., lineStyles => lp::Dash)
+
+When you thread like points, each line segment is treated as a seperate line.
+That mis-applies your dashing style. For large datasets (more than a million
+points), another problem with point-like threading is that it uses more
+memory and CPU to perform the drawing.
+
+
+If you are plotting very large data sets (> 1 million points), be aware that
+full threading is less efficient than traditional threading, both in memory
+and CPU consumption.
 
 =cut
 
@@ -117,10 +150,20 @@ sub pt::Lines {
 	PDL::Graphics::Prima::PlotType::Lines->new(@_);
 }
 
-# I don't have any special initialization to do, so I won't override it here
-#sub initialize {
-#	
-#}
+# I decided to include the 'thread_over' property.
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	$self->{thread_like} = 'lines' unless defined $self->{thread_like};
+	$self->{thread_like} = lc $self->{thread_like};
+	
+	# Make sure it's a valid option:
+	croak("thread_like should either be lines or points")
+		unless $self->{thread_like} =~ /^(lines|points)$/;
+}
 
 # Collation needs some work, since the threading doesn't work quite right
 # out-of-the-box. The line data is polyline data and it must be reduced
@@ -128,8 +171,9 @@ sub pt::Lines {
 sub compute_collated_min_max_for {
 	my ($self, $axis_name, $pixel_extent) = @_;
 	# Get the list of properties for which we need to look for bad values:
-	my %properties
-		= $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
+														: @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
 	
 	# Extract the line widths, against which we'll collate:
 	my $lineWidths = $properties{lineWidths};
@@ -139,7 +183,7 @@ sub compute_collated_min_max_for {
 	my @prop_piddles = values %properties;
 	
 	# Get the data:
-	my ($xs, $ys) = $self->dataset->get_data;
+	my ($xs, $ys) = $self->get_data;
 	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
 	
 	# working here - now that minmaxforpair does not return infs, make sure
@@ -153,18 +197,46 @@ sub compute_collated_min_max_for {
 }
 
 
+# A function that gets the data, meant to be overloaded:
+sub get_data {
+	return $_[0]->dataset->get_data;
+}
+sub get_data_as_pixels {
+	my $self = shift;
+	my ($xs, $ys) = $self->get_data;
+	
+	return ($self->widget->x->reals_to_pixels($xs)
+		, $self->widget->y->reals_to_pixels($ys));
+}
+
 # I need to define a drawing method:
 sub draw {
 	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
+														: @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
 
-	# Draw the lines:
-	$self->widget->pdl_polylines($xs, $ys, %properties);
+	my ($xs, $ys) = $self->get_data_as_pixels;
+	
+	if ($self->{thread_like} eq 'points') {
+		# Draw from the points to their half-way points:
+		my $left_xs = $xs->copy;
+		my $right_xs = $xs->copy;
+		$right_xs(0:-2) .= $left_xs(1:-1) .= ($xs(1:-1) + $xs(0:-2)) / 2;
+		
+		my $left_ys = $ys->copy;
+		my $right_ys = $ys->copy;
+		$right_ys(0:-2) .= $left_ys(1:-1) .= ($ys(1:-1) + $ys(0:-2)) / 2;
+		$self->widget->pdl_lines($left_xs, $left_ys, $right_xs, $right_ys, %properties);
+	}
+	else {
+		# Draw from the points to their half-way points:
+		$self->widget->pdl_polylines($xs, $ys, %properties);
+	}
 }
 
 ##########################################
@@ -867,7 +939,6 @@ sub initialize {
 	$self->{baseline} += 0;
 }
 
-use PDL::NiceSlice;
 
 # Returns user-supplied or computed bin-edge data.
 sub get_bin_edges {
