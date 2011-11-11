@@ -99,6 +99,8 @@ sub plotType {
 
 =head2 copy
 
+Not yet implemented.
+
 You can make a copy of a Palette that does not have an associated plotType.
 This way, if you put a lot of effort into making a palette, you can easily
 reuse that palette with minimal effort.
