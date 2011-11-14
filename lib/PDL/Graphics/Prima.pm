@@ -731,7 +731,9 @@ sub on_mouseup {
 
 sub get_image {
 	my $self = shift;
-	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
+#	print "Got ", $::application->get_image($self->client_to_screen($self->origin), $self->size), "\n";
+	return $::application->get_image($self->origin, $self->size);
+	
 }
 
 # A routine to save the current plot to a rasterized file:

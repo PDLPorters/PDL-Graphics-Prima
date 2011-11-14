@@ -161,7 +161,7 @@ in the C<pal> namespace.
 
 =over
 
-=item Rainbow
+=item pal::Rainbow
 
 Runs from red->orange->yellow->green->blue->purple->red in ascending order.
 
