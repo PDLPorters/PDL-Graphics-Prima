@@ -274,6 +274,8 @@ sub pal::HSVrange {
 
 1;
 
+=back
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)
