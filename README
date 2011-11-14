@@ -14,11 +14,100 @@ interactive because it is built upon Prima, the Perl-centric multi-platform
 set of drawing functions and GUI toolkit, and because interactive behavior
 like panning and zooming are built right into the widget.
 
-For more information, see the documentation for PDL::Graphics::Prima.
+For more information, see the documentation for PDL::Graphics::Prima. If
+you're new, you should check out the documentation for
+PDL::Graphics::Prima::Simple. I have also posted a YouTube video
+demonstrating a number of cool features of the library at
+http://youtu.be/WILd2XTz3F4.
 
+DEVELOPMENT STATUS
+==================
+
+This project is currently in alpha. I say this not because the software is
+unstable to execute but because the API is likely to undergo some
+substantial revisions under this name. Once the interface has settled down,
+all future API changes will go under a seperate name, likely
+PDL::Graphics::Prima2.
+
+In other words, please play around with this library and use it if you like,
+but please *do not* use it in code that you plan to run unmodified next
+month. (Unfortunately, I still need to go through my code base and update
+code that is about to or has already broken.)
+
+DEPENDENCIES
+============
+
+This module depends on PDL::Drawing::Prima. As that module is strongly
+intertwined with this one, I have provided instructions for installing it
+in the INSTALLATION section. PDL::Drawing::Prima depends on the Perl Data
+Language version 2.4.10. 2.4.10 is still in testing, so as of the time of
+writing you'll need to download and install the current developers release.
+PDL::Drawing::Prima also depends on Prima, a Perl GUI toolkit.
+
+PDL::Graphics::Prima requires Perl 5.10, although it will soon be relaxed to
+Perl 5.8. If you don't have that version of Perl, I recommend installing
+Strawberry Perl if you're on Windows, or using perlbrew if you're on Linux
+or Mac.
+
+PDL::Drawing::Prima (and a CPAN install of PDL and Prima) requires a C
+compiler. If you're on Linux, you'll also need your X11 headers to compile
+Prima.
 
 INSTALLATION
 ============
+
+To instal the latest deveoper's release of PDL, Launch CPAN and type this:
+
+ cpan> get  CHM/PDL-2.4.9_010.tar.gz
+ cpan> make CHM/PDL-2.4.9_010.tar.gz
+ cpan> test CHM/PDL-2.4.9_010.tar.gz
+ cpan> install CHM/PDL-2.4.9_010.tar.gz
+
+From the same shell, you should also install Prima:
+
+ cpan> instal Prima
+
+With those in place, you can proceed to download and install PDL::*::Prima.
+From your prompt (you'll need git for this), pull the two repositories:
+
+ > git pull git://github.com/run4flat/PDL-Drawing-Prima.git
+ > git pull git://github.com/run4flat/PDL-Graphics-Prima.git
+
+Build and install PDL::Drawing::Prima:
+
+ > cd PDL-Drawing-Prima
+ > perl Makefile.PL
+ > make     ( or nmake or dmake on Windows as appropriate)
+ > make install
+
+Try running the examples for the Drawing library if you like. Then, build 
+and run (and install, if you like) PDL::Graphics::Prima:
+
+ > cd ../PDL-Graphics-Prima
+ > perl Makefile.PL
+ > make
+
+At this point, there are no tests for PDL::Graphics::Prima. There are,
+however, many examples under the inappropriately named test/ directory. I
+recommend trying them out, and examining the code if you want to see how
+the library works:
+
+ > perl test/test-error-bars.pl
+
+CODE REPOSITORY
+===============
+
+This project is being actively developed at Github. Find the latest at:
+
+ https://github.com/run4flat/PDL-Graphics-Prima
+
+
+EVENTUAL INSTRUCTIONS
+=====================
+
+These are the instructions that I wrote earlier, in anticipation of
+releasing this to CPAN. I retain them here to minimize my effort when I 
+release this project to Bet.
 
 There are a number of ways to install this module. The simplest is to
 install it using CPAN:
@@ -38,29 +127,6 @@ Frankly, I'm not sure exactly to go about testing this sort of distribution.
 Patches welcome! However, there are a number of example (and as such, test
 scripts) in the test/ directory in the source distribution if you want to
 take the library for a spin.
-
-
-DEPENDENCIES
-============
-
-This module depends on the Perl Data Language, specifically version 2.4.10.
-As of the time of writing, that has not yet been released, which means you
-will need a developer's release of PDL, or a clone of the latest developer's
-repository. This is needed because it uses whereND, and that was introduced
-after the release of 2.4.9.
-
-This module also depends on PDL::Drawing::Prima, which itself depends on
-the Prima toolkit. You will almost certainly need a C compiler to install
-these.
-
-
-CODE REPOSITORY
-===============
-
-This project is being actively developed at Github. Find the latest at:
-
- https://github.com/run4flat/PDL-Graphics-Prima
-
 
 COPYRIGHT AND LICENCE
 =====================
