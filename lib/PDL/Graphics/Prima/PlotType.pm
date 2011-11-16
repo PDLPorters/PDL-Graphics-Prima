@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use PDL::NiceSlice;
 
 # Note: The base class is defined near the bottom of the file because I wanted
 # to write the documentation for creating new derived classes in the same space
@@ -101,11 +102,43 @@ can be specified when creating plot types. For example,
 
 =for ref
 
- pt::Lines( options )
+ pt::Lines( [thread_like => STRING,] options )
 
-Draws the x/y data as lines. This lets you draw each curve with an individual
-color and line style; it does not let you specify a color and/or line style for
-each segment.
+Draws the x/y data as lines, connecting each pair of points with a line
+segment. The behavior of the line drawing depends on what kind of threading
+you want. You can specify that the threading behave like lines:
+
+ pt::Lines(thread_like => 'lines', ...)
+
+which is the default, or like points:
+
+ pt::Lines(thread_like => 'points', ...)
+
+Threading like lines does not play well with the many point-based plotTypes.
+For all of those plotTypes, you can specify one property per point (like
+C<colors> and C<lineWidths>), but doing so could lead to thread index
+mismatch and an error in C<collate_min_max_wrt_many>:
+
+ Index mismatch in collate_min_max_wrt_many ...
+
+So, if you want a line with continually changing thicknesses, or continually
+changing colors, you should specify that it thread like C<points>.
+
+However, threading like points has one major drawback, which is that it does
+not properly handle line styles. For example, if you wanted a dashed curve,
+you would specify
+
+ pt::Lines(..., lineStyles => lp::Dash)
+
+When you thread like points, each line segment is treated as a seperate line.
+That mis-applies your dashing style. For large datasets (more than a million
+points), another problem with point-like threading is that it uses more
+memory and CPU to perform the drawing.
+
+
+If you are plotting very large data sets (> 1 million points), be aware that
+full threading is less efficient than traditional threading, both in memory
+and CPU consumption.
 
 =cut
 
@@ -117,10 +150,20 @@ sub pt::Lines {
 	PDL::Graphics::Prima::PlotType::Lines->new(@_);
 }
 
-# I don't have any special initialization to do, so I won't override it here
-#sub initialize {
-#	
-#}
+# I decided to include the 'thread_over' property.
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	$self->{thread_like} = 'lines' unless defined $self->{thread_like};
+	$self->{thread_like} = lc $self->{thread_like};
+	
+	# Make sure it's a valid option:
+	croak("thread_like should either be lines or points")
+		unless $self->{thread_like} =~ /^(lines|points)$/;
+}
 
 # Collation needs some work, since the threading doesn't work quite right
 # out-of-the-box. The line data is polyline data and it must be reduced
@@ -128,8 +171,9 @@ sub pt::Lines {
 sub compute_collated_min_max_for {
 	my ($self, $axis_name, $pixel_extent) = @_;
 	# Get the list of properties for which we need to look for bad values:
-	my %properties
-		= $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
+														: @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
 	
 	# Extract the line widths, against which we'll collate:
 	my $lineWidths = $properties{lineWidths};
@@ -139,7 +183,7 @@ sub compute_collated_min_max_for {
 	my @prop_piddles = values %properties;
 	
 	# Get the data:
-	my ($xs, $ys) = $self->dataset->get_data;
+	my ($xs, $ys) = $self->get_data;
 	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
 	
 	# working here - now that minmaxforpair does not return infs, make sure
@@ -153,18 +197,119 @@ sub compute_collated_min_max_for {
 }
 
 
+# A function that gets the data, meant to be overloaded:
+sub get_data {
+	return $_[0]->dataset->get_data;
+}
+sub get_data_as_pixels {
+	my $self = shift;
+	my ($xs, $ys) = $self->get_data;
+	
+	return ($self->widget->x->reals_to_pixels($xs)
+		, $self->widget->y->reals_to_pixels($ys));
+}
+
 # I need to define a drawing method:
 sub draw {
 	my ($self) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties(@PDL::Drawing::Prima::polylines_props);
+	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
+														: @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+	my ($xs, $ys) = $self->get_data_as_pixels;
+	
+	if ($self->{thread_like} eq 'points') {
+		# Draw from the points to their half-way points:
+		my $left_xs = $xs->copy;
+		my $right_xs = $xs->copy;
+		$right_xs(0:-2) .= $left_xs(1:-1) .= ($xs(1:-1) + $xs(0:-2)) / 2;
+		
+		my $left_ys = $ys->copy;
+		my $right_ys = $ys->copy;
+		$right_ys(0:-2) .= $left_ys(1:-1) .= ($ys(1:-1) + $ys(0:-2)) / 2;
+		$self->widget->pdl_lines($left_xs, $left_ys, $right_xs, $right_ys, %properties);
+	}
+	else {
+		# Draw from the points to their half-way points:
+		$self->widget->pdl_polylines($xs, $ys, %properties);
+	}
+}
 
-	# Draw the lines:
-	$self->widget->pdl_polylines($xs, $ys, %properties);
+##############################################
+# PDL::Graphics::Prima::PlotType::Trendlines #
+##############################################
+
+=head2 Trendlines
+
+=for ref
+
+ pt::Trendlines( [full_threading => BOOLEAN,] [weights => PDL,]
+                 [along_dim => INTEGER,] options )
+
+Draws linear fits to the x/y data as lines. This is a descendent of
+C<pt::Lines>, so you can specify the style of threading you want employed.
+You can also specify the weights that you want used for your fitting. The
+default is equal weights.
+
+If you are using multidimensional data, the fit is performed along the first
+dimension by default. However, if you need to perform the fit along some
+other dimension, you can specify that with the C<along_dim> key.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::TrendLines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Lines);
+use strict;
+use warnings;
+use PDL;
+
+# Install the short name constructor:
+sub pt::TrendLines {
+	PDL::Graphics::Prima::PlotType::TrendLines->new(@_);
+}
+
+# Allow the user to specify fit weights:
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	$self->{weights} = 1 unless defined $self->{weights};
+	
+}
+
+sub get_data {
+	my $self = shift;
+	
+	# Retrieve the data from the dataset:
+	my ($xs, $ys) = $self->dataset->get_data;
+	my $weights = $self->{weights};
+	
+	# Recompute the $ys as the fit values:
+	# working here - this seems to be erroneous and it blows up when 
+	# S_x is close to zero
+	my $S = sumover($xs->ones/$weights);
+	my $S_x = sumover($xs/$weights);
+	my $S_y = sumover($ys/$weights);
+	my $S_xx = sumover($xs*$xs/$weights);
+	my $S_xy = sumover($xs*$ys/$weights);
+	my $slope = ($S_xy * $S - $S_x * $S_y) / ($S_xx * $S - $S_x * $S_x);
+	my $y0 = ($S_xy - $slope * $S_xx) / $S_x;
+	
+	# Store these values in case the user wants to retrieve them
+	# (I need to create a method for this, and a means for getting at the
+	# plotType object)
+	$self->{slope} = $slope;
+	$self->{intercept} = $y0;
+	
+	# make a new set of ys that are the linear fits:
+	$ys = $y0 + $slope * $xs;
+	
+	return ($xs, $ys);
 }
 
 ##########################################
@@ -867,7 +1012,6 @@ sub initialize {
 	$self->{baseline} += 0;
 }
 
-use PDL::NiceSlice;
 
 # Returns user-supplied or computed bin-edge data.
 sub get_bin_edges {
@@ -1862,12 +2006,50 @@ sub draw {
 
 =head1 TODO
 
-Docs: I need to explain how to use multiple plotTypes together in the DESCRIPTION.
+I have lots of things that need to happen to improve this library.
+
+=over
+
+=item Some plot types are characteristically different
+
+I need to split the plotTypes up based upon the nature of the data.
+For example, ColorGrids fundamentally works with gridded 2d data, and
+should be put into a different group from Lines, which fundamentally works
+with 1d time series. This also suggests a collection of plot types for 0d data,
+by which I guess I mean sets of numbers. In that situation, cumulative
+distibution plots and probability distribution plots (i.e. histograms)
+would be good.
+
+here's a potential naming scheme for the different plot types that I can
+think of:
+
+ pdist::CDF - plot distribution, cumulative distribution function
+ pseq::Lines - plot sequence, Lines
+ pgrid::Colors - plot grid, Colors (ColorGrid)
+
+This would then be associated with different dataSets, which would have
+constructor names like:
+
+ ds::Dist
+ ds::Seq
+ ds::Grid
+
+=item Add support for 3d Plots
+
+Dmitry has written a proof-of-concept widget that uses openGL and it should
+be possible to make many of these plotTypes work with 3d data just as well
+as with 2d data.
+
+=item Documentation on Combining
+
+I need to explain how to use multiple plotTypes together in the DESCRIPTION.
 (For now, the best discussion is in L<PDL::Graphics::Prima::Simple>, in case
 you're looking.)
 
+=item New Plot Types
+
 There are many, many plot types that are not yet supported, but should
-be. The plot-types that come to mind include:
+be. Time-series plot-types that come to mind include:
 
 =over
 
@@ -1883,6 +2065,10 @@ I would really like to be able to draw error-bands around a best-fit function.
 =item box-and-whisker
 
 Box-and-whisker plots should be easy enough, a simple extension of error bars.
+
+=back
+
+
 
 =item simpler image support
 

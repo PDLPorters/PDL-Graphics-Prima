@@ -99,6 +99,8 @@ sub plotType {
 
 =head2 copy
 
+Not yet implemented.
+
 You can make a copy of a Palette that does not have an associated plotType.
 This way, if you put a lot of effort into making a palette, you can easily
 reuse that palette with minimal effort.
@@ -159,7 +161,7 @@ in the C<pal> namespace.
 
 =over
 
-=item Rainbow
+=item pal::Rainbow
 
 Runs from red->orange->yellow->green->blue->purple->red in ascending order.
 
@@ -271,6 +273,8 @@ sub pal::HSVrange {
 }
 
 1;
+
+=back
 
 =head1 AUTHOR
 
