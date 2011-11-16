@@ -6,6 +6,8 @@ use Prima qw(Application);
 use PDL::Graphics::Prima;
 use PDL::NiceSlice;
 
+my $N_points = $ARGV[0] || 30;
+
 my $wDisplay = Prima::MainWindow->create(
 	text    => 'Error Bar Test',
 	size	=> [500, 500],
@@ -13,10 +15,10 @@ my $wDisplay = Prima::MainWindow->create(
 
 $wDisplay->insert('Plot',
 	-data => [
-		3 * grandom(30), 3 * grandom(30),
+		3 * grandom($N_points), 3 * grandom($N_points),
 		plotType => [
-			pt::ErrorBars(y_err => grandom(30), colors => cl::LightRed,
-				x_left_err => grandom(30), x_err => grandom(30)),
+			pt::ErrorBars(y_err => grandom($N_points), colors => cl::LightRed,
+				x_left_err => grandom($N_points), x_err => grandom($N_points)),
 			pt::Blobs(radius => 4),
 		]
 	],
