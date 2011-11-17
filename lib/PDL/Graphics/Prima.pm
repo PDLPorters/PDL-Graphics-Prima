@@ -125,6 +125,8 @@ sub profile_default {
 		# Blank profiles for the axes:
 		x => {},
 		y => {},
+		selectable => 1,
+		buffered => 1,
 	};
 }
 

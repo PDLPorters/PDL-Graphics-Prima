@@ -157,35 +157,28 @@ Clicking and dragging your right mouse button will zoom into a specific region.
 You will see a zoom rectangle on the plot until you release the mouse, at which
 point the plot will be zoomed-in to the region that you selected.
 
-* This works on all platforms, but the rectangle is not drawn on Cygwin.
-
 =item scroll-wheel zooming
 
 You can zoom-in and zoom-out using your scroll wheel.* The zooming is designed to
 keep the data under the mouse at the same location as you zoom in and out.
 Unfortunately, some recent changes have made this operation less than perfect.
 
-* This is not working on Windows; I haven't figured out why, but I suspect
-it's a Prima thing.
-
 =item dragging/panning
 
 Once you have zoomed into a region, you can examine nearby data by clicking and
 dragging with your left mouse button, much like an interactive map.
-
-* This works on all platforms except Cygwin. Bummer. :-(
 
 =item context menu
 
 Right-clicking on the plot will bring up a context menu with options including
 restoring auto-scaling, copying the current plot image* (to be pasted directly
 into, say, Microsoft's PowerPoint or LibreOffice's Impress), and saving the
-current plot image to a file. The supported output file formats depend on the
+current plot image to a file*. The supported output file formats depend on the
 codecs that L<Prima> was able to install, so are system- and machine-dependent.
 
-* For reasons not clear to me, copying the plot to the clipboard does not
-work on Macs. Again, I believe this is a Prima thing and I hope to resolve
-it soon becuase I work regularly on a Mac.
+* For reasons not clear to me, copying the plot to the clipboard or saving the
+image does not work on my Mac, though I suspect this is a specific issue with my
+machine.
 
 =back
 
