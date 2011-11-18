@@ -1811,7 +1811,7 @@ sub compute_collated_min_max_for {
 	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
 	
 	# Collate:
-	return collate_min_max_wrt_many($to_check, $lineWidths
+	return PDL::collate_min_max_wrt_many($to_check, $lineWidths
 		, $to_check, $lineWidths, $pixel_extent, $extra, @prop_piddles);
 }
 
@@ -1851,11 +1851,12 @@ sub generate_properties {
 
 =head2 widget
 
-working here
+Returns the widget that owns the dataType which, in turn, called this drawing
+operation.
 
 =head2 dataset
 
-working here
+Returns the dataSet that owns this plotType.
 
 =cut
 
@@ -1873,13 +1874,13 @@ sub dataset {
 
 Needs explanation and examples. This function will be called whenever the
 plot widget needs to redraw your plotType (window resizes, zooms, etc). It is
-called with three arguments: the plotType object, the dataSet object, and
-the widget object.
+a simple method call, and is called with the plotType object as the first and
+only argument.
 
 Now, something that I I<always> forget to do is to convert the data values to
 pixel values. You do that with the widget's x- and y-axis objects with code like
 
- my $x_to_plot = $widget->x->reals_to_pixels($xs)
+ my $x_to_plot = $self->widget->x->reals_to_pixels($xs)
 
 If it seems like your new plot type is not plotting anything, be sure that you
 have properly converted the points you are trying to plot.
@@ -1975,7 +1976,7 @@ sub initialize {
 
 # Dynamic drawing based upon values of the draw key and/or the base class:
 sub draw {
-	my ($self, $dataset, $widget) = @_;
+	my ($self) = @_;
 	
 	if (not exists $self->{draw}) {
 		# Didn't supply a draw function, so call the base class's draw function:
@@ -1987,7 +1988,7 @@ sub draw {
 		# Masquerade as the base class:
 		my $class = ref($self);
 		bless $self, $self->{base_class};
-		$self->draw($dataset, $widget);
+		$self->draw;
 		bless $self, $class;
 		return;
 	}
@@ -1995,7 +1996,7 @@ sub draw {
 	if (ref($self->{draw}) and ref($self->{draw}) eq 'CODE') {
 		# They supplied a code reference, so run it:
 		my $func = $self->{draw};
-		&$func($self, $dataset, $widget);
+		&$func($self);
 		return;
 	}
 	
