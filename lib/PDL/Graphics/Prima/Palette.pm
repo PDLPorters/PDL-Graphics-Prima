@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use PDL::Drawing::Prima;
+use PDL::Drawing::Prima::Utils;
 
 =head1 NAME
 
