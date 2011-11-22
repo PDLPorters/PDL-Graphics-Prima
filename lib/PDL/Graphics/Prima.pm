@@ -483,7 +483,7 @@ sub on_paint {
 	foreach my $key (sort keys %{$self->{dataSets}}) {
 		next if $key eq 'widget';
 		my $dataset = $self->{dataSets}->{$key};
-		$dataset->draw($self);
+		$dataset->draw;
 		
 		# Restore the drawing parameters after each draw function:
 		$self->set(%backups);

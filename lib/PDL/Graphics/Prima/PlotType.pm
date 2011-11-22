@@ -233,7 +233,7 @@ sub draw {
 		$self->widget->pdl_lines($left_xs, $left_ys, $right_xs, $right_ys, %properties);
 	}
 	else {
-		# Draw from the points to their half-way points:
+		# Draw the lines as single curves:
 		$self->widget->pdl_polylines($xs, $ys, %properties);
 	}
 }
@@ -1818,7 +1818,7 @@ sub compute_collated_min_max_for {
 =head2 generate_properties
 
 Needs to be explained. Basically, this accumulates all the properties from the
-plotType object together with thsoe from the dataset into a single hash that
+plotType object together with those from the dataset into a single hash that
 you can submit to one of the (PDL-based) Prima drawing methods.
 
 This function is provided for your use in the draw() function. You should not
