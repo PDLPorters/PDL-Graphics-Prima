@@ -456,6 +456,15 @@ sub draw {
 	# Get the locations for the major and minor ticks:
 	my ($Ticks, $ticks) = $axis->{scaling}->compute_ticks($axis->minmax);
 	
+	# Extend major ticks with extra labels, for a smoother scrolling effect
+	my ( $Ticks_first, $Ticks_last ) = ( 0, $Ticks-> nelem - 1 );
+	if ( 1 < $Ticks-> nelem ) {
+		my $dTicks = $Ticks-> at(1) - $Ticks-> at(0);
+		$Ticks = pdl( $Ticks-> at(0) - $dTicks, $Ticks-> list, $Ticks-> at(-1) + $dTicks);
+		$Ticks_first++;
+		$Ticks_last++;
+	}
+
 	# Rescale to pixels:
 	my $ticks_pixels = $axis->reals_to_pixels($ticks);
 	my $Ticks_pixels = $axis->reals_to_pixels($Ticks);
@@ -476,6 +485,8 @@ sub draw {
 	my $lineWidth = $canvas->lineWidth;
 	
 	if ($axis->name eq 'x') {
+		$canvas-> clipRect( $clip_left, 0, $clip_right, $canvas-> height);
+
 		# Draw the minor tick marks:
 		$canvas->pdl_lines($ticks_pixels, $top_bottom, $ticks_pixels, $top_bottom + $tick_size
 				, lineWidths => 2);
@@ -504,9 +515,11 @@ sub draw {
 				| dt::UseExternalLeading);
 			
 			# Compute their widths:
-			my $half_width = $canvas->get_text_width($string) / 2;
-			$left_edge = $x - $half_width if $x - $half_width < $left_edge;
-			$right_edge = $x + $half_width if $x + $half_width > $right_edge;
+			if ( $i >= $Ticks_first and $i <= $Ticks_last ) {
+				my $half_width = $canvas->get_text_width($string) / 2;
+				$left_edge = $x - $half_width if $x - $half_width < $left_edge;
+				$right_edge = $x + $half_width if $x + $half_width > $right_edge;
+			}
 		}
 		# Store these left and right edges:
 		$axis->{edge_requirements}->[0]
@@ -527,6 +540,8 @@ sub draw {
 		}
 	}
 	else {
+		$canvas-> clipRect( 0, $clip_bottom, $canvas-> width, $clip_top);
+
 		# draw the minor tick marks:
 		$canvas->pdl_lines($left_right, $ticks_pixels, $left_right + $tick_size, $ticks_pixels
 				, lineWidths => 2);
@@ -555,8 +570,10 @@ sub draw {
 				| dt::UseExternalLeading);
 			
 			# Compute its left extent:
-			my $points = $canvas->get_text_box($string);
-			$largest_width = $points->[4] if $points->[4] > $largest_width;
+			if ( $i >= $Ticks_first and $i <= $Ticks_last ) {
+				my $points = $canvas->get_text_box($string);
+				$largest_width = $points->[4] if $points->[4] > $largest_width;
+			}
 		}
 		$axis->{edge_requirements}->[0] = $largest_width + $em_height/2;
 		$axis->{edge_requirements}->[0] += $em_height * 1.5
