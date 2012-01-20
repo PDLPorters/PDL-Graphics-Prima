@@ -48,11 +48,109 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
 
 =head1 DESCRIPTION
 
-This module provides all of the different plot types that you can use in a
-PDL::Graphics::Prima plot. The documentation that follows is broken into three
-parts:
+This module provides a number of basic plot types that you can use in a
+PDL::Graphics::Prima plot. As far as PDL::Graphics::Prima is concerned, there
+are different kinds of data that you might want to visualize, each with their
+own distinct plot types. The three kinds of basic data sets are sets, sequences,
+and grids.
+
+=cut
+
+
+###############################################################################
+#                        Distribution-based Plot Types                        #
+###############################################################################
+
+package PDL::Graphics::Prima::PlotType::Set;
+use base 'PDL::Graphics::Prima::PlotType';
+
+=head2 Sets
+
+A set of data is an unordered collection. Usually the goal is to get some
+insights into the distribution of the data. For example, if you have a
+collection of the heights of students in a class, you would expect them to be
+distributed normally. You could visualize that by plotting a histogram of the
+heights and comparing that to a bell curve, for example. The plot types
+associated with sets are C<pset::CDF> and C<pset::Hist>.
 
 =over
+
+=item pset::CDF
+
+This plots the cumulative distribution function for a set. Given an unordered
+set of data (as a piddle), it plots a continuous line 
+
+ increasing => 1
+ normalized => 1
+ offset => ?
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Set::CDF;
+use base 'PDL::Graphics::Prima::PlotType::Set';
+
+# Install the short name constructor:
+sub pset::CDF {
+	PDL::Graphics::Prima::PlotType::Set::CDF->new(@_);
+}
+
+# I decided to include the 'normalized' and 'increasing' properties.
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	# Give a default values. Note that I do not need to validate these
+	# because they simply need to be evaluable in boolean context. It would
+	# only be a problem if they used a piddle for these:
+	$self->{normalized} = 1 unless defined $self->{normalized};
+	$self->{increasing} = 1 unless defined $self->{increasing};
+}
+
+# Collation is easy because I can simply use the line width and the min/max
+sub compute_collated_min_max_for {
+	# now working here
+	my ($self, $axis_name, $pixel_extent) = @_;
+	# Get the list of properties for which we need to look for bad values:
+	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
+														: @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
+	
+	# Extract the line widths, against which we'll collate:
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
+	# get the rest of the piddles; we don't need their names:
+	my @prop_piddles = values %properties;
+	
+	# Get the data:
+	my ($xs, $ys) = $self->get_data;
+	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
+	
+	# working here - now that minmaxforpair does not return infs, make sure
+	# this works
+	my ($min_to_check, $max_to_check) = ($min_x, $max_x);
+	($min_to_check, $max_to_check) = ($min_y, $max_y) if $axis_name eq 'y';
+	
+	# Collate the min and the max:
+	return PDL::collate_min_max_wrt_many($min_to_check, $lineWidths,
+			$max_to_check, $lineWidths, $pixel_extent, @prop_piddles);
+}
+
+
+=item pset::Hist
+
+working here
+
+=cut
+
+=back
+
+
+=over
+
+=item Sets
 
 =item Line-based plot types
 
@@ -1846,6 +1944,12 @@ sub generate_properties {
 		}
 	}
 	
+	# Add a check for the handles property of the widget. This is a hack to
+	# enable plotting to other canvases:
+	if (ref ($self) and exists $self->widget->{handles}) {
+		$properties{handles} = $self->widget->{handles};
+	}
+	
 	return %properties;
 }
 
@@ -2010,6 +2114,11 @@ sub draw {
 I have lots of things that need to happen to improve this library.
 
 =over
+
+=item Consistencies
+
+Are string-properties OK, or should they be constants? (threadlike, for example)
+Should properties be threadable?
 
 =item Some plot types are characteristically different
 
