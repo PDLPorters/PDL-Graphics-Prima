@@ -42,8 +42,8 @@ sub STORE {
 	# to turn the supplied anonymous array into an object (after validating the
 	# data, of course).
 	croak('You can only add anonymous arrays or dataSet objects to dataSets')
-		unless ref($value) and (UNIVERSAL::isa($value, 'ARRAY')
-						or UNIVERSAL::isa($value, 'PDL::Graphics::Prima::DataSet'));
+		unless ref($value) and (ref($value) eq 'ARRAY'
+					or eval {$value->isa('PDL::Graphics::Prima::DataSet')});
 	
 	# Silently do nothing if they try to change the widget:
 	return if $key eq 'widget';
