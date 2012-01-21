@@ -54,6 +54,16 @@ are different kinds of data that you might want to visualize, each with their
 own distinct plot types. The three kinds of basic data sets are sets, sequences,
 and grids.
 
+Many plural L<Prima::Drawable> properties (i.e. C<colors> rather than C<color>)
+can be specified when creating plot types. For example,
+
+ # Specify the color for each blob:
+ pt::Blobs(colors => $my_colors)
+ 
+ # Specify different line widths for each column in the histogram:
+ pt::Histogram(lineWidths => $the_widths)
+
+
 =cut
 
 
@@ -106,36 +116,73 @@ sub initialize {
 	# only be a problem if they used a piddle for these:
 	$self->{normalized} = 1 unless defined $self->{normalized};
 	$self->{increasing} = 1 unless defined $self->{increasing};
+	# If I use an offset, I need to modify the y-collation
 }
 
-# Collation is easy because I can simply use the line width and the min/max
+# Collation is a little tricky and has different behavior between the x-
+# and y- calcuations:
 sub compute_collated_min_max_for {
-	# now working here
 	my ($self, $axis_name, $pixel_extent) = @_;
+	
 	# Get the list of properties for which we need to look for bad values:
-	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
-														: @PDL::Drawing::Prima::lines_props;
-	my %properties = $self->generate_properties(@prop_list);
+	my %properties = $self->generate_properties(
+		@PDL::Drawing::Prima::polylines_props);
 	
 	# Extract the line widths, against which we'll collate:
 	my $lineWidths = $properties{lineWidths};
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
-	# get the rest of the piddles; we don't need their names:
+	# get the rest of the piddles; we don't need their names and order is
+	# not important as this is for bad value checking:
 	my @prop_piddles = values %properties;
 	
 	# Get the data:
-	my ($xs, $ys) = $self->get_data;
-	my ($min_x, $min_y, $max_x, $max_y) = PDL::minmaxforpair($xs, $ys);
+	my $set = $self->dataset->get_data;
 	
-	# working here - now that minmaxforpair does not return infs, make sure
-	# this works
-	my ($min_to_check, $max_to_check) = ($min_x, $max_x);
-	($min_to_check, $max_to_check) = ($min_y, $max_y) if $axis_name eq 'y';
+	# The y- and x-data handling are quite different:
+	if ($axis_name eq 'y') {
+		# Compute the y-min, either 0 or bad:
+		my $ymin = $set->ngoodover == 0;
+		$ymin = $ymin->setbadif($ymin == 1);
+		# Compute the y-max, which is either 1, the number of good elements,
+		# or bad:
+		my $ymax = $set->ngoodover;
+		$ymax = $ymax->setbadif($ymax == 0);
+		$ymax->where($ymax > 0) .= 1 if $self->{normalized};
+		
+		return PDL::collate_min_max_wrt_many($ymin, $lineWidths
+				, $ymax, $lineWidths, $pixel_extent, @prop_piddles);
+	}
 	
-	# Collate the min and the max:
-	return PDL::collate_min_max_wrt_many($min_to_check, $lineWidths,
-			$max_to_check, $lineWidths, $pixel_extent, @prop_piddles);
+	# Arrived here means we are dealing with x-data:
+	my ($xmin, $xmax) = $set->minmaximum;
+	
+	# Collate and return:
+	return PDL::collate_min_max_wrt_many($xmin, $lineWidths, $xmax
+		, $lineWidths, $pixel_extent, @prop_piddles);
+}
+
+
+# This draws the CDFS:
+sub draw {
+	my ($self) = @_;
+	
+	my %properties = $self->generate_properties(
+		@PDL::Drawing::Prima::polylines_props);
+	
+	# Retrieve the data from the dataset and sort:
+	my $xs = $self->dataset->get_data->qsort;
+	# Compute the associated heights:
+	my $ys = $xs->xlinvals;
+	$ys -= $xs->ngoodover->dummy(0) if not $self->{increasing};
+	$ys /= $xs->maximum->dummy(0) if $self->{normalized};
+	
+	# Convert these xs and ys to pixels:
+	$xs = $self->widget->x->reals_to_pixels($xs);
+	$ys = $self->widget->y->reals_to_pixels($ys);
+	
+	# Draw the curves:
+	$self->widget->pdl_polylines($xs, $ys, %properties);
 }
 
 
@@ -148,45 +195,32 @@ working here
 =back
 
 
-=over
 
-=item Sets
-
-=item Line-based plot types
+=heads Sequences
 
 Many plots are based on plotting points of data or lines, or perhaps shaded
 areas. If you think of your data as a function of a single variable, like a
 time series, you will likely use these plot types to visualize your data.
-
-=item Grid-based plot types
-
-Other plots focus on using color or greyscale to visualize data that is a
-function of two variables. If you need to plot a 2D histogram or you want to
-visualize the elements of a matrix, you will likely use these plot types.
-
-=item Creating new plot types
-
-If the supplied plot types do not match your needs, you can always make a new
-one: all of the code for all of these plot types is written in Perl, so it isn't
-too difficult. This section describes how to create custom plot types for your
-own needs.
-
-=back
-
-Many plural L<Prima::Drawable> properties (i.e. C<colors> rather than C<color>)
-can be specified when creating plot types. For example,
-
- # Specify the color for each blob:
- pt::Blobs(colors => $my_colors)
- 
- # Specify different line widths for each column in the histogram:
- pt::Histogram(lineWidths => $the_widths)
 
 =cut
 
 ################################################################################
 #                            Line-based Plot Types                            #
 ################################################################################
+
+=head2 Grid-based plot types
+
+Other plots focus on using color or greyscale to visualize data that is a
+function of two variables. If you need to plot a 2D histogram or you want to
+visualize the elements of a matrix, you will likely use these plot types.
+
+=head2 Creating new plot types
+
+If the supplied plot types do not match your needs, you can always make a new
+one: all of the code for all of these plot types is written in Perl, so it isn't
+too difficult. This section describes how to create custom plot types for your
+own needs.
+
 
 =head1 One-Dimensional Plot Types
 
