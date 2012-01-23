@@ -7,7 +7,7 @@ use PDL::Graphics::Prima;
 use PDL::NiceSlice;
 
 my $wDisplay = Prima::MainWindow->create(
-	text    => 'NGon Test',
+	text    => 'Symbols Test',
 	size	=> [500, 500],
 );
 
