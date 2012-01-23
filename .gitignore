@@ -8,4 +8,6 @@ blib/
 pm_to_blib
 install.sh
 script.pl
-
+.DS_Store
+test.pl
+MYMETA.yml
