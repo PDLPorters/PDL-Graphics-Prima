@@ -12,8 +12,8 @@ my $colors = pal::Rainbow->apply($xs);
 plot(
 	-data => [$xs, $ys,
 		plotType => [
-			pt::Blobs,
-			pt::TrendLines(thread_like => 'points'),
+			pseq::Blobs,
+			pseq::TrendLines(thread_like => 'points'),
 		],
 		colors => $colors,
 	],

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Carp 'croak';
 
-# Import the symbols like pt::Lines and lm::Auto into the global symbol
+# Import the symbols like pseq::Lines and lm::Auto into the global symbol
 # table so the user can use them
 use PDL::Graphics::Prima::Palette;
 use PDL::Graphics::Prima::Limits;
@@ -71,7 +71,7 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  plot(
      -lines         => [$x, $y],
      -color_squares => [$x, $y + 1, colors => $colors,
-                      plotType => pt::Squares(filled => 1)],
+                      plotType => pseq::Squares(filled => 1)],
      x => { label   => 'Time' },
      y => { label   => 'Sine' },
  );
@@ -242,11 +242,11 @@ sub line_plot {
 Plots filled circles at (x, y). Equivalent L<plot|/"PLOT FUNCTION"> commands
 include:
 
- plot(-data => [$x, $y, plotType => pt::Blobs]);
+ plot(-data => [$x, $y, plotType => pseq::Blobs]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          filled => 'yes',
          N_pionts => 0,
      ),
@@ -257,7 +257,7 @@ include:
 sub circle_plot {
 	croak("circle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Blobs]);
+	plot(-data => [@_, plotType => pseq::Blobs]);
 }
 
 =item triangle_plot ($x, $y)
@@ -265,11 +265,11 @@ sub circle_plot {
 Plots filled upright triangles at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Triangles(filled => 1)]);
+ plot(-data => [$x, $y, plotType => pseq::Triangles(filled => 1)]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          filled => 'yes',
          N_pionts => 3,
          orientation => 'up',
@@ -281,7 +281,7 @@ commands include:
 sub triangle_plot {
 	croak("triangle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Triangles(filled => 1)]);
+	plot(-data => [@_, plotType => pseq::Triangles(filled => 1)]);
 }
 
 =item square_plot ($x, $y)
@@ -289,11 +289,11 @@ sub triangle_plot {
 Plots filled squares at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Squares(filled => 1)]);
+ plot(-data => [$x, $y, plotType => pseq::Squares(filled => 1)]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          filled => 'yes',
          N_pionts => 4,
          orientation => 45,
@@ -305,7 +305,7 @@ commands include:
 sub square_plot {
 	croak("square_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Squares(filled => 1)]);
+	plot(-data => [@_, plotType => pseq::Squares(filled => 1)]);
 }
 
 =item diamond_plot ($x, $y)
@@ -313,11 +313,11 @@ sub square_plot {
 Plots filled diamonds at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Diamonds(filled => 1)]);
+ plot(-data => [$x, $y, plotType => pseq::Diamonds(filled => 1)]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          filled => 'yes',
          N_pionts => 4,
      ),
@@ -328,7 +328,7 @@ commands include:
 sub diamond_plot {
 	croak("diamond_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Diamonds(filled => 1)]);
+	plot(-data => [@_, plotType => pseq::Diamonds(filled => 1)]);
 }
 
 =item cross_plot ($x, $y)
@@ -336,11 +336,11 @@ sub diamond_plot {
 Plots crosses (i.e. plus symbols) at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Crosses]);
+ plot(-data => [$x, $y, plotType => pseq::Crosses]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          N_pionts => 4,
          skip => 0,
      ),
@@ -351,7 +351,7 @@ commands include:
 sub cross_plot {
 	croak("cross_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Crosses]);
+	plot(-data => [@_, plotType => pseq::Crosses]);
 }
 
 =item X_plot ($x, $y)
@@ -359,11 +359,11 @@ sub cross_plot {
 Plots X symbols at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Xs]);
+ plot(-data => [$x, $y, plotType => pseq::Xs]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          N_pionts => 4,
          skip => 0,
          orientation => 45,
@@ -375,7 +375,7 @@ commands include:
 sub X_plot {
 	croak("X_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Xs]);
+	plot(-data => [@_, plotType => pseq::Xs]);
 }
 
 =item asterisk_plot ($x, $y)
@@ -383,11 +383,11 @@ sub X_plot {
 Plots five-pointed asterisks at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pt::Asterisks(N_points => 5)]);
+ plot(-data => [$x, $y, plotType => pseq::Asterisks(N_points => 5)]);
  plot(-data => [
      $x,
      $y,
-     plotType => pt::Symbol(
+     plotType => pseq::Symbol(
          N_pionts => 5,
          skip => 0,
          orientation => 'up',
@@ -399,7 +399,7 @@ commands include:
 sub asterisk_plot {
 	croak("asterisk_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Asterisks(N_pionts => 5)]);
+	plot(-data => [@_, plotType => pseq::Asterisks(N_pionts => 5)]);
 }
 
 
@@ -507,7 +507,7 @@ positions are bad the will be skipped, leaving a gap in the histogram.
 
 The equivalent L<plot|/"PLOT FUNCTION"> command is:
 
- plot(-data => [$x, $y, plotType => pt::Histogram]);
+ plot(-data => [$x, $y, plotType => pseq::Histogram]);
  
 
 =cut
@@ -515,7 +515,7 @@ The equivalent L<plot|/"PLOT FUNCTION"> command is:
 sub hist_plot {
 	croak("hist_plot expects two piddles, the bin-centers and the bin heights")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pt::Histogram]);
+	plot(-data => [@_, plotType => pseq::Histogram]);
 }
 
 =item matrix_plot ([$xbounds, $ybounds,] $matrix)
@@ -534,12 +534,12 @@ great. Future versions may use a different color to specify bad values.
 
 If you do not specify the x- and y-bounds, the equivalent L<plot|/"PLOT FUNCTION"> command is:
 
- plot(-image => [plotType => pt::ColorGrid(colors => $matrix)]);
+ plot(-image => [plotType => pgrid::ColorGrid(colors => $matrix)]);
 
 If you do specify the x- and y-bounds, the quivalent is:
 
  plot(-image => [$x_bounts, $y_bounts
-               , plotType => pt::ColorGrid(colors => $matrix)]
+               , plotType => pgrid::ColorGrid(colors => $matrix)]
  );
 
 =cut
@@ -559,7 +559,7 @@ sub matrix_plot {
 			. "matrix_plot ([x0, xf], [y0, yf], \$image)")
 	}
 	
-	plot(-image => [$x, $y, plotType => pt::ColorGrid(colors => $matrix)]);
+	plot(-image => [$x, $y, plotType => pgrid::ColorGrid(colors => $matrix)]);
 }
 
 =back
@@ -617,7 +617,7 @@ dataset:
 
  -data => [
      ...
-     plotType => pt::Squares,
+     plotType => pseq::Squares,
      ...
  ]
 
@@ -625,24 +625,24 @@ You can specify multiple plotTypes by passing them in an anonymous array:
 
  -data => [
      ...
-     plotType => [pt::Triangles, pt::Lines],
+     plotType => [pseq::Triangles, pseq::Lines],
      ...
  ]
 
 All the plotTypes take key/value paired arguments. You can specify various
 L<Prima::Drawable> properties like line-width using the C<lineWidths> key
 or color using the C<colors> key; you can pass plotType-specific options
-like symbol size (for C<pt::Symbol> and itsd derivatives) using the C<size> key
+like symbol size (for C<pseq::Symbol> and its derivatives) using the C<size> key
 or the baseline height for C<pt::Histogram> using the C<baseline> key; and
 some of the plotTypes have required arguments, such as at least one error bar
-specification with C<pt::ErrorBars>. To create red blobs, you would use
+specification with C<pseq::ErrorBars>. To create red blobs, you would use
 something like this:
 
- pt::Blobs(colors => cl::LightRed)
+ pseq::Blobs(colors => cl::LightRed)
 
 To specify a 5-pixel line width for a Lines plotType, you would say
 
- pt::Lines(lineWidths => 5)
+ pseq::Lines(lineWidths => 5)
 
 (Notice that these keys are identical to the properties listed in L<Prima::Drawable>,
 except that they are plural. Plural keys means you can specify a piddle for the
@@ -655,31 +655,31 @@ C<cl::LightRed> lines. If the triangles are specified first, they will have red
 lines drawn through them, and if the triangles are second, the triangles will
 be drawn over the red lines.
 
-The default plot type is C<pt::Lines> so you do not need to specify that if you
+The default plot type is C<pseq::Lines> so you do not need to specify that if you
 simply want lines drawn from one point to the next. The plotTypes are discussed
 thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
 
- pt::Lines      - lines from point to point
- pt::TrendLines - a linear fit to the data
- pt::Blobs      - blobs (filled ellipses) with specifiable x- and y- radii
- pt::Symbols    - open or filled regular geometric shapes with many options:
+ pseq::Lines      - lines from point to point
+ pseq::TrendLines - a linear fit to the data
+ pseq::Blobs      - blobs (filled ellipses) with specifiable x- and y- radii
+ pseq::Symbols    - open or filled regular geometric shapes with many options:
                   size, orientation, number of points, skip pattern, and fill
- pt::Triangles  - open or filled triangles with  specifiable
+ pseq::Triangles  - open or filled triangles with  specifiable
                 - orientations and sizes
- pt::Squares    - open or filled squares with specifiable sizes
- pt::Diamonds   - open or filled diamonds with specifiable sizes
- pt::Stars      - open or filled star shapes with specifiable sizes,
+ pseq::Squares    - open or filled squares with specifiable sizes
+ pseq::Diamonds   - open or filled diamonds with specifiable sizes
+ pseq::Stars      - open or filled star shapes with specifiable sizes,
                   orientations, and number of points
- pt::Asterisks  - asterisk shapes with specifiable size, orientation, and
+ pseq::Asterisks  - asterisk shapes with specifiable size, orientation, and
                   number of points
- pt::Xs         - four-point asterisks that look like xs, with specifiable
+ pseq::Xs         - four-point asterisks that look like xs, with specifiable
                   sizes
- pt::Crosses    - four-pint asterisks that look like + signs, with
+ pseq::Crosses    - four-pint asterisks that look like + signs, with
                   specifiable sizes
- pt::Spikes     - spikes to (x,y) from a specified vertical or horizontal
+ pseq::Spikes     - spikes to (x,y) from a specified vertical or horizontal
                   baseline
- pt::Histogram  - histograms with specifiable baseline and top padding
- pt::ErrorBars  - error bars with specified x/y errors and cap sizes
+ pseq::Histogram  - histograms with specifiable baseline and top padding
+ pseq::ErrorBars  - error bars with specified x/y errors and cap sizes
  
  # This is likely to be removed, or placed into a different category:
  pt::ColorGrid  - colored rectangles, i.e. images
@@ -741,8 +741,8 @@ with code like so:
          $y,
          # I want error bars along with squares:
          plotType => [
-             pt::ErrorBars(y_err => $y_errors),
-             pt::Squares(filled => 1),
+             pseq::ErrorBars(y_err => $y_errors),
+             pseq::Squares(filled => 1),
          ],
      ],
      
@@ -750,7 +750,7 @@ with code like so:
      -fit => [
          \&my_fit_function,
          # Default plotType is lines, but I'll be explicit:
-         plotType => pt::Lines,
+         plotType => pseq::Lines,
      ],
  );
 
@@ -818,8 +818,8 @@ one dataset, and it has only two plotTypes:
          $x,
          $y,
          plotType => [
-             pt::Triangles,
-             pt::Lines,
+             pseq::Triangles,
+             pseq::Lines,
          ],
      ],
  );
@@ -844,11 +844,11 @@ properties for the plotTypes:
          $x,
          $y,
          plotType => [
-             pt::Blobs (
+             pseq::Blobs (
                  radius => 1 + $x->random*4,
                  colors => $colors,
              ),
-             pt::Lines (
+             pseq::Lines (
                  lineWidths => 3,
              ),
          ],
@@ -875,10 +875,10 @@ which I have to do in order to guarantee having Prima's color shortcuts.
          $x,
          $y,
          plotType => [
-             pt::Lines (
+             pseq::Lines (
                  lineWidths => 3,
              ),
-             pt::Blobs (
+             pseq::Blobs (
                  radius => $radius,
                  colors => $colors,
              ),
@@ -909,13 +909,13 @@ makes open circles, but that's not (yet?) available.
          $x,
          $y,
          plotType => [
-             pt::Lines (
+             pseq::Lines (
                  lineWidths => 3,
              ),
-             pt::Blobs(
+             pseq::Blobs(
                  radius => 1 + $radius,
              ),
-             pt::Blobs (
+             pseq::Blobs (
                  radius => $radius,
                  colors => $colors,
              ),
@@ -946,10 +946,10 @@ only using one Blobs plotType instead of two.
          $x,
          $y,
          plotType => [
-             pt::Lines (
+             pseq::Lines (
                  lineWidths => 3,
              ),
-             pt::Blobs(
+             pseq::Blobs(
                  radius => $radius,
                  colors => $colors,
              ),
@@ -994,8 +994,8 @@ ErrorBars plotType and the use of function-based data sets.
          $x,
          $y,
          plotType => [
-             pt::Diamonds(filled => 'yes'),
-             pt::ErrorBars(y_err => $y_err),
+             pseq::Diamonds(filled => 'yes'),
+             pseq::ErrorBars(y_err => $y_err),
          ],
      ],
      -func => [
@@ -1006,7 +1006,7 @@ ErrorBars plotType and the use of function-based data sets.
  );
 
 That example used a function-based dataset, but we could just as easily have
-used C<pt::TrendLines> to compute the fit for us. The only difference between
+used C<pseq::TrendLines> to compute the fit for us. The only difference between
 the last example and the one below is that the trendline for this next example
 does not extend out to infinity in the x-direction but terminates at the
 end of the data.
@@ -1026,9 +1026,9 @@ end of the data.
          $x,
          $y,
          plotType => [
-             pt::Diamonds(filled => 'yes'),
-             pt::ErrorBars(y_err => $y_err),
-             pt::TrendLines(
+             pseq::Diamonds(filled => 'yes'),
+             pseq::ErrorBars(y_err => $y_err),
+             pseq::TrendLines(
                  weights => $y_err,
                  lineWidths => 2,
                  colors => pdl(255, 0, 0)->rgb_to_color,
@@ -1066,8 +1066,8 @@ interesting:
          $x,
          $y,
          plotType => [
-             pt::Xs,
-             pt::Lines,
+             pseq::Xs,
+             pseq::Lines,
          ],
      ],
      onMouseMove => sub {

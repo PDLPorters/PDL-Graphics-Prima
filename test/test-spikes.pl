@@ -16,7 +16,7 @@ my $wDisplay = Prima::MainWindow->create(
 
 $wDisplay->insert('Plot',
 #	-data => [$t_series, $heights],
-	-data => [$t_series(:-2), $heights, plotType => pt::Spikes],
+	-data => [$t_series(:-2), $heights, plotType => pseq::Spikes],
 	pack => { fill => 'both', expand => 1},
 #	y => {scaling => sc::Log},
 );

@@ -17,7 +17,7 @@ my $colors = pal::Rainbow->apply(random($N_symbols));
 $wDisplay->insert('Plot',
 	-data => [
 		3 * grandom($N_symbols), 3 * grandom($N_symbols),
-		plotType => pt::Symbols(
+		plotType => pseq::Symbols(
 			orientation => 360 * random($N_symbols),
 			filled      => (random($N_symbols) > 0.5),
 			N_points    => 8 * random($N_symbols),

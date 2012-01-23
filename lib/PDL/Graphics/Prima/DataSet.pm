@@ -125,7 +125,7 @@ sub new {
 	my $self = {@args, widget => $widget};
 	
 	# Make sure self has a plotType option:
-	$self->{plotType} = pt::Lines unless exists $self->{plotType};
+	$self->{plotType} = pseq::Lines unless exists $self->{plotType};
 	
 	# Make sure the plotType option is packed into an anonymous array:
 	$self->{plotType} = [$self->{plotType}]

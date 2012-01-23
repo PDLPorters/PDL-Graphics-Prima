@@ -18,8 +18,8 @@ plot(
 	-data => [
 		$x, $y,
 		plotType => [
-			pt::ErrorBars(y_err => $y_err, colors => $black),
-			pt::Triangles(colors => $red),
+			pseq::ErrorBars(y_err => $y_err, colors => $black),
+			pseq::Triangles(colors => $red),
 		],
 	],
 );
@@ -32,13 +32,13 @@ plot(
 	-data => [
 		$x, $y,
 		plotType => [
-			pt::ErrorBars(y_err => $y_err, colors => $black),
-			pt::Triangles(
+			pseq::ErrorBars(y_err => $y_err, colors => $black),
+			pseq::Triangles(
 				filled => 'yes',
 				colors => $white,
 				orientation => 'up',
 			),
-			pt::Triangles(colors => $red),
+			pseq::Triangles(colors => $red),
 		],
 	],
 );
@@ -51,8 +51,8 @@ plot(
 	-data => [
 		$x, $y,
 		plotType => [
-			pt::ErrorBars(y_err => $y_err, colors => $black),
-			pt::Triangles(
+			pseq::ErrorBars(y_err => $y_err, colors => $black),
+			pseq::Triangles(
 				filled => pdl(1, 0)->transpose,
 				colors => $colors,
 			),
@@ -68,8 +68,8 @@ plot(
 	-data => [
 		$x->transpose, $y->transpose,
 		plotType => [
-			pt::ErrorBars(y_err => $y_err->transpose, colors => $black),
-			pt::Triangles(
+			pseq::ErrorBars(y_err => $y_err->transpose, colors => $black),
+			pseq::Triangles(
 				filled => pdl(1, 0),
 				colors => $colors->transpose,
 			),

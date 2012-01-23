@@ -51,18 +51,21 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
 This module provides a number of basic plot types that you can use in a
 PDL::Graphics::Prima plot. As far as PDL::Graphics::Prima is concerned, there
 are different kinds of data that you might want to visualize, each with their
-own distinct plot types. The three kinds of basic data sets are sets, sequences,
-and grids.
+own distinct plot types. The three kinds of basic data sets, as described in
+L<PDL::Graphics::Prima::DataSet>, are Sets, Sequences, and Grids. Here, I will
+discuss the different plot types that you can apply to each of these sorts of
+data.
 
-Many plural L<Prima::Drawable> properties (i.e. C<colors> rather than C<color>)
-can be specified when creating plot types. For example,
+Just as you can specify properties for C<DataSet>s, you can also specify properties
+for individual <PlotType>s. XXX working here - discuss PlotType-wide properties
+(singular) and threaded (plural) properties, and ensure that they are handled
+as documented.
 
  # Specify the color for each blob:
  pt::Blobs(colors => $my_colors)
  
  # Specify different line widths for each column in the histogram:
  pt::Histogram(lineWidths => $the_widths)
-
 
 =cut
 
@@ -84,6 +87,12 @@ heights and comparing that to a bell curve, for example. The plot types
 associated with sets are C<pset::CDF> and C<pset::Hist>.
 
 =over
+
+=cut
+
+############################################
+# PDL::Graphics::Prima::PlotType::Set::CDF #
+############################################
 
 =item pset::CDF
 
@@ -186,6 +195,10 @@ sub draw {
 }
 
 
+############################################
+# PDL::Graphics::Prima::PlotType::Set::CDF #
+############################################
+
 =item pset::Hist
 
 working here
@@ -194,6 +207,24 @@ working here
 
 =back
 
+
+=cut
+
+###############################################################################
+#                          Sequence-based Plot Types                          #
+###############################################################################
+
+package PDL::Graphics::Prima::PlotType::Sequence;
+use base 'PDL::Graphics::Prima::PlotType';
+
+# A function that gets the data and performs the real-to-pixel conversion:
+sub get_data_as_pixels {
+	my $self = shift;
+	my ($xs, $ys) = $self->get_data;
+	
+	return ($self->widget->x->reals_to_pixels($xs)
+		, $self->widget->y->reals_to_pixels($ys));
+}
 
 
 =heads Sequences
@@ -204,47 +235,30 @@ time series, you will likely use these plot types to visualize your data.
 
 =cut
 
-################################################################################
-#                            Line-based Plot Types                            #
-################################################################################
-
-=head2 Grid-based plot types
-
-Other plots focus on using color or greyscale to visualize data that is a
-function of two variables. If you need to plot a 2D histogram or you want to
-visualize the elements of a matrix, you will likely use these plot types.
-
-=head2 Creating new plot types
-
-If the supplied plot types do not match your needs, you can always make a new
-one: all of the code for all of these plot types is written in Perl, so it isn't
-too difficult. This section describes how to create custom plot types for your
-own needs.
-
 
 =head1 One-Dimensional Plot Types
 
 =cut
 
-#########################################
-# PDL::Graphics::Prima::PlotType::Lines #
-#########################################
+###################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Lines #
+###################################################
 
 =head2 Lines
 
 =for ref
 
- pt::Lines( [thread_like => STRING,] options )
+ pseq::Lines( [thread_like => STRING,] options )
 
 Draws the x/y data as lines, connecting each pair of points with a line
 segment. The behavior of the line drawing depends on what kind of threading
 you want. You can specify that the threading behave like lines:
 
- pt::Lines(thread_like => 'lines', ...)
+ pseq::Lines(thread_like => 'lines', ...)
 
 which is the default, or like points:
 
- pt::Lines(thread_like => 'points', ...)
+ pseq::Lines(thread_like => 'points', ...)
 
 Threading like lines does not play well with the many point-based plotTypes.
 For all of those plotTypes, you can specify one property per point (like
@@ -260,29 +274,24 @@ However, threading like points has one major drawback, which is that it does
 not properly handle line styles. For example, if you wanted a dashed curve,
 you would specify
 
- pt::Lines(..., lineStyles => lp::Dash)
+ pseq::Lines(..., lineStyles => lp::Dash)
 
 When you thread like points, each line segment is treated as a seperate line.
 That mis-applies your dashing style. For large datasets (more than a million
 points), another problem with point-like threading is that it uses more
 memory and CPU to perform the drawing.
 
-
-If you are plotting very large data sets (> 1 million points), be aware that
-full threading is less efficient than traditional threading, both in memory
-and CPU consumption.
-
 =cut
 
-package PDL::Graphics::Prima::PlotType::Lines;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Lines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 # Install the short name constructor:
-sub pt::Lines {
-	PDL::Graphics::Prima::PlotType::Lines->new(@_);
+sub pseq::Lines {
+	PDL::Graphics::Prima::PlotType::Sequence::Lines->new(@_);
 }
 
-# I decided to include the 'thread_over' property.
+# Handle the 'thread_over' property.
 sub initialize {
 	my $self = shift;
 
@@ -328,20 +337,6 @@ sub compute_collated_min_max_for {
 			$max_to_check, $lineWidths, $pixel_extent, @prop_piddles);
 }
 
-
-# A function that gets the data, meant to be overloaded:
-sub get_data {
-	return $_[0]->dataset->get_data;
-}
-sub get_data_as_pixels {
-	my $self = shift;
-	my ($xs, $ys) = $self->get_data;
-	
-	return ($self->widget->x->reals_to_pixels($xs)
-		, $self->widget->y->reals_to_pixels($ys));
-}
-
-# I need to define a drawing method:
 sub draw {
 	my ($self) = @_;
 	
@@ -370,19 +365,19 @@ sub draw {
 	}
 }
 
-##############################################
-# PDL::Graphics::Prima::PlotType::Trendlines #
-##############################################
+########################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Trendlines #
+########################################################
 
 =head2 Trendlines
 
 =for ref
 
- pt::Trendlines( [full_threading => BOOLEAN,] [weights => PDL,]
+ pseq::Trendlines( [full_threading => BOOLEAN,] [weights => PDL,]
                  [along_dim => INTEGER,] options )
 
 Draws linear fits to the x/y data as lines. This is a descendent of
-C<pt::Lines>, so you can specify the style of threading you want employed.
+C<pseq::Lines>, so you can specify the style of threading you want employed.
 You can also specify the weights that you want used for your fitting. The
 default is equal weights.
 
@@ -392,15 +387,15 @@ other dimension, you can specify that with the C<along_dim> key.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::TrendLines;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Lines);
+package PDL::Graphics::Prima::PlotType::Sequence::TrendLines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence::Lines);
 use strict;
 use warnings;
 use PDL;
 
 # Install the short name constructor:
-sub pt::TrendLines {
-	PDL::Graphics::Prima::PlotType::TrendLines->new(@_);
+sub pseq::TrendLines {
+	PDL::Graphics::Prima::PlotType::Sequence::TrendLines->new(@_);
 }
 
 # Allow the user to specify fit weights:
@@ -444,9 +439,9 @@ sub get_data {
 	return ($xs, $ys);
 }
 
-##########################################
-# PDL::Graphics::Prima::PlotType::Spikes #
-##########################################
+####################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Spikes #
+####################################################
 # working here - get rid of the class-specific padding; if anything, such
 # padding should be part of the general class, not this specific one
 
@@ -454,7 +449,7 @@ sub get_data {
 
 =for ref
 
- pt::Spikes( [x_baseline | y_baseline => PDL], options )
+ pseq::Spikes( [x_baseline | y_baseline => PDL], options )
 
 Draws x/y data as a collection of vertical or horizontal lines. In the default
 behavior, for each (x, y) data point, it draws a line from (x, 0) to (x, y). You
@@ -468,12 +463,12 @@ taken as the minimum of the dataset's x or y data, respectively.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Spikes;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Spikes;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 # Install the short name constructor:
-sub pt::Spikes {
-	PDL::Graphics::Prima::PlotType::Spikes->new(@_);
+sub pseq::Spikes {
+	PDL::Graphics::Prima::PlotType::Sequence::Spikes->new(@_);
 }
 
 # Set padding options:
@@ -602,15 +597,15 @@ sub draw {
 
 
 
-#########################################
-# PDL::Graphics::Prima::PlotType::Blobs #
-#########################################
+###################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Blobs #
+###################################################
 
 =head2 Blobs
 
 =for ref
 
- pt::Blobs( [radius => PDL], [xRadius => PDL],
+ pseq::Blobs( [radius => PDL], [xRadius => PDL],
             [yRadius => PDL], options )
 
 Lets you draw filled ellipses with per-point x- and y- pixel radii. If you
@@ -619,16 +614,16 @@ more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Blobs;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Blobs;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 use PDL::Core ':Internal';
 use Carp 'croak';
 use PDL;
 
 # Install the short name constructor:
-sub pt::Blobs {
-	PDL::Graphics::Prima::PlotType::Blobs->new(@_);
+sub pseq::Blobs {
+	PDL::Graphics::Prima::PlotType::Sequence::Blobs->new(@_);
 }
 
 # The blobs initializer defaults to a radius of 3 pixels
@@ -706,15 +701,15 @@ sub draw {
 		, %properties);
 }
 
-###########################################
-# PDL::Graphics::Prima::PlotType::Symbols #
-###########################################
+#####################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Symbols #
+#####################################################
 
 =head2 Symbols
 
 =for ref
 
- pt::Symbols( [size => PDL], [filled => PDL::Byte],
+ pseq::Symbols( [size => PDL], [filled => PDL::Byte],
               [N_points => PDL::Byte], [orientation => PDL],
               [skip => PDL::Byte], options )
 
@@ -779,16 +774,16 @@ I am not sure how useful they would be.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Symbols;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Symbols;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 use PDL::Core ':Internal';
 use Carp 'croak';
 use PDL;
 
 # Install the short name constructor:
-sub pt::Symbols {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_);
+sub pseq::Symbols {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_);
 }
 
 sub initialize {
@@ -893,13 +888,13 @@ sub draw {
 		, $self->{skip}, %props);
 }
 
-#######################################################
-# PDL::Graphics::Prima::PlotType::Symbols Derivatives #
-#######################################################
+#################################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Symbols Derivatives #
+#################################################################
 
 =pod
 
-In addition, there are many nicely named derivatives of pt::Symbols. These
+In addition, there are many nicely named derivatives of pseq::Symbols. These
 give descriptive names to many common symbols and include:
 
 =over
@@ -908,77 +903,77 @@ give descriptive names to many common symbols and include:
 
 =for ref
 
- pt::Sticks( [size => PDL], [orientation => PDL], options )
+ pseq::Sticks( [size => PDL], [orientation => PDL], options )
 
-C<pt::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
+C<pseq::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
 that is, sticks. This can be very useful to visualize flow-fields, for
 example. You can specify the orientation and the size; you can also specify
 N_points and filled, but those will be ignored.
 
 =cut
 
-sub pt::Sticks {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 2, filled => 'no');
+sub pseq::Sticks {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_, N_points => 2, filled => 'no');
 }
 
 =item Triangles
 
 =for ref
 
- pt::Triangles( [size => PDL], [filled => PDL::Byte],
+ pseq::Triangles( [size => PDL], [filled => PDL::Byte],
                 [orientation => PDL], options )
 
-C<pt::Triangles> is a wrapper around the Symbols plotType that draws 3-point regular
+C<pseq::Triangles> is a wrapper around the Symbols plotType that draws 3-point regular
 polygons. It takes the same options as Symbols, except that if you specify
 N_points, it will be overridden by the value 3. Also, the default orientation
 which you B<can> override, is 'up'.
 
 =cut
 
-sub pt::Triangles {
-	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 'up', @_, N_points => 3);
+sub pseq::Triangles {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(orientation => 'up', @_, N_points => 3);
 }
 
 =item Squares
 
 =for ref
 
- pt::Squares( [size => PDL], [filled => PDL::Byte], options )
+ pseq::Squares( [size => PDL], [filled => PDL::Byte], options )
 
-C<pt::Squares> is a wrapper around Symbols that draws 4-point regular polygon with an
+C<pseq::Squares> is a wrapper around Symbols that draws 4-point regular polygon with an
 orientation that makes it look like a square (instead of a diamond). You can
 specify vales for N_points and orientation, but they will be ignored.
 
 =cut
 
-sub pt::Squares {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45);
+sub pseq::Squares {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_, N_points => 4, orientation => 45);
 }
 
 =item Diamonds
 
 =for ref
 
- pt::Diamonds( [size => PDL], [filled => PDL::Byte], options )
+ pseq::Diamonds( [size => PDL], [filled => PDL::Byte], options )
 
-C<pt::Diamonds> is just like Squares, but rotated by 45
+C<pseq::Diamonds> is just like Squares, but rotated by 45
 degrees. Again, you can specify N_points and orientation, but those will be
 ignored.
 
 =cut
 
-sub pt::Diamonds {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0);
+sub pseq::Diamonds {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_, N_points => 4, orientation => 0);
 }
 
 =item Stars
 
 =for ref
 
- pt::Stars( [size => PDL], [N_points => PDL::Byte],
+ pseq::Stars( [size => PDL], [N_points => PDL::Byte],
             [orientation => PDL], options )
 
-C<pt::Stars> creates open or filled star shapes. These only look right when
+C<pseq::Stars> creates open or filled star shapes. These only look right when
 you have five or more C<N_points>, though it will plot something with four
 and fewer. The default orientation is 'up' but that can be overridden. The
 C<skip> of two, however, cannot be overridden. You can also specify the fill
@@ -987,66 +982,66 @@ of course.
 
 =cut
 
-sub pt::Stars {
-	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 2);
+sub pseq::Stars {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(orientation => 90, @_, skip => 2);
 }
 
 =item Asterisks
 
 =for ref
 
- pt::Asterisks( [size => PDL], [N_points => PDL::Byte],
+ pseq::Asterisks( [size => PDL], [N_points => PDL::Byte],
                 [orientation => PDL], options )
 
 
-C<pt::Asterisks> creates N-sided asterisks. It does this by forcing a skip
+C<pseq::Asterisks> creates N-sided asterisks. It does this by forcing a skip
 of zero that cannot be overridden. As with Stars, the default orientation is
 'up' but that can be overridden. You can also specify the fill state, but
 that will not be used.
 
 =cut
 
-sub pt::Asterisks {
-	PDL::Graphics::Prima::PlotType::Symbols->new(orientation => 90, @_, skip => 0);
+sub pseq::Asterisks {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(orientation => 90, @_, skip => 0);
 }
 
 =item Xs
 
 =for ref
 
- pt::Xs( [size => PDL], options )
+ pseq::Xs( [size => PDL], options )
 
-C<pt::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
+C<pseq::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
 arguments except the size.
 
 =cut
 
-sub pt::Xs {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
+sub pseq::Xs {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
 }
 
 =item Crosses
 
 =for ref
 
- pt::Crosses( [size => PDL], options )
+ pseq::Crosses( [size => PDL], options )
 
-C<pt::Crosses> creates cross-shaped symbols. Again, you are free to set the
+C<pseq::Crosses> creates cross-shaped symbols. Again, you are free to set the
 size, but all other Symbol options are set for you.
 
 =cut
 
-sub pt::Crosses {
-	PDL::Graphics::Prima::PlotType::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
+sub pseq::Crosses {
+	PDL::Graphics::Prima::PlotType::Sequence::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
 }
 
 =back
 
 =cut
 
-##########################################
-# PDL::Graphics::Prima::PlotType::Slopes #
-##########################################
+####################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Slopes #
+####################################################
 #
 #=head2 Slopes
 #
@@ -1054,15 +1049,15 @@ sub pt::Crosses {
 #
 #=cut
 
-#############################################
-# PDL::Graphics::Prima::PlotType::Histogram #
-#############################################
+#######################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Histogram #
+#######################################################
 
 =head2 Histogram
 
 =for ref
 
- pt::Histogram( [binEdges => PDL], [baseline => SCALAR],
+ pseq::Histogram( [binEdges => PDL], [baseline => SCALAR],
                 [topPadding => SCALAR], options )
 
 Draws a histogram with bin-centers at the data's x-values and heights at the
@@ -1074,7 +1069,7 @@ histogram with different spacing, such as quadratic or logarithmic, you will
 need to compute the spacing on your own and specify the spacing using the
 binEdges key:
 
- pt::Histogram(binEdges => $bin_edges)
+ pseq::Histogram(binEdges => $bin_edges)
 
 Note that binEdges should have one more element compared with your y-data,
 that is, if you have 20 heights, you'll need 21 binEdges. Unfortunately,
@@ -1112,8 +1107,8 @@ filled/unfilled specifications (as in Symbols).
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Histogram;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Histogram;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 use Carp 'croak';
 use PDL;
@@ -1124,8 +1119,8 @@ use warnings;
 # unnecessary?
 
 # Install the short name constructor:
-sub pt::Histogram {
-	PDL::Graphics::Prima::PlotType::Histogram->new(@_);
+sub pseq::Histogram {
+	PDL::Graphics::Prima::PlotType::Sequence::Histogram->new(@_);
 }
 
 # The histogram initializer ensures that the top padding is set to a reasonable
@@ -1235,21 +1230,21 @@ sub draw {
 			, $pixel_edges(1:-1), $ys, %properties);
 }
 
-#################################################
-# PDL::Graphics::Prima::PlotType::BoxAndWhisker #
-#################################################
+###########################################################
+# PDL::Graphics::Prima::PlotType::Sequence::BoxAndWhisker #
+###########################################################
 # Plots vertical box-and-whisker at each data point
 
-package PDL::Graphics::Prima::PlotType::BoxAndWhisker;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::BoxAndWhisker;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
-#############################################
-# PDL::Graphics::Prima::PlotType::ErrorBars #
-#############################################
+#######################################################
+# PDL::Graphics::Prima::PlotType::Sequence::ErrorBars #
+#######################################################
 # Adds error bars
 
-package PDL::Graphics::Prima::PlotType::ErrorBars;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::ErrorBars;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 # working here - ensure documentation consistency
 
@@ -1257,13 +1252,13 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =for ref
 
- pt::ErrorBars( [x_err => PDL], [y_err => PDL]
-                [x_left_err => PDL], [x_right_err => PDL],
-                [y_upper_err => PDL], [y_lower_err => PDL],
-                [x_err_width => PDL], [y_err_width => PDL],
-                [err_width => PDL], options );
+ pseq::ErrorBars( [x_err => PDL], [y_err => PDL]
+                  [x_left_err => PDL], [x_right_err => PDL],
+                  [y_upper_err => PDL], [y_lower_err => PDL],
+                  [x_err_width => PDL], [y_err_width => PDL],
+                  [err_width => PDL], options );
 
-You create an error bars plotType objet with C<pt::ErrorBars>:
+You create an error bars plotType objet with C<pseq::ErrorBars>:
 
 You must specify at least one sort of error bar to plot, though you can mix and
 match as you wish. Each error specification must be a piddle or something that
@@ -1291,8 +1286,8 @@ Again, the more specific widths override the less specific ones.
 =cut
 
 # Install the short name constructor:
-sub pt::ErrorBars {
-	PDL::Graphics::Prima::PlotType::ErrorBars->new(@_);
+sub pseq::ErrorBars {
+	PDL::Graphics::Prima::PlotType::Sequence::ErrorBars->new(@_);
 }
 
 # The ErrorBars initializer figures out the x and y bar widths
@@ -1536,28 +1531,32 @@ sub draw {
 	}
 }
 
-#########################################
-# PDL::Graphics::Prima::PlotType::Bands #
-#########################################
+###################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Bands #
+###################################################
 # Plots symmetric or unsymmetric error bands around the data
 
-package PDL::Graphics::Prima::PlotType::Bands;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Bands;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
-########################################
-# PDL::Graphics::Prima::PlotType::Area #
-########################################
+##################################################
+# PDL::Graphics::Prima::PlotType::Sequence::Area #
+##################################################
 # Plots shaded area, where one edge is the data
 
-package PDL::Graphics::Prima::PlotType::Area;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+package PDL::Graphics::Prima::PlotType::Sequence::Area;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 
 ###############################################################################
 #                            Grid-based Plot Types                            #
 ###############################################################################
 
-=head1 Plotting Two-Dimensional Data
+=head2 Grid-based plot types
+
+Other plots focus on using color or greyscale to visualize data that is a
+function of two variables. If you need to plot a 2D histogram or you want to
+visualize the elements of a matrix, you will likely use these plot types.
 
 =cut
 
@@ -1813,7 +1812,12 @@ package PDL::Graphics::Prima::PlotType;
 
 use Carp 'croak';
 
-=head1 Creating your own Plot Type
+=head2 Creating new plot types
+
+If the supplied plot types do not match your needs, you can always make a new
+one: all of the code for all of these plot types is written in Perl, so it isn't
+too difficult. This section describes how to create custom plot types for your
+own needs.
 
 To write your own plot type, you must create a class that is derived from
 C<PDL::Graphics::Prima::PlotType>. (To make the discussion a bit more concrete,
@@ -1996,6 +2000,10 @@ operation.
 
 Returns the dataSet that owns this plotType.
 
+=head2 get_data
+
+Shorthand: Returns the result of calling the dataset's get_data function.
+
 =cut
 
 sub widget {
@@ -2006,6 +2014,11 @@ sub widget {
 sub dataset {
 	$_[0]->{dataSet} = $_[1] if (@_ == 2);
 	return $_[0]->{dataSet};
+}
+
+# A function that gets the data, meant to be overloaded:
+sub get_data {
+	return $_[0]->dataset->get_data;
 }
 
 =head2 draw
@@ -2220,6 +2233,11 @@ ColorGrid, while immensely flexible, is very slow. Prima has hooks for adding
 images to a Drawable object, but they have not yet been incorporated into
 L<PDL::Drawing::Prima>. Once that happens, fast and scalable image support will
 be possible.
+
+=item consistent interface for caching
+
+Many of these plottypes could speed up bounds calculations by caching certain
+results. I need to implement a generic interface for caching, and cache clearing.
 
 =back
 

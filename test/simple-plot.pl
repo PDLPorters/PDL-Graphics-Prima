@@ -10,8 +10,8 @@ my $colors = pal::Rainbow->apply(sequence(3)->transpose);
 plot(
 	-data => [$xs, $ys,
 		plotType => [
-			pt::Blobs,
-			pt::Lines(thread_like => 'points'),
+			pseq::Blobs,
+			pseq::Lines(thread_like => 'points'),
 		],
 		colors => $colors,
 	],

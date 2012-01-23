@@ -17,9 +17,9 @@ $wDisplay->insert('Plot',
 	-data => [
 		3 * grandom($N_points), 3 * grandom($N_points),
 		plotType => [
-			pt::ErrorBars(y_err => grandom($N_points), colors => cl::LightRed,
+			pseq::ErrorBars(y_err => grandom($N_points), colors => cl::LightRed,
 				x_left_err => grandom($N_points), x_err => grandom($N_points)),
-			pt::Blobs(radius => 4),
+			pseq::Blobs(radius => 4),
 		]
 	],
 	pack => { fill => 'both', expand => 1},
