@@ -4,86 +4,25 @@ use warnings;
 # Codifies the different kinds of dataset plotting that you can do, and defines
 # the class for the tied dataset array.
 
-package PDL::Graphics::Prima::DataSet::Collection;
-# This package implements the tied array functionality needed for automatic
-# data validation for the array setting operations.
+=head1 NAME
 
-use Tie::Hash;
-use parent -norequire, 'Tie::StdHash';
+PDL::Graphics::Prima::DataSet - the way we think about data
 
-# Validate and convert the data, and set the graph's min/max values if they are
-# on auto mode.
-use Carp 'croak';
+=head1 SYNOPSIS
 
-sub TIEHASH {
-	my ($class, $widget) = @_;
-	my $self = {widget => $widget};
-	return bless $self, $class;
-}
+ # working here
 
-# Override delete to prevent removing the widget key:
-sub DELETE {
-	my ($this, $key) = @_;
-	return if $key eq 'widget';
-	delete $this->{$key};
-}
+=head1 DESCRIPTION
 
-# Clear the contents of the hash while preserving the widget:
-sub CLEAR {
-	my ($this) = @_;
-	%{$this} = (widget => $this->{widget}); 
-}
+C<PDL::Graphics::Prima> differentiates between a few kinds of data: Sets,
+Sequences, and Grids. A Set is an unordered collection of data, such as the
+heights of a class of students. A Sequence is an ordered collection of x/y
+pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
+colors of a photograph.
 
-sub STORE {
-	my ($self, $key, $value) = @_;
-	# The value needs to be an anonymous array with arguments suitable for
-	# data sets. Optional arguments are passed in hash references, and one of
-	# the options is a plotType key. That is actually a class name that is used
-	# to turn the supplied anonymous array into an object (after validating the
-	# data, of course).
-	croak('You can only add anonymous arrays or dataSet objects to dataSets')
-		unless ref($value) and (ref($value) eq 'ARRAY'
-					or eval {$value->isa('PDL::Graphics::Prima::DataSet')});
-	
-	# Silently do nothing if they try to change the widget:
-	return if $key eq 'widget';
-	
-	# Create a dataset if it's not a blessed object:
-	my $dataset;
-	if (ref($value) eq 'ARRAY') {
-		# If the first argument is a code reference, then the user simply wants
-		# to plot a function.
-		if (ref($value->[0]) and ref($value->[0]) eq 'CODE') {
-			# If the second argument is *also* a code reference, then they
-			# want a two-function:
-			if (ref($value->[1]) and ref($value->[1]) eq 'CODE') {
-				$dataset = PDL::Graphics::Prima::DataSet::FuncBoth->new($value, $self->{widget});
-			}
-			else {
-				$dataset = PDL::Graphics::Prima::DataSet::Func->new($value, $self->{widget});
-			}
-		}
-		# Otherwise, the user must specify both the x- and y- data sets.
-		else {
-			$dataset = PDL::Graphics::Prima::DataSet->new($value, $self->{widget});
-		}
-	}
-	else {
-		$dataset = $value;
-	}
-	
-	# Store it:
-	$self->{$key} = $dataset;
+=head2 Sets
 
-	# Call data initialization for all of the plot types:
-	# working here - still do this? I think that histograms will want this,
-	# maybe.
-#	$dataset->initialize_plot_types;
-	
-	# Recompute the auto min/max values:
-	$self->{widget}->x->update_edges;
-	$self->{widget}->y->update_edges;
-}
+# working here
 
 =pod
 
@@ -466,6 +405,104 @@ sub compute_collated_min_max_for {
 	
 	return ($collated_min, $collated_max);
 }
+
+
+=head2 DataSet::Collection
+
+The dataset collection is the thing that actually holds the datasets in the
+plot widget object. The Collection is a tied hash, so you access all of its
+data members as if they were hash elements. However, it does some
+double-checking for you behind the scenes to make sure that whenever you
+add a dataset to the Collection, that you added a real DataSet object and
+not some arbitrary thing.
+
+working here - this needs to be clarified
+
+=cut
+
+package PDL::Graphics::Prima::DataSet::Collection;
+# This package implements the tied array functionality needed for automatic
+# data validation for the array setting operations.
+
+use Tie::Hash;
+use parent -norequire, 'Tie::StdHash';
+
+# Validate and convert the data, and set the graph's min/max values if they are
+# on auto mode.
+use Carp 'croak';
+
+sub TIEHASH {
+	my ($class, $widget) = @_;
+	my $self = {widget => $widget};
+	return bless $self, $class;
+}
+
+# Override delete to prevent removing the widget key:
+sub DELETE {
+	my ($this, $key) = @_;
+	return if $key eq 'widget';
+	delete $this->{$key};
+}
+
+# Clear the contents of the hash while preserving the widget:
+sub CLEAR {
+	my ($this) = @_;
+	%{$this} = (widget => $this->{widget}); 
+}
+
+sub STORE {
+	my ($self, $key, $value) = @_;
+	# The value needs to be an anonymous array with arguments suitable for
+	# data sets. Optional arguments are passed in hash references, and one of
+	# the options is a plotType key. That is actually a class name that is used
+	# to turn the supplied anonymous array into an object (after validating the
+	# data, of course).
+	croak('You can only add anonymous arrays or dataSet objects to dataSets')
+		unless ref($value) and (ref($value) eq 'ARRAY'
+					or eval {$value->isa('PDL::Graphics::Prima::DataSet')});
+	
+	# Silently do nothing if they try to change the widget:
+	return if $key eq 'widget';
+	
+	# Create a dataset if it's not a blessed object:
+	my $dataset;
+	if (ref($value) eq 'ARRAY') {
+		# If the first argument is a code reference, then the user simply wants
+		# to plot a function.
+		if (ref($value->[0]) and ref($value->[0]) eq 'CODE') {
+			# If the second argument is *also* a code reference, then they
+			# want a two-function:
+			if (ref($value->[1]) and ref($value->[1]) eq 'CODE') {
+				$dataset = PDL::Graphics::Prima::DataSet::FuncBoth->new($value, $self->{widget});
+			}
+			else {
+				$dataset = PDL::Graphics::Prima::DataSet::Func->new($value, $self->{widget});
+			}
+		}
+		# Otherwise, the user must specify both the x- and y- data sets.
+		else {
+			$dataset = PDL::Graphics::Prima::DataSet->new($value, $self->{widget});
+		}
+	}
+	else {
+		$dataset = $value;
+	}
+	
+	# Store it:
+	$self->{$key} = $dataset;
+
+	# Call data initialization for all of the plot types:
+	# working here - still do this? I think that histograms will want this,
+	# maybe.
+#	$dataset->initialize_plot_types;
+	
+	# Recompute the auto min/max values:
+	$self->{widget}->x->update_edges;
+	$self->{widget}->y->update_edges;
+}
+
+
+
 
 1;
 
