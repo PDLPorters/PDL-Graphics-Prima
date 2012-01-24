@@ -23,8 +23,8 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
          $x,
          $y,
          plotType => [
-             pt::Lines,
-             pt::Diamonds,
+             pseq::Lines,
+             pseq::Diamonds,
          ],
      ],
  );
@@ -37,8 +37,8 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
          $x,
          $y,
          plotType => [
-             pt::Spikes(colors => cl::Green, lineWidths => 2),
-             pt::Asterisks(N_points => 11, colors => cl::White),
+             pseq::Spikes(colors => cl::Green, lineWidths => 2),
+             pseq::Asterisks(N_points => 11, colors => cl::White),
          ],
      ],
      backColor => cl::LightBlue,
@@ -62,7 +62,7 @@ for individual <PlotType>s. XXX working here - discuss PlotType-wide properties
 as documented.
 
  # Specify the color for each blob:
- pt::Blobs(colors => $my_colors)
+ pseq::Blobs(colors => $my_colors)
  
  # Specify different line widths for each column in the histogram:
  pt::Histogram(lineWidths => $the_widths)
@@ -227,16 +227,13 @@ sub get_data_as_pixels {
 }
 
 
-=heads Sequences
+=head2 Sequences
 
 Many plots are based on plotting points of data or lines, or perhaps shaded
 areas. If you think of your data as a function of a single variable, like a
 time series, you will likely use these plot types to visualize your data.
 
-=cut
-
-
-=head1 One-Dimensional Plot Types
+=over
 
 =cut
 
@@ -244,7 +241,7 @@ time series, you will likely use these plot types to visualize your data.
 # PDL::Graphics::Prima::PlotType::Sequence::Lines #
 ###################################################
 
-=head2 Lines
+=item pseq::Lines
 
 =for ref
 
@@ -369,7 +366,7 @@ sub draw {
 # PDL::Graphics::Prima::PlotType::Sequence::Trendlines #
 ########################################################
 
-=head2 Trendlines
+=item pseq::Trendlines
 
 =for ref
 
@@ -445,7 +442,7 @@ sub get_data {
 # working here - get rid of the class-specific padding; if anything, such
 # padding should be part of the general class, not this specific one
 
-=head2 Spikes
+=item pseq::Spikes
 
 =for ref
 
@@ -601,7 +598,7 @@ sub draw {
 # PDL::Graphics::Prima::PlotType::Sequence::Blobs #
 ###################################################
 
-=head2 Blobs
+=item pseq::Blobs
 
 =for ref
 
@@ -705,7 +702,7 @@ sub draw {
 # PDL::Graphics::Prima::PlotType::Sequence::Symbols #
 #####################################################
 
-=head2 Symbols
+=item pseq::Symbols
 
 =for ref
 
@@ -1043,7 +1040,7 @@ sub pseq::Crosses {
 # PDL::Graphics::Prima::PlotType::Sequence::Slopes #
 ####################################################
 #
-#=head2 Slopes
+#=item pseq::Slopes
 #
 #This plot type visualizes derivatives, i.e. slopes. 
 #
@@ -1248,7 +1245,7 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 
 # working here - ensure documentation consistency
 
-=head2 ErrorBars
+=item pseq::ErrorBars
 
 =for ref
 
@@ -1551,6 +1548,8 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType::Sequence);
 ###############################################################################
 #                            Grid-based Plot Types                            #
 ###############################################################################
+
+=back
 
 =head2 Grid-based plot types
 
@@ -2187,7 +2186,7 @@ think of:
 This would then be associated with different dataSets, which would have
 constructor names like:
 
- ds::Dist
+ ds::Set
  ds::Seq
  ds::Grid
 
