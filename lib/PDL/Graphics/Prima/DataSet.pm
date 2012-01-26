@@ -10,7 +10,18 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 
 =head1 SYNOPSIS
 
- # working here
+ -distribution => ds::Set(
+     $data, plotType => pset::CDF
+ ),
+ -lines => ds::Seq(
+     $x, $y, plotType => [pseq::Lines, pseq::Lines::Diamonds]
+ ),
+ -contour => ds::Grid(
+     $matrix, bounds => [$left, $bottom, $right, $top],
+              y_edges => $ys, x_bounds => [$left, $right],
+              x_edges => $xs, y_bounds => [$bottom, $top],
+              plotType => pgrid::Color(palette => $palette),
+ ),
 
 =head1 DESCRIPTION
 
@@ -20,23 +31,113 @@ heights of a class of students. A Sequence is an ordered collection of x/y
 pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
 colors of a photograph.
 
+working here: what about TwoSet, an unordered collection of pairs of data, like
+collections of individuals' height and weight. This could be displayed with
+p2set::Bin, which would bin the data in two dimensions.
+
+Once upon a time, this made sense, but it needs to be revised:
+
+ At the moment there are two kinds of datasets. The piddle-based datasets have
+ piddles for their x- and y-data. The function-based datasets create their
+ x-values on the fly and evaluate their y-values using the supplied function
+ reference. The x-values are generated using the C<sample_evenly> function which
+ belongs to the x-axis's scaling object/class. As such, any scaling class needs
+ to implement a C<sample_evenly> function to support function-based datasets.
+
+=head2 Base Class
+
+The Dataset base class provides a few methods that work for all datasets.
+These include accessing the associated widget and drawing the data.
+
+=over
+
+=cut
+
+package PDL::Graphics::Prima::DataSet;
+
+=item widget
+
+The widget associated with the dataset.
+
+=cut
+
+sub widget {
+	$_[0]->{widget} = $_[1] if @_ == 2;
+	return $_[0]->{widget};
+}
+
+
+=item draw
+
+Calls all of the drawing functions for each plotType of the dataset. This also
+applies all the global drawing options (like C<color>, for example) that were
+supplied to the dataset.
+
+=cut
+
+# Calls all the drawing functions for the plotTypes for this dataset:
+sub draw {
+	my ($dataset) = @_;
+	my $widget = $dataset->widget;
+	
+	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
+			lineEnd rop rop2);
+	
+	# backup the dataset-wide drawing parameters:
+	my %backups;
+	foreach(@drawing_parameters) {
+		if (exists $dataset->{$_}) {
+			$backups{$_} = $dataset->{$_};
+		}
+		elsif (not exists $dataset->{$_.'s'}) {
+			$backups{$_} = $widget->$_;
+		}
+	}
+
+	# Call each plot type's drawing function, in the order specified:
+	foreach my $plotType (@{$dataset->{plotType}}) {
+		# set the default drawing parameters and draw the plot type
+		$widget->set(%backups);
+		$plotType->draw;
+	}
+	$widget->set(%backups);
+}
+
+=back
+
 =head2 Sets
 
 # working here
 
-=pod
-
-At the moment there are two kinds of datasets. The piddle-based datasets have
-piddles for their x- and y-data. The function-based datasets create their
-x-values on the fly and evaluate their y-values using the supplied function
-reference. The x-values are generated using the C<sample_evenly> function which
-belongs to the x-axis's scaling object/class. As such, any scaling class needs
-to implement a C<sample_evenly> function to support function-based datasets.
-
 =cut
 
+package PDL::Graphics::Prima::DataSet::Set;
+use base 'PDL::Graphics::Prima::DataSet';
+use Carp;
 
-package PDL::Graphics::Prima::DataSet;
+# short-name constructor:
+sub ds::Set {
+	croak('ds::Set expects data and then key => value pairs, but you supplied'
+		. ' an even number of arguments') if @_ % 2 == 0;
+	return PDL::Graphics::Prima::DataSet::Set->new(@_);
+}
+
+sub new {
+	# Validation occurred with ds::Set, so we'll just unpack:
+	my ($class, $data, %options) = @_;
+	
+	# WORKING HERE
+}
+
+
+
+
+
+
+
+
+
+package PDL::Graphics::Prima::DataSet::Sequence;
 
 use PDL::Graphics::Prima::PlotType;
 use PDL::Core ':Internal'; # for topdl
@@ -182,54 +283,6 @@ sub initialize {
 	
 	croak('For standard datasets, the arguments must be piddles '
 		. 'or scalars that pdl() knows how to process');
-}
-
-=head2 widget
-
-The widget associated with the dataset.
-
-=cut
-
-sub widget {
-	$_[0]->{widget} = $_[1] if @_ == 2;
-	return $_[0]->{widget};
-}
-
-
-=head2 draw
-
-Calls all of the drawing functions for each plotType of the dataset. This also
-applies all the global drawing options (like C<color>, for example) that were
-supplied to the dataset.
-
-=cut
-
-# Calls all the drawing functions for the plotTypes for this dataset:
-sub draw {
-	my ($dataset) = @_;
-	my $widget = $dataset->widget;
-	
-	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
-			lineEnd rop rop2);
-	
-	# backup the dataset-wide drawing parameters:
-	my %backups;
-	foreach(@drawing_parameters) {
-		if (exists $dataset->{$_}) {
-			$backups{$_} = $dataset->{$_};
-		}
-		elsif (not exists $dataset->{$_.'s'}) {
-			$backups{$_} = $widget->$_;
-		}
-	}
-
-	# Call each plot type's drawing function, in the order specified:
-	foreach my $plotType (@{$dataset->{plotType}}) {
-		# set the default drawing parameters and draw the plot type
-		$widget->set(%backups);
-		$plotType->draw;
-	}
-	$widget->set(%backups);
 }
 
 # Returns the data values from the dataset. The widget is required for the
@@ -451,45 +504,19 @@ sub CLEAR {
 }
 
 sub STORE {
-	my ($self, $key, $value) = @_;
-	# The value needs to be an anonymous array with arguments suitable for
-	# data sets. Optional arguments are passed in hash references, and one of
-	# the options is a plotType key. That is actually a class name that is used
-	# to turn the supplied anonymous array into an object (after validating the
-	# data, of course).
-	croak('You can only add anonymous arrays or dataSet objects to dataSets')
-		unless ref($value) and (ref($value) eq 'ARRAY'
-					or eval {$value->isa('PDL::Graphics::Prima::DataSet')});
-	
+	my ($self, $name, $dataset) = @_;
 	# Silently do nothing if they try to change the widget:
-	return if $key eq 'widget';
+	return if $name eq 'widget';
 	
-	# Create a dataset if it's not a blessed object:
-	my $dataset;
-	if (ref($value) eq 'ARRAY') {
-		# If the first argument is a code reference, then the user simply wants
-		# to plot a function.
-		if (ref($value->[0]) and ref($value->[0]) eq 'CODE') {
-			# If the second argument is *also* a code reference, then they
-			# want a two-function:
-			if (ref($value->[1]) and ref($value->[1]) eq 'CODE') {
-				$dataset = PDL::Graphics::Prima::DataSet::FuncBoth->new($value, $self->{widget});
-			}
-			else {
-				$dataset = PDL::Graphics::Prima::DataSet::Func->new($value, $self->{widget});
-			}
-		}
-		# Otherwise, the user must specify both the x- and y- data sets.
-		else {
-			$dataset = PDL::Graphics::Prima::DataSet->new($value, $self->{widget});
-		}
-	}
-	else {
-		$dataset = $value;
-	}
+	# They must pass in a DataSet object:
+	croak('You can only add dataSet objects to the collection of dataSets')
+		unless eval {$dataset->isa('PDL::Graphics::Prima::DataSet')});
 	
 	# Store it:
-	$self->{$key} = $dataset;
+	$self->{$name} = $dataset;
+	
+	# Inform the dataset of its parent widget:
+	$dataset->widget($self->{widget});
 
 	# Call data initialization for all of the plot types:
 	# working here - still do this? I think that histograms will want this,
