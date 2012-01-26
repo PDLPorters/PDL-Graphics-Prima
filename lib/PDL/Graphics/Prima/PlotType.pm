@@ -1557,32 +1557,37 @@ Other plots focus on using color or greyscale to visualize data that is a
 function of two variables. If you need to plot a 2D histogram or you want to
 visualize the elements of a matrix, you will likely use these plot types.
 
+=over
+
 =cut
 
-#############################################
-# PDL::Graphics::Prima::PlotType::GridLines #
-#############################################
+package PDL::Graphics::Prima::PlotType::Grid;
+use base 'PDL::Graphics::Prima::PlotType';
 
-package PDL::Graphics::Prima::PlotType::GridLines;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+#################################################
+# PDL::Graphics::Prima::PlotType::Grid::Contour #
+#################################################
 
-# working here
+package PDL::Graphics::Prima::PlotType::Grid::Contour;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Contour);
 
-#############################################
-# PDL::Graphics::Prima::PlotType::ColorGrid #
-#############################################
+# working here - contour plot visualization of gridded data
+
+###############################################
+# PDL::Graphics::Prima::PlotType::Grid::Color #
+###############################################
 # Plots a matrix
 
-package PDL::Graphics::Prima::PlotType::ColorGrid;
+package PDL::Graphics::Prima::PlotType::Grid::Color;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 use Carp 'croak';
 
-=head2 ColorGrid
+=item pgrid::Color
 
 =for ref
 
- pt::ColorGrid( colors => PDL, [palette => PDL::Graphics::Prima::Palette],
+ pgrid::Color( [palette => PDL::Graphics::Prima::Palette],
                 [xs => PDL], [ys => PDL], options )
 
 This plot type lets you specify colors or values on a grid, primarily for making
@@ -1616,8 +1621,8 @@ data.
 =cut
 
 # Install the short-name constructor:
-sub pt::ColorGrid {
-	PDL::Graphics::Prima::PlotType::ColorGrid->new(@_);
+sub pgrid::Color {
+	PDL::Graphics::Prima::PlotType::Grid::Color->new(@_);
 }
 
 # Needed for function topdl:
