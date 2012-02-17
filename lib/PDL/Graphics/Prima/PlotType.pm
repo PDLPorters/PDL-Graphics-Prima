@@ -19,28 +19,28 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
  
  # A lines+diamonds plot
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Lines,
              ppair::Diamonds,
          ],
-     ],
+     ),
  );
  
  # Dandelions:
  $x = random(10);
  $y = random(10) + 0.5;
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Spikes(colors => cl::Green, lineWidths => 2),
              ppair::Asterisks(N_points => 11, colors => cl::White),
          ],
-     ],
+     ),
      backColor => cl::LightBlue,
      color => cl::White,
  );
@@ -52,7 +52,7 @@ This module provides a number of basic plot types that you can use in a
 PDL::Graphics::Prima plot. As far as PDL::Graphics::Prima is concerned, there
 are different kinds of data that you might want to visualize, each with their
 own distinct plot types. The three kinds of basic data sets, as described in
-L<PDL::Graphics::Prima::DataSet>, are Sets, Sequences, and Grids. Here, I will
+L<PDL::Graphics::Prima::DataSet>, are Sets, Pairs, and Grids. Here, I will
 discuss the different plot types that you can apply to each of these sorts of
 data.
 
@@ -195,9 +195,9 @@ sub draw {
 }
 
 
-############################################
-# PDL::Graphics::Prima::PlotType::Set::CDF #
-############################################
+#############################################
+# PDL::Graphics::Prima::PlotType::Set::Hist #
+#############################################
 
 =item pset::Hist
 
@@ -227,9 +227,13 @@ sub get_data_as_pixels {
 }
 
 
-=head2 Sequences
+=head2 Pairs
 
-Many plots are based on plotting points of data or lines, or perhaps shaded
+Many plots are based on plotting x/y pairs 
+
+working here
+
+of data or lines, or perhaps shaded
 areas. If you think of your data as a function of a single variable, like a
 time series, you will likely use these plot types to visualize your data.
 
