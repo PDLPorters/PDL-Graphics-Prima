@@ -214,7 +214,7 @@ working here
 #                            Pair-based Plot Types                            #
 ###############################################################################
 
-package PDL::Graphics::Prima::PlotType::Pairs;
+package PDL::Graphics::Prima::PlotType::Pair;
 use base 'PDL::Graphics::Prima::PlotType';
 
 # A function that gets the data and performs the real-to-pixel conversion:
@@ -238,7 +238,7 @@ time series, you will likely use these plot types to visualize your data.
 =cut
 
 ###################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Lines #
+# PDL::Graphics::Prima::PlotType::Pair::Lines #
 ###################################################
 
 =item ppair::Lines
@@ -280,12 +280,12 @@ memory and CPU to perform the drawing.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::Lines;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Lines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 # Install the short name constructor:
 sub ppair::Lines {
-	PDL::Graphics::Prima::PlotType::Pairs::Lines->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::Lines->new(@_);
 }
 
 # Handle the 'thread_over' property.
@@ -363,7 +363,7 @@ sub draw {
 }
 
 ########################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Trendlines #
+# PDL::Graphics::Prima::PlotType::Pair::Trendlines #
 ########################################################
 
 =item ppair::Trendlines
@@ -384,15 +384,15 @@ other dimension, you can specify that with the C<along_dim> key.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::TrendLines;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs::Lines);
+package PDL::Graphics::Prima::PlotType::Pair::TrendLines;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair::Lines);
 use strict;
 use warnings;
 use PDL;
 
 # Install the short name constructor:
 sub ppair::TrendLines {
-	PDL::Graphics::Prima::PlotType::Pairs::TrendLines->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::TrendLines->new(@_);
 }
 
 # Allow the user to specify fit weights:
@@ -437,7 +437,7 @@ sub get_data {
 }
 
 ####################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Spikes #
+# PDL::Graphics::Prima::PlotType::Pair::Spikes #
 ####################################################
 # working here - get rid of the class-specific padding; if anything, such
 # padding should be part of the general class, not this specific one
@@ -460,12 +460,12 @@ taken as the minimum of the dataset's x or y data, respectively.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::Spikes;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Spikes;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 # Install the short name constructor:
 sub ppair::Spikes {
-	PDL::Graphics::Prima::PlotType::Pairs::Spikes->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::Spikes->new(@_);
 }
 
 # Set padding options:
@@ -595,7 +595,7 @@ sub draw {
 
 
 ###################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Blobs #
+# PDL::Graphics::Prima::PlotType::Pair::Blobs #
 ###################################################
 
 =item ppair::Blobs
@@ -611,8 +611,8 @@ more specific keys C<xRadius> and C<yRadius> override the C<radius> key.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::Blobs;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Blobs;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 use PDL::Core ':Internal';
 use Carp 'croak';
@@ -620,7 +620,7 @@ use PDL;
 
 # Install the short name constructor:
 sub ppair::Blobs {
-	PDL::Graphics::Prima::PlotType::Pairs::Blobs->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::Blobs->new(@_);
 }
 
 # The blobs initializer defaults to a radius of 3 pixels
@@ -699,7 +699,7 @@ sub draw {
 }
 
 #####################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Symbols #
+# PDL::Graphics::Prima::PlotType::Pair::Symbols #
 #####################################################
 
 =item ppair::Symbols
@@ -771,8 +771,8 @@ I am not sure how useful they would be.
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::Symbols;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Symbols;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 use PDL::Core ':Internal';
 use Carp 'croak';
@@ -780,7 +780,7 @@ use PDL;
 
 # Install the short name constructor:
 sub ppair::Symbols {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_);
 }
 
 sub initialize {
@@ -886,7 +886,7 @@ sub draw {
 }
 
 #################################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Symbols Derivatives #
+# PDL::Graphics::Prima::PlotType::Pair::Symbols Derivatives #
 #################################################################
 
 =pod
@@ -910,7 +910,7 @@ N_points and filled, but those will be ignored.
 =cut
 
 sub ppair::Sticks {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_, N_points => 2, filled => 'no');
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 2, filled => 'no');
 }
 
 =item Triangles
@@ -928,7 +928,7 @@ which you B<can> override, is 'up'.
 =cut
 
 sub ppair::Triangles {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(orientation => 'up', @_, N_points => 3);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 'up', @_, N_points => 3);
 }
 
 =item Squares
@@ -944,7 +944,7 @@ specify vales for N_points and orientation, but they will be ignored.
 =cut
 
 sub ppair::Squares {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_, N_points => 4, orientation => 45);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 45);
 }
 
 =item Diamonds
@@ -960,7 +960,7 @@ ignored.
 =cut
 
 sub ppair::Diamonds {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_, N_points => 4, orientation => 0);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 0);
 }
 
 =item Stars
@@ -980,7 +980,7 @@ of course.
 =cut
 
 sub ppair::Stars {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(orientation => 90, @_, skip => 2);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 90, @_, skip => 2);
 }
 
 =item Asterisks
@@ -999,7 +999,7 @@ that will not be used.
 =cut
 
 sub ppair::Asterisks {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(orientation => 90, @_, skip => 0);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 90, @_, skip => 0);
 }
 
 =item Xs
@@ -1014,7 +1014,7 @@ arguments except the size.
 =cut
 
 sub ppair::Xs {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
 }
 
 =item Crosses
@@ -1029,7 +1029,7 @@ size, but all other Symbol options are set for you.
 =cut
 
 sub ppair::Crosses {
-	PDL::Graphics::Prima::PlotType::Pairs::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
+	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 0, skip => 0);
 }
 
 =back
@@ -1037,7 +1037,7 @@ sub ppair::Crosses {
 =cut
 
 ####################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Slopes #
+# PDL::Graphics::Prima::PlotType::Pair::Slopes #
 ####################################################
 #
 #=item ppair::Slopes
@@ -1047,7 +1047,7 @@ sub ppair::Crosses {
 #=cut
 
 #######################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Histogram #
+# PDL::Graphics::Prima::PlotType::Pair::Histogram #
 #######################################################
 
 =head2 Histogram
@@ -1104,8 +1104,8 @@ filled/unfilled specifications (as in Symbols).
 
 =cut
 
-package PDL::Graphics::Prima::PlotType::Pairs::Histogram;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Histogram;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 use Carp 'croak';
 use PDL;
@@ -1117,7 +1117,7 @@ use warnings;
 
 # Install the short name constructor:
 sub ppair::Histogram {
-	PDL::Graphics::Prima::PlotType::Pairs::Histogram->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::Histogram->new(@_);
 }
 
 # The histogram initializer ensures that the top padding is set to a reasonable
@@ -1228,20 +1228,20 @@ sub draw {
 }
 
 ###########################################################
-# PDL::Graphics::Prima::PlotType::Pairs::BoxAndWhisker #
+# PDL::Graphics::Prima::PlotType::Pair::BoxAndWhisker #
 ###########################################################
 # Plots vertical box-and-whisker at each data point
 
-package PDL::Graphics::Prima::PlotType::Pairs::BoxAndWhisker;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::BoxAndWhisker;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 #######################################################
-# PDL::Graphics::Prima::PlotType::Pairs::ErrorBars #
+# PDL::Graphics::Prima::PlotType::Pair::ErrorBars #
 #######################################################
 # Adds error bars
 
-package PDL::Graphics::Prima::PlotType::Pairs::ErrorBars;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::ErrorBars;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 # working here - ensure documentation consistency
 
@@ -1284,7 +1284,7 @@ Again, the more specific widths override the less specific ones.
 
 # Install the short name constructor:
 sub ppair::ErrorBars {
-	PDL::Graphics::Prima::PlotType::Pairs::ErrorBars->new(@_);
+	PDL::Graphics::Prima::PlotType::Pair::ErrorBars->new(@_);
 }
 
 # The ErrorBars initializer figures out the x and y bar widths
@@ -1529,20 +1529,20 @@ sub draw {
 }
 
 ###################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Bands #
+# PDL::Graphics::Prima::PlotType::Pair::Bands #
 ###################################################
 # Plots symmetric or unsymmetric error bands around the data
 
-package PDL::Graphics::Prima::PlotType::Pairs::Bands;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Bands;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 ##################################################
-# PDL::Graphics::Prima::PlotType::Pairs::Area #
+# PDL::Graphics::Prima::PlotType::Pair::Area #
 ##################################################
 # Plots shaded area, where one edge is the data
 
-package PDL::Graphics::Prima::PlotType::Pairs::Area;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Pairs);
+package PDL::Graphics::Prima::PlotType::Pair::Area;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 
 ###############################################################################
@@ -2192,7 +2192,7 @@ This would then be associated with different dataSets, which would have
 constructor names like:
 
  ds::Set
- ds::Pairs
+ ds::Pair
  ds::Grid
 
 =item Add support for 3d Plots

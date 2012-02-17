@@ -13,7 +13,7 @@ PDL::Graphics::Prima::DataSet - the way we think about data
  -distribution => ds::Set(
      $data, plotType => pset::CDF
  ),
- -lines => ds::Seq(
+ -lines => ds::Pair(
      $x, $y, plotType => [ppair::Lines, ppair::Diamonds]
  ),
  -contour => ds::Grid(
@@ -36,7 +36,7 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 
 C<PDL::Graphics::Prima> differentiates between a few kinds of data: Sets,
 Pair collections, and Grids. A Set is an unordered collection of data, such as the
-heights of a class of students. A Pair collection is an ordered collection of x/y
+heights of a class of students. A Pair collection is an collection of x/y
 pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
 colors of a photograph.
 
@@ -398,25 +398,23 @@ sub get_data {
 =cut
 
 ###############################################################################
-#                                    Pairs                                    #
+#                                    Pair                                    #
 ###############################################################################
 
-package PDL::Graphics::Prima::DataSet::Pairs;
+package PDL::Graphics::Prima::DataSet::Pair;
 use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
 use strict;
 use warnings;
 
-=head2 Pairs
+=head2 Pair
 
-Pairs are collections of paired data. A typical set of pairs is the sort of
-thing you would visualize with an x/y plot: a time series
+Pairwise datasets are collections of paired x/y data. A typical Pair dataset
+is the sort of thing you would visualize with an x/y plot: a time series
 such as the series of high temperatures for each day in a month or the x- and
 y-coordinates of a bug walking across your desk. PDL::Graphics::Prima provides
-many ways of visualizing Pairs, as discussed under
-L<PDL::Graphics::Prima::PlotType/Pairs>.
-
-WORKING HERE - change things over from Sequence to Pairs
+many ways of visualizing Pair datasets, as discussed under
+L<PDL::Graphics::Prima::PlotType/Pair>.
 
 The dimensions of pluralized properties (i.e. C<colors>) should
 thread-match the dimensions of the data. An important exception to this is
@@ -426,34 +424,34 @@ The default plot type is C<ppair::Diamonds>.
 
 =over
 
-=item ds::Pairs - short-name constructor
+=item ds::Pair - short-name constructor
 
 =for sig
 
-    ds::Pairs($x_data, $y_data, option => value, ...)
+    ds::Pair($x_data, $y_data, option => value, ...)
 
-The short-name constructor to create sequences. The data can be either a piddle
-of values or an array reference of values (which will be converted to a piddle
-during initialization).
+The short-name constructor to create pairwise datasets. The x- and y-data
+can be either piddles or array references (which will be converted to a
+piddle during initialization).
 
 =cut
 
-sub ds::Pairs {
-	croak('ds::Pairs expects x- and y-data and then key => value pairs, but you'
+sub ds::Pair {
+	croak('ds::Pair expects x- and y-data and then key => value pairs, but you'
 		. ' supplied an odd number of arguments') if @_ % 2 == 1;
 	my ($x_data, $y_data) = (shift, shift);
-	return PDL::Graphics::Prima::DataSet::Pairs->new(@_
+	return PDL::Graphics::Prima::DataSet::Pair->new(@_
 		, x => $data, y => $y_data);
 }
 
 =item expected_plot_class
 
-Sequences expect plot type objects that are derived from
-C<PDL::Graphics::Prima::PlotType::Pairs>.
+Pair datasets expect plot type objects that are derived from
+C<PDL::Graphics::Prima::PlotType::Pair>.
 
 =cut
 
-sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Pairs'}
+sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Pair'}
 
 # Standard initialization, and ensures that the data are piddles.
 sub init {
@@ -472,7 +470,7 @@ sub init {
 	};
 	return unless $@;
 	
-	croak('For Sequence datasets, the x- and y-data must be piddles '
+	croak('For pairwise datasets, the x- and y-data must be piddles '
 		. 'or scalars that pdl() knows how to process');
 }
 
