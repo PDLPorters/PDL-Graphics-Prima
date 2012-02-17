@@ -832,37 +832,71 @@ sub guess_scaling_for {
 =cut
 
 
-###############################################################################
-#                                    Other                                    #
-###############################################################################
+##############################################################################
+#                                    Func                                    #
+##############################################################################
 
-=head2 PDL::Graphics::Prima::DataSet::Func
+=head2 Func
 
-This dataset only takes a function reference and computes the values it needs
-from the min/max bounds of the plotting. You can specify the number of data
+PDL::Graphics::Prima provides a special pair dataset that takes a function
+reference instead of a set of data. The function should take a piddle of x-values
+as input and compute and return the y-values. You can specify the number of data
 points by supplying
 
  N_points => value
 
-in the list of key-value pairs that initialize the dataset.
-
-working here - clarify and expand
+in the list of key-value pairs that initialize the dataset. Most of the
+functionality is inherited from C<PDL::Graphics::Prima::DataSet::Pair>, but
+there are a few exceptions.
 
 =cut
 
 package PDL::Graphics::Prima::DataSet::Func;
-our @ISA = qw(PDL::Graphics::Prima::DataSet);
+our @ISA = qw(PDL::Graphics::Prima::DataSet::Pair);
 
 use Carp 'croak';
 use strict;
 use warnings;
 
-# Even less to do for this than for a normal dataset. Just store the function in
-# $self and ensure we have a sensible value for N_points:
-sub initialize {
-	my ($dataset, $array_ref) = @_;
-	$dataset->{func} = $array_ref->[0];
+=over
+
+=item ds::Func - short-name constructor
+
+=for sig
+
+    ds::Func($subroutine, option => value, ...)
+
+The short-name constructor to create function datasets. The subroutine must be
+a reference to a subroutine, or an anonymous sub. For example, 
+
+=for example
+
+ # Using an anonymous subroutine:
+ ds::Func ( sub {
+     my $xs = shift;
+     return $xs->exp;
+ })
+ 
+ # Using PDL's exponential function:
+ ds::Func (\&PDL::exp)
+
+=cut
+
+sub ds::Func {
+	croak('ds::Func expects a function reference and then key => value pairs, but you'
+		. ' supplied an even number of arguments') if @_ % 2 == 0;
+	return PDL::Graphics::Prima::DataSet::Func->new(func => @_);
+}
+
+# Even less to do for this than for a normal dataset. Just verify the function,
+# store it in $self, and ensure we have a sensible value for N_points:
+sub init {
+	my $self = shift;
 	
+	croak('Func datasets require a function reference, but what you supplied '
+		. 'is not a function reference')
+		unless ref($self->{func}) and ref($self->{func}) eq 'CODE';
+
 	# Set the default number of data points (for evaluated data) to 200:
 	$dataset->{N_points} ||= 200;
 	croak("N_points must be a positive number")

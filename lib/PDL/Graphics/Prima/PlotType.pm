@@ -889,9 +889,9 @@ sub draw {
 		, $self->{skip}, %props);
 }
 
-#################################################################
+#############################################################
 # PDL::Graphics::Prima::PlotType::Pair::Symbols Derivatives #
-#################################################################
+#############################################################
 
 =pod
 
@@ -907,8 +907,7 @@ give descriptive names to many common symbols and include:
  ppair::Sticks( [size => PDL], [orientation => PDL], options )
 
 C<ppair::Sticks> is a wrapper around the Symbols plotType that draws 2-point polygons,
-that is, sticks. This can be very useful to visualize flow-fields, for
-example. You can specify the orientation and the size; you can also specify
+that is, sticks. You can specify the orientation and the size; you can also specify
 N_points and filled, but those will be ignored.
 
 =cut
@@ -994,7 +993,6 @@ sub ppair::Stars {
  ppair::Asterisks( [size => PDL], [N_points => PDL::Byte],
                 [orientation => PDL], options )
 
-
 C<ppair::Asterisks> creates N-sided asterisks. It does this by forcing a skip
 of zero that cannot be overridden. As with Stars, the default orientation is
 'up' but that can be overridden. You can also specify the fill state, but
@@ -1012,8 +1010,8 @@ sub ppair::Asterisks {
 
  ppair::Xs( [size => PDL], options )
 
-C<ppair::Xs> creates 'X' shape, i.e. tilted crosses. This sets all the Symbol
-arguments except the size.
+C<ppair::Xs> creates C<x> shaped symbols. This sets all the Symbol arguments
+except the size, so although you can specify them, they will be ignored.
 
 =cut
 
@@ -1027,8 +1025,9 @@ sub ppair::Xs {
 
  ppair::Crosses( [size => PDL], options )
 
-C<ppair::Crosses> creates cross-shaped symbols. Again, you are free to set the
-size, but all other Symbol options are set for you.
+C<ppair::Crosses> creates cross-shaped symbols, i.e. a C<+> shape. As with Xs,
+you are free to set the size, but all other Symbol options are set for you and
+will be ignored if you specify them.
 
 =cut
 
