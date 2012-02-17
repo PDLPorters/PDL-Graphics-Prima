@@ -14,7 +14,7 @@ PDL::Graphics::Prima::DataSet - the way we think about data
      $data, plotType => pset::CDF
  ),
  -lines => ds::Seq(
-     $x, $y, plotType => [pseq::Lines, pseq::Diamonds]
+     $x, $y, plotType => [ppair::Lines, ppair::Diamonds]
  ),
  -contour => ds::Grid(
      $matrix, bounds => [$left, $bottom, $right, $top],
@@ -35,8 +35,8 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 =head1 DESCRIPTION
 
 C<PDL::Graphics::Prima> differentiates between a few kinds of data: Sets,
-Sequences, and Grids. A Set is an unordered collection of data, such as the
-heights of a class of students. A Sequence is an ordered collection of x/y
+Pair collections, and Grids. A Set is an unordered collection of data, such as the
+heights of a class of students. A Pair collection is an ordered collection of x/y
 pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
 colors of a photograph.
 
@@ -44,7 +44,7 @@ working here - this needs to be cleaned up!
 
 In addition, there are two derived kinds of datasets when you wish to specify
 a function instead of raw set of data. For example, to plot an analytic function,
-you could use a Function instead of a Sequence. This has the advantage that if
+you could use a Function instead of Pairs. This has the advantage that if
 you zoom in on the function, the curve is recalculated and looks smooth instead
 of jagged. Similarly, if you can describe a surface by a function, you can plot
 that function using a function grid, i.e. FGrid.
@@ -181,13 +181,17 @@ sub compute_collated_min_max_for {
 
 =item new
 
-
+This is the unversal constructor that is called by the short-name constructors
+introduced below. This handles the uniform packaging of plotTypes (for
+example, allowing the user to say C<plotType => ppair::Diamonds> instead of
+the more verbose C<plotTypes => [ppair::Diamonds]>). In general, you (the
+user) will not need to invoke this constructor directly.
 
 =cut
 
 sub new {
 	# Short-name constructors are required to send us stuff that looks like
-	# this. In particular, if they must pack their data into appropriately
+	# this. In particular, they must pack their data into appropriately
 	# named keys among the %options
 	my ($class, %options) = @_;
 	
@@ -416,17 +420,17 @@ WORKING HERE - change things over from Sequence to Pairs
 
 The dimensions of pluralized properties (i.e. C<colors>) should
 thread-match the dimensions of the data. An important exception to this is
-C<pseq::Lines>, in which case you must specify how you want properties to thread.
+C<ppair::Lines>, in which case you must specify how you want properties to thread.
 
-The default plot type is C<pseq::Diamonds>.
+The default plot type is C<ppair::Diamonds>.
 
 =over
 
-=item ds::Seq - short-name constructor
+=item ds::Pairs - short-name constructor
 
 =for sig
 
-    ds::Seq($x_data, $y_data, option => value, ...)
+    ds::Pairs($x_data, $y_data, option => value, ...)
 
 The short-name constructor to create sequences. The data can be either a piddle
 of values or an array reference of values (which will be converted to a piddle
@@ -434,29 +438,29 @@ during initialization).
 
 =cut
 
-sub ds::Seq {
-	croak('ds::Seq expects x- and y-data and then key => value pairs, but you'
+sub ds::Pairs {
+	croak('ds::Pairs expects x- and y-data and then key => value pairs, but you'
 		. ' supplied an odd number of arguments') if @_ % 2 == 1;
 	my ($x_data, $y_data) = (shift, shift);
-	return PDL::Graphics::Prima::DataSet::Sequence->new(@_
+	return PDL::Graphics::Prima::DataSet::Pairs->new(@_
 		, x => $data, y => $y_data);
 }
 
 =item expected_plot_class
 
 Sequences expect plot type objects that are derived from
-C<PDL::Graphics::Prima::PlotType::Sequence>.
+C<PDL::Graphics::Prima::PlotType::Pairs>.
 
 =cut
 
-sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Sequence'}
+sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Pairs'}
 
 # Standard initialization, and ensures that the data are piddles.
 sub init {
 	my $self = shift;
 	
 	# Supply a default plot type:
-	$self->{plotTypes} = [pseq::Diamonds] unless exists $self->{plotTypes};
+	$self->{plotTypes} = [ppair::Diamonds] unless exists $self->{plotTypes};
 	
 	# Check that the plotTypes are valid:
 	$self->check_plot_types(@{$self->{plotTypes}});
