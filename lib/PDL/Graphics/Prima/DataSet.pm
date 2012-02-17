@@ -526,7 +526,7 @@ differently, it is a structure in which the data is described by two indices.
 The analogous mathematical structure is a matrix and the analogous visual is an
 image. PDL::Graphics::Prima provides a few ways to visualize grids, as
 discussed under L<PDL::Graphics::Prima::PlotType/Grids>. The default plot type
-is C<pseq::Color>.
+is C<pgrid::Color>.
 
 This is the least well thought-out dataSet. As such, it may change in the
 future. All such changes will, hopefully, be backwards compatible.

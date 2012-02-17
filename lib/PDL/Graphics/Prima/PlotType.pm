@@ -65,7 +65,7 @@ as documented.
  ppair::Blobs(colors => $my_colors)
  
  # Specify different line widths for each column in the histogram:
- pt::Histogram(lineWidths => $the_widths)
+ ppair::Histogram(lineWidths => $the_widths)
 
 =cut
 
@@ -366,9 +366,9 @@ sub draw {
 	}
 }
 
-########################################################
+####################################################
 # PDL::Graphics::Prima::PlotType::Pair::Trendlines #
-########################################################
+####################################################
 
 =item ppair::Trendlines
 
@@ -440,9 +440,9 @@ sub get_data {
 	return ($xs, $ys);
 }
 
-####################################################
+################################################
 # PDL::Graphics::Prima::PlotType::Pair::Spikes #
-####################################################
+################################################
 # working here - get rid of the class-specific padding; if anything, such
 # padding should be part of the general class, not this specific one
 
@@ -455,7 +455,7 @@ sub get_data {
 Draws x/y data as a collection of vertical or horizontal lines. In the default
 behavior, for each (x, y) data point, it draws a line from (x, 0) to (x, y). You
 can change the baseline by specifying either the C<y_baseline> or C<x_baseline>
-key. For example, by specifying C<< y_baseline => 5 >>, this will draw a lines
+key. For example, if you specify C<< y_baseline => 5 >>, this will draw lines
 starting from (x, 5) instead of (x, 0). Specifying C<< x_baseline => -2 >> will
 lead to horizontal lines instead of vertical lines, drawn from (-2, y) to
 (x, y). Finally, if you specify the undefined value, as
@@ -598,9 +598,9 @@ sub draw {
 
 
 
-###################################################
+###############################################
 # PDL::Graphics::Prima::PlotType::Pair::Blobs #
-###################################################
+###############################################
 
 =item ppair::Blobs
 
