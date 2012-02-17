@@ -370,7 +370,7 @@ sub draw {
 
 =for ref
 
- pseq::Trendlines( [full_threading => BOOLEAN,] [weights => PDL,]
+ pseq::Trendlines( [[thread_like => STRING,] [weights => PDL,]
                  [along_dim => INTEGER,] options )
 
 Draws linear fits to the x/y data as lines. This is a descendent of
@@ -2210,7 +2210,7 @@ you're looking.)
 =item New Plot Types
 
 There are many, many plot types that are not yet supported, but should
-be. Time-series plot-types that come to mind include:
+be. Sequential plot-types that come to mind include:
 
 =over
 
@@ -2229,7 +2229,21 @@ Box-and-whisker plots should be easy enough, a simple extension of error bars.
 
 =back
 
+Set plot-types that come to mind include many fitting types, such as:
 
+=over
+
+=item gaussian-fit
+
+=item lorentzian-fit
+
+=item power-law-fit
+
+=item exponential-fit
+
+etc
+
+=back
 
 =item simpler image support
 
