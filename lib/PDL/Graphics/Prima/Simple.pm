@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Carp 'croak';
 
-# Import the symbols like pseq::Lines and lm::Auto into the global symbol
+# Import the symbols like ppair::Lines and lm::Auto into the global symbol
 # table so the user can use them
 use PDL::Graphics::Prima::Palette;
 use PDL::Graphics::Prima::Limits;
@@ -69,20 +69,28 @@ PDL::Graphics::Prima::Simple - a very simple plotting interface
  # multiple datasets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines         => [$x, $y],
-     -color_squares => [$x, $y + 1, colors => $colors,
-                      plotType => pseq::Squares(filled => 1)],
+     -lines         => ds::Pair($x, $y),										# default is now diamonds?
+     -color_squares => ds::Pair($x, $y + 1
+         , colors => $colors,
+         , plotType => ppair::Squares(filled => 1)
+     ),
      x => { label   => 'Time' },
      y => { label   => 'Sine' },
  );
 
 =head1 DESCRIPTION
 
-C<PDL::Graphics::Prima::Simple> provides the simplest possible interface for
-plotting using the L<PDL::Graphics::Prima> graphing widget at the cost of
-some of the more powerful aspects of the library. This document not only
-explains how to use C<PDL::Graphics::Prima::Simple>, but also provides a
-tutorial for understanding the plotting capabilities of L<PDL::Graphics::Prima>.
+One of Perl's mottos is to "make easy things easy, and hard things possible."
+The bulk of the modules provided by the L<PDL::Graphics::Prima> distribution
+focus on the latter half, making hard but very powerful things possible.
+This module tackles the other half: making easy things easy.
+This module provides a
+number of simple functions for quick data plotting so that you can
+easily get a first look at your data. The interface is functional, in
+contrast to the GUI/OO interface of the rest of L<PDL::Graphics::Prima>.
+
+In addition to making easy plots easy, this module and its documentation are
+meant to serve as an introduction to L<PDL::Graphics::Prima>.
 If you are new to the libarary, this is where you should start.
 
 When you use this library, you get a handful of functions for quick data
@@ -117,8 +125,8 @@ y-bounds, the third of which is the matrix to plot
 =item plot (...)
 
 a much more powerful routine that takes the same arguments you would pass to
-the constructor of a L<PDL::Graphics::Prima> widget, but which lacks the
-flexibility you get with the full GUI toolkit
+the constructor of a L<PDL::Graphics::Prima> widget, but which lacks much of
+the flexibility you get with the full GUI toolkit
 
 =back
 
@@ -159,9 +167,10 @@ point the plot will be zoomed-in to the region that you selected.
 
 =item scroll-wheel zooming
 
-You can zoom-in and zoom-out using your scroll wheel.* The zooming is designed to
+You can zoom-in and zoom-out using your scroll wheel. The zooming is designed to
 keep the data under the mouse at the same location as you zoom in and out.
-Unfortunately, some recent changes have made this operation less than perfect.
+(Unfortunately, some recent changes have made this operation less than perfect,
+but I think it still does a pretty good job.)
 
 =item dragging/panning
 
@@ -227,14 +236,14 @@ gap into the line.
 
 To generate the same plot using the L<plot|/"PLOT FUNCTION"> command, you would type this:
 
- plot(-data => [$x, $y]);
+ plot(-data => ds::Pair(@_, plotType => ppair::Lines));
 
 =cut
 
 sub line_plot {
 	croak("line_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => \@_);
+	plot(-data => ds::Pair(@_, plotType => ppair::Lines));
 }
 
 =item circle_plot ($x, $y)
@@ -242,22 +251,22 @@ sub line_plot {
 Plots filled circles at (x, y). Equivalent L<plot|/"PLOT FUNCTION"> commands
 include:
 
- plot(-data => [$x, $y, plotType => pseq::Blobs]);
- plot(-data => [
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Blobs));
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
+     plotType => ppair::Symbol(
          filled => 'yes',
-         N_pionts => 0,
+         N_points => 0,
      ),
- ]);
+ ));
 
 =cut
 
 sub circle_plot {
 	croak("circle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Blobs]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Blobs));
 }
 
 =item triangle_plot ($x, $y)
@@ -265,23 +274,27 @@ sub circle_plot {
 Plots filled upright triangles at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Triangles(filled => 1)]);
- plot(-data => [
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
+     plotType => ppair::Triangles(filled => 1)
+ ));
+ plot(-data => ds::Pair(
+     $x,
+     $y,
+     plotType => ppair::Symbol(
          filled => 'yes',
-         N_pionts => 3,
+         N_points => 3,
          orientation => 'up',
      ),
- ]);
+ ));
 
 =cut
 
 sub triangle_plot {
 	croak("triangle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Triangles(filled => 1)]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Triangles(filled => 1)));
 }
 
 =item square_plot ($x, $y)
@@ -289,23 +302,27 @@ sub triangle_plot {
 Plots filled squares at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Squares(filled => 1)]);
- plot(-data => [
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
+     plotType => ppair::Squares(filled => 1)
+ ));
+ plot(-data => ds::Pair(
+     $x,
+     $y,
+     plotType => ppair::Symbol(
          filled => 'yes',
-         N_pionts => 4,
+         N_points => 4,
          orientation => 45,
      ),
- ]);
+ ));
 
 =cut
 
 sub square_plot {
 	croak("square_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Squares(filled => 1)]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Squares(filled => 1)));
 }
 
 =item diamond_plot ($x, $y)
@@ -313,22 +330,27 @@ sub square_plot {
 Plots filled diamonds at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Diamonds(filled => 1)]);
- plot(-data => [
+ plot(-data => ds::Pair($x, $y));
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
+     plotType => ppair::Diamonds(filled => 1)
+ ));
+ plot(-data => ds::Pair(
+     $x,
+     $y,
+     plotType => ppair::Symbol(
          filled => 'yes',
-         N_pionts => 4,
+         N_points => 4,
      ),
- ]);
+ ));
 
 =cut
 
 sub diamond_plot {
 	croak("diamond_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Diamonds(filled => 1)]);
+	plot(-data => ds::Pair(@_));
 }
 
 =item cross_plot ($x, $y)
@@ -336,22 +358,22 @@ sub diamond_plot {
 Plots crosses (i.e. plus symbols) at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Crosses]);
- plot(-data => [
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Crosses));
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
-         N_pionts => 4,
+     plotType => ppair::Symbol(
+         N_points => 4,
          skip => 0,
      ),
- ]);
+ ));
 
 =cut
 
 sub cross_plot {
 	croak("cross_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Crosses]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Crosses));
 }
 
 =item X_plot ($x, $y)
@@ -359,23 +381,23 @@ sub cross_plot {
 Plots X symbols at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Xs]);
- plot(-data => [
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Xs));
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
-         N_pionts => 4,
+     plotType => ppair::Symbol(
+         N_points => 4,
          skip => 0,
          orientation => 45,
      ),
- ]);
+ ));
 
 =cut
 
 sub X_plot {
 	croak("X_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Xs]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Xs));
 }
 
 =item asterisk_plot ($x, $y)
@@ -383,23 +405,27 @@ sub X_plot {
 Plots five-pointed asterisks at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
 commands include:
 
- plot(-data => [$x, $y, plotType => pseq::Asterisks(N_points => 5)]);
- plot(-data => [
+ plot(-data => ds::Pair(
      $x,
      $y,
-     plotType => pseq::Symbol(
-         N_pionts => 5,
+     plotType => ppair::Asterisks(N_points => 5)
+ ));
+ plot(-data => ds::Pair(
+     $x,
+     $y,
+     plotType => ppair::Symbol(
+         N_points => 5,
          skip => 0,
          orientation => 'up',
      ),
- ]);
+ ));
 
 =cut
 
 sub asterisk_plot {
 	croak("asterisk_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Asterisks(N_pionts => 5)]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Asterisks(N_points => 5)));
 }
 
 
@@ -418,6 +444,8 @@ y-points to be plotted. Here are some examples:
 
  # Plot PDL's exponential function:
  func_plot (1, 5, \&PDL::exp);
+ # this time with higher resolution:
+ func_plot (1, 5, \&PDL::exp
  
  # Plot a rescaled tangent function:
  func_plot (1, 5, sub {
@@ -462,7 +490,7 @@ If you do not specify the number of points to draw, the equivalent L<plot|/"PLOT
 command is this:
 
  plot(
-     -data => [$func_ref],
+     -data => ds::Func($func_ref),
      x => { min => $xmin, max => $xmax },
  );
 
@@ -470,7 +498,7 @@ If you do specify the number of points to draw, the equivalent L<plot|/"PLOT FUN
 is this:
 
  plot(
-     -data => [$func_ref, N_points => $N_points],
+     -data => ds::Func($func_ref, N_points => $N_points),
      x => { min => $xmin, max => $xmax },
  );
 
@@ -482,7 +510,7 @@ sub func_plot {
 		unless @_ == 3 or @_ == 4;
 	my ($xmin, $xmax, $func_ref, $N_points) = @_;
 	plot(
-		-data => [$func_ref, ($N_points ? (N_points => $N_points) : ())],
+		-data => ds::Func($func_ref, ($N_points ? (N_points => $N_points) : ())),
 		x => {
 			min => $xmin,
 			max => $xmax,
@@ -503,11 +531,11 @@ PDL's L<hist|PDL::Basic/"hist"> function, so the following idiom works:
 
 PDL's L<hist|PDL::Basic/"hist"> function does not (to my knowledge) generate bad
 values, but if you generate your values by some other means and any heights or
-positions are bad the will be skipped, leaving a gap in the histogram.
+positions are bad they will be skipped, leaving a gap in the histogram.
 
 The equivalent L<plot|/"PLOT FUNCTION"> command is:
 
- plot(-data => [$x, $y, plotType => pseq::Histogram]);
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Histogram));
  
 
 =cut
@@ -515,32 +543,53 @@ The equivalent L<plot|/"PLOT FUNCTION"> command is:
 sub hist_plot {
 	croak("hist_plot expects two piddles, the bin-centers and the bin heights")
 		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => [@_, plotType => pseq::Histogram]);
+	plot(-data => ds::Pair(@_, plotType => ppair::Histogram));
 }
 
-=item matrix_plot ([$xbounds, $ybounds,] $matrix)
+=item matrix_plot ([$x_edges, $y_edges,] $matrix)
 
-The C<matrix_plot> function takes either one or three arguments. The first designates the
-x-bounds of the plot; the second designates the y-bounds of the plot, and
-the third specifies a matrix that you want to have plotted in grey-scale.
-The x-bounds and y-bounds arguments should either be two-element arrays or
-two-element piddles designating the min and the max. (You can also pass
-arrays or piddles with more elements, but I will defer discussing that until
-later.)
+The C<matrix_plot> function takes either one or three arguments. The first
+designates the x min and max of the plot; the second designates the y min
+and max of the plot, and the third specifies a matrix that you want to have
+plotted in grey-scale. The x-edges and y-edges arguments should be
+two-element array references, such as:
 
-Bad values, if your data has any, are skipped. This means that you will have
+ matrix_plot ([0 => 5], [1 => 10], $matrix);
+
+Bad values, if your matrix has any, are skipped. This means that you will have
 a white spot in its place (since the background is white), which is not
 great. Future versions may use a different color to specify bad values.
 
-If you do not specify the x- and y-bounds, the equivalent L<plot|/"PLOT FUNCTION"> command is:
+Not specifying edges looks like this:
 
- plot(-image => [plotType => pgrid::ColorGrid(colors => $matrix)]);
+ matrix_plot ($matrix);
 
-If you do specify the x- and y-bounds, the quivalent is:
+and its equivalent L<plot|/"PLOT FUNCTION"> commands are:
 
- plot(-image => [$x_bounts, $y_bounts
-               , plotType => pgrid::ColorGrid(colors => $matrix)]
- );
+ plot(-image => ds::Grid(
+     $matrix,
+     x_edges => [0, 1],
+     y_edges => [0, 1],
+ ));
+ plot(-image => ds::Grid(
+     $matrix,
+     x_edges => [0, 1],
+     y_edges => [0, 1],
+     plotType => pgrid::Color,
+ ));
+
+Specifying edges looks like this:
+
+ matrix_plot ([0 => 5], [1 => 10], $matrix);
+
+and the quivalent is:
+
+ plot(-image => ds::Grid(
+     $matrix,
+     x_edges => [0, 5],
+     y_edges => [1, 10],
+     plotType => pgrid::Color,
+ ));
 
 =cut
 
@@ -559,7 +608,11 @@ sub matrix_plot {
 			. "matrix_plot ([x0, xf], [y0, yf], \$image)")
 	}
 	
-	plot(-image => [$x, $y, plotType => pgrid::ColorGrid(colors => $matrix)]);
+	plot(-image => ds::Grid(
+		$matrix,
+		x_edges => $x
+		y_edges => $y
+	));
 }
 
 =back
@@ -579,21 +632,21 @@ this function, using the actual widget in an interactive GUI script is simply a
 matter of understanding how to structure a GUI program.
 
 The C<plot> function takes options and dataset specifications as key/value
-pairs. The basic usage of plot looks like this:
+pairs. The basic usage of C<plot> looks like this:
 
  plot(
-     -dataset1 => [$x1, $y1, ...options...],
+     -dataset1 => ds::Pair($x1, $y1, ...options...),
      x => {
      	other => options,
      },
-     -dataset2 => [$x2, $y2, ...options...],
+     -dataset2 => ds::Pair($x2, $y2, ...options...),
      y => {
      	axis => options,
      },
-     -mydata => [$data_a, $data_b, ...options...],
+     -mydist => ds::Set($data, ...options...),
      title => 'Title!',
      titleSpace => 60,
-     -more_data => [$x_a, $y_a],
+     -the_image => ds::Grid($image, ...options...),
      ... Prima Drawable options ...
  );
 
@@ -615,39 +668,43 @@ Each dataSet can have one or more plotTypes. If you only want to specify a
 single plotType, you can do so by specifying it after the plotType key for your
 dataset:
 
- -data => [
+ -data => ds::Pair(
      ...
-     plotType => pseq::Squares,
+     plotType => ppair::Squares,
      ...
- ]
+ )
 
 You can specify multiple plotTypes by passing them in an anonymous array:
 
- -data => [
+ -data => ds::Pair(
      ...
-     plotType => [pseq::Triangles, pseq::Lines],
+     plotTypes => [ppair::Triangles, ppair::Lines],
      ...
- ]
+ )
+
+(Note that the singular and plural keys C<plotType> and C<plotTypes> are
+interchangeable. Use whichever is appropriate.)
 
 All the plotTypes take key/value paired arguments. You can specify various
 L<Prima::Drawable> properties like line-width using the C<lineWidths> key
 or color using the C<colors> key; you can pass plotType-specific options
-like symbol size (for C<pseq::Symbol> and its derivatives) using the C<size> key
+like symbol size (for C<ppair::Symbol> and its derivatives) using the C<size> key
 or the baseline height for C<pt::Histogram> using the C<baseline> key; and
 some of the plotTypes have required arguments, such as at least one error bar
-specification with C<pseq::ErrorBars>. To create red blobs, you would use
+specification with C<ppair::ErrorBars>. To create red blobs, you would use
 something like this:
 
- pseq::Blobs(colors => cl::LightRed)
+ ppair::Blobs(colors => cl::LightRed)
 
 To specify a 5-pixel line width for a Lines plotType, you would say
 
- pseq::Lines(lineWidths => 5)
+ ppair::Lines(lineWidths => 5)
 
 (Notice that these keys are identical to the properties listed in L<Prima::Drawable>,
 except that they are plural. Plural keys means you can specify a piddle for the
 values and it will thread over the piddle while it threads over the drawing.
-At the moment, singular keys do not work with plotTypes.)
+At the moment, singular keys do not work with plotTypes, but as shown above,
+you can specify a scalar value for a plural key and it will work.)
 
 When a dataset gets drawn, it draws the different plotTypes in the order
 specified. For example, suppose you specify C<cl::Black> filled triangles and
@@ -655,69 +712,91 @@ C<cl::LightRed> lines. If the triangles are specified first, they will have red
 lines drawn through them, and if the triangles are second, the triangles will
 be drawn over the red lines.
 
-The default plot type is C<pseq::Lines> so you do not need to specify that if you
-simply want lines drawn from one point to the next. The plotTypes are discussed
+Each dataSet has a default plot type. For Sets, it is C<pset::CDF>. For
+Pairs, it is C<ppair::Diamonds>. For Grids, it is C<pgrid::Color>. If you
+want to use a different plotType, you need to specify it as illustrated
+by the super-simple examples above. The plotTypes are discussed
 thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
 
- pseq::Lines      - lines from point to point
- pseq::TrendLines - a linear fit to the data
- pseq::Blobs      - blobs (filled ellipses) with specifiable x- and y- radii
- pseq::Symbols    - open or filled regular geometric shapes with many options:
-                  size, orientation, number of points, skip pattern, and fill
- pseq::Triangles  - open or filled triangles with  specifiable
-                - orientations and sizes
- pseq::Squares    - open or filled squares with specifiable sizes
- pseq::Diamonds   - open or filled diamonds with specifiable sizes
- pseq::Stars      - open or filled star shapes with specifiable sizes,
-                  orientations, and number of points
- pseq::Asterisks  - asterisk shapes with specifiable size, orientation, and
-                  number of points
- pseq::Xs         - four-point asterisks that look like xs, with specifiable
-                  sizes
- pseq::Crosses    - four-pint asterisks that look like + signs, with
-                  specifiable sizes
- pseq::Spikes     - spikes to (x,y) from a specified vertical or horizontal
-                  baseline
- pseq::Histogram  - histograms with specifiable baseline and top padding
- pseq::ErrorBars  - error bars with specified x/y errors and cap sizes
+ Set plotTypes
+ =============
+ pset::CDF         - plots a cumulative distribution curve for the given data
  
- # This is likely to be removed, or placed into a different category:
- pt::ColorGrid  - colored rectangles, i.e. images
+ 
+ Pair plotTypes
+ ==============
+ ppair::Lines      - lines from point to point
+ ppair::TrendLines - a linear fit to the data
+ ppair::Blobs      - blobs (filled ellipses) with specifiable x- and y- radii
+ ppair::Symbols    - open or filled regular geometric shapes with many options:
+                     size, orientation, number of points, skip pattern, and fill
+ ppair::Triangles  - open or filled triangles with  specifiable
+                     orientations and sizes
+ ppair::Squares    - open or filled squares with specifiable sizes
+ ppair::Diamonds   - open or filled diamonds with specifiable sizes
+ ppair::Stars      - open or filled star shapes with specifiable sizes,
+                     orientations, and number of points
+ ppair::Asterisks  - asterisk shapes with specifiable size, orientation, and
+                     number of points
+ ppair::Xs         - four-point asterisks that look like xs, with specifiable
+                     sizes
+ ppair::Crosses    - four-point asterisks that look like + signs, with
+                     specifiable sizes
+ ppair::Spikes     - spikes to (x,y) from a specified vertical or horizontal
+                     baseline
+ ppair::Histogram  - histograms with specifiable baseline and top padding
+ ppair::ErrorBars  - error bars with specified x/y errors and cap sizes
+ 
+ 
+ Grid plotTypes
+ ==============
+ pgrid::ColorGrid  - colored rectangles, i.e. images
+
+More plot types are planned, but the ones listed above are the currently
+implemented ones.
+
+The plotTypes are the simplest unit in L<PDL::Graphics::Prima>. The next
+largest unit is the dataSet, which not only holds data of various kinds, but
+also holds the plotTypes that are to be applied to the given data.
 
 =head2 Data Sets
 
 You can plot one or more sets of data on a given Plot. You do this by specifying
-the dataset's name with a dash, followed by an anonymous array with the
-properties of your dataset (including the plotType, as already discussed).
-There are two kinds of datasets that you can specify: data-based and
-function-based. Data-based datasets are what you would use when you have
-explicit x/y data that needs to be visualized. Function-based datasets are what
-you would use when you want to visualize functions, such as fit functions:
+the dataset's name with a dash, followed by a dataSet constructor. The dataSet
+constructor specifies the properties of your dataset, including the data
+itself along with the plotType or plotTypes.
 
- -data => [ $x, $y, ... ],
- -func => [ $func_ref, ... ],
+As I have already aluded, there are three kinds of dataSets: Sets, Pairs,
+and Grids. The Function Pairs dataset is a drop-in replacement for a Pair
+dataSet that plots a function instead of explicitly specified data.
 
-The difference between the two is that function-based datasets have a CODE
-reference as its first argument, while data-based datasets do not. In fact,
-data-based datasets do not need to have piddles for their first two arguments.
-Anything that can be converted to a piddle, including scalar numbers and
-anonymous arrays of values, can be specified as the first two arguments for
-data-based datasets. That means that the following are valid dataset
-specifications:
+The Set dataSet takes a single piddle of unordered data and visually
+represents it with agregated plots like probability distributions or
+cumulative distributions. The constructor takes a single piddle argument that
+represents that data to plot, and then key/value pairs that let you tweak how
+the data is visualized.
 
- # Data based:
- -data => [ sequence(10), sequence(10)->sin ]
- -data => [ [1, 2, 3], [1, 4, 9] ]
- -data => [ sequence(100), 5 ]
- 
- # Function based:
- -data => [ sub {return 5} ]
- -data => [ sub {return $_[0]**2} ]
- -data => [ \&PDL::sin ]
+The Pair dataSet targets x/y paired data and lets you visualize trends and
+correlations between two collections of data. The constructor takes two
+arguments (the x-data and the y-data) and then key/value pairs that indicate
+your plotTypes and specify precisely how you want the data visualized. Typical
+x/y plots are plotted in such a way that the x-data is sorted in increasing
+order, but this is not required. This means that it is just as easy to draw
+a sine function as it is to draw a spiral or a scatter plot.
 
-You don't have to sort the data that you use, but Lines, Histograms, and
-ColorGrids might look very strange if you don't. Then again, they may look
-exactly how you want them to look. It depends what you're trying to accomplish.
+The Grid dataSet is what you would use to visualize matrices or images. It
+takes a single piddle which represents a matrix of data,
+followed by key/value pairs the specify how you want the data plotted. In
+particular, there are many ways to specify the grid centers or boundaries.
+
+The data that you specify for the Set, Pair, and Grid dataSets do not need
+to be piddles: anything that can be converted to a piddle, including scalar
+numbers and anonymous arrays of values, can be specified. That means that the
+following are valid dataset specifications:
+
+ -data => ds::Pair(sequence(10), sequence(10)->sin)
+ -data => ds::Pair([1, 2, 3], [1, 4, 9]);
+ -data => ds::Pair(sequence(100), 5);
 
 Once you have specified the data or function that you want to plot, you can
 specify other options with key/value pairs. I discussed the
@@ -741,8 +820,8 @@ with code like so:
          $y,
          # I want error bars along with squares:
          plotType => [
-             pseq::ErrorBars(y_err => $y_errors),
-             pseq::Squares(filled => 1),
+             ppair::ErrorBars(y_err => $y_errors),
+             ppair::Squares(filled => 1),
          ],
      ],
      
@@ -750,7 +829,7 @@ with code like so:
      -fit => [
          \&my_fit_function,
          # Default plotType is lines, but I'll be explicit:
-         plotType => pseq::Lines,
+         plotType => ppair::Lines,
      ],
  );
 
@@ -818,8 +897,8 @@ one dataset, and it has only two plotTypes:
          $x,
          $y,
          plotType => [
-             pseq::Triangles,
-             pseq::Lines,
+             ppair::Triangles,
+             ppair::Lines,
          ],
      ],
  );
@@ -844,11 +923,11 @@ properties for the plotTypes:
          $x,
          $y,
          plotType => [
-             pseq::Blobs (
+             ppair::Blobs (
                  radius => 1 + $x->random*4,
                  colors => $colors,
              ),
-             pseq::Lines (
+             ppair::Lines (
                  lineWidths => 3,
              ),
          ],
@@ -875,10 +954,10 @@ which I have to do in order to guarantee having Prima's color shortcuts.
          $x,
          $y,
          plotType => [
-             pseq::Lines (
+             ppair::Lines (
                  lineWidths => 3,
              ),
-             pseq::Blobs (
+             ppair::Blobs (
                  radius => $radius,
                  colors => $colors,
              ),
@@ -909,13 +988,13 @@ makes open circles, but that's not (yet?) available.
          $x,
          $y,
          plotType => [
-             pseq::Lines (
+             ppair::Lines (
                  lineWidths => 3,
              ),
-             pseq::Blobs(
+             ppair::Blobs(
                  radius => 1 + $radius,
              ),
-             pseq::Blobs (
+             ppair::Blobs (
                  radius => $radius,
                  colors => $colors,
              ),
@@ -946,10 +1025,10 @@ only using one Blobs plotType instead of two.
          $x,
          $y,
          plotType => [
-             pseq::Lines (
+             ppair::Lines (
                  lineWidths => 3,
              ),
-             pseq::Blobs(
+             ppair::Blobs(
                  radius => $radius,
                  colors => $colors,
              ),
@@ -994,8 +1073,8 @@ ErrorBars plotType and the use of function-based data sets.
          $x,
          $y,
          plotType => [
-             pseq::Diamonds(filled => 'yes'),
-             pseq::ErrorBars(y_err => $y_err),
+             ppair::Diamonds(filled => 'yes'),
+             ppair::ErrorBars(y_err => $y_err),
          ],
      ],
      -func => [
@@ -1006,7 +1085,7 @@ ErrorBars plotType and the use of function-based data sets.
  );
 
 That example used a function-based dataset, but we could just as easily have
-used C<pseq::TrendLines> to compute the fit for us. The only difference between
+used C<ppair::TrendLines> to compute the fit for us. The only difference between
 the last example and the one below is that the trendline for this next example
 does not extend out to infinity in the x-direction but terminates at the
 end of the data.
@@ -1026,9 +1105,9 @@ end of the data.
          $x,
          $y,
          plotType => [
-             pseq::Diamonds(filled => 'yes'),
-             pseq::ErrorBars(y_err => $y_err),
-             pseq::TrendLines(
+             ppair::Diamonds(filled => 'yes'),
+             ppair::ErrorBars(y_err => $y_err),
+             ppair::TrendLines(
                  weights => $y_err,
                  lineWidths => 2,
                  colors => pdl(255, 0, 0)->rgb_to_color,
@@ -1066,8 +1145,8 @@ interesting:
          $x,
          $y,
          plotType => [
-             pseq::Xs,
-             pseq::Lines,
+             ppair::Xs,
+             ppair::Lines,
          ],
      ],
      onMouseMove => sub {

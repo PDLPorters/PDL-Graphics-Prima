@@ -101,7 +101,7 @@ set of data (as a piddle), it plots a continuous line
 
  increasing => 1
  normalized => 1
- offset => ?
+ offset => not yet implemented
 
 =cut
 
@@ -1053,7 +1053,7 @@ sub ppair::Crosses {
 # PDL::Graphics::Prima::PlotType::Pair::Histogram #
 #######################################################
 
-=head2 Histogram
+=item Histogram
 
 =for ref
 
@@ -1582,7 +1582,7 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType::Contour);
 # Plots a matrix
 
 package PDL::Graphics::Prima::PlotType::Grid::Color;
-our @ISA = qw(PDL::Graphics::Prima::PlotType);
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Grid);
 
 use Carp 'croak';
 
@@ -1809,6 +1809,10 @@ sub draw {
 #=cut
 
 # working here - consider adding counter lines
+
+=back
+
+=cut
 
 ###############################################################################
 #                         Creating your own Plot Type                         #
@@ -2234,17 +2238,16 @@ Box-and-whisker plots should be easy enough, a simple extension of error bars.
 
 Set plot-types that come to mind include many fitting types, such as:
 
+ gauss-cdf-fit     gauss-pdf-fit
+ lorentz-cdf-fit   lorentz-pdf-fit
+ p-law-cdf-fit     p-law-pdf-fit
+ log-norm-cdf-fit  log-norm-pdf-fit
+ exp-cdf-fit       exp-pdf-fit
+ beta-cdf-fit      beta-pdf-fit
+
+Surely there are others. In addition:
+
 =over
-
-=item gaussian-fit
-
-=item lorentzian-fit
-
-=item power-law-fit
-
-=item exponential-fit
-
-etc
 
 =item PairSet
 
@@ -2256,7 +2259,7 @@ with points would fail due to too many in the same place.
 
 =item simpler image support
 
-ColorGrid, while immensely flexible, is very slow. Prima has hooks for adding
+pgrid::Color, while immensely flexible, is very slow. Prima has hooks for adding
 images to a Drawable object, but they have not yet been incorporated into
 L<PDL::Drawing::Prima>. Once that happens, fast and scalable image support will
 be possible.

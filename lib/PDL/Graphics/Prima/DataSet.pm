@@ -458,7 +458,8 @@ sub init {
 	my $self = shift;
 	
 	# Supply a default plot type:
-	$self->{plotTypes} = [ppair::Diamonds] unless exists $self->{plotTypes};
+	$self->{plotTypes} = [ppair::Diamonds(filled => 1)]
+		unless exists $self->{plotTypes};
 	
 	# Check that the plotTypes are valid:
 	$self->check_plot_types(@{$self->{plotTypes}});
@@ -589,7 +590,7 @@ two elements containing the same sorts of data as the C<bounds> array.
 The value associated with C<x_centers> (or C<y_centers>) should be a piddle with
 increasing values of x (or y) that give the mid-points of the data. For example,
 if we have a matrix with shape (3, 4), C<x_centers> would have 3 elements and
-C<y_edges would have 4 elements:
+C<y_edges> would have 4 elements:
 
     -------------------
  y3 | d03 | d13 | d23 |
@@ -988,6 +989,9 @@ sub compute_collated_min_max_for {
 	return ($collated_min, $collated_max);
 }
 
+=back
+
+=cut
 
 #############################################################################
 #                            Dataset::Collection                            #
