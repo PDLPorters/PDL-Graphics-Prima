@@ -164,6 +164,7 @@ use Carp 'cluck';
 sub transform {
 	my ($class, $min, $max, $data) = @_;
 	my $range = $max - $min;
+	cluck ("bad data?") if not defined $data;
 	return (($data - $min) / $range);
 }
 

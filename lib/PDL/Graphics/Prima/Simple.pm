@@ -9,6 +9,7 @@ use PDL::Graphics::Prima::Palette;
 use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Scaling;
 use PDL::Graphics::Prima::PlotType;
+use PDL::Graphics::Prima::DataSet;
 
 =head1 NAME
 
@@ -610,8 +611,8 @@ sub matrix_plot {
 	
 	plot(-image => ds::Grid(
 		$matrix,
-		x_edges => $x
-		y_edges => $y
+		x_edges => $x,
+		y_edges => $y,
 	));
 }
 
@@ -774,20 +775,37 @@ The Set dataSet takes a single piddle of unordered data and visually
 represents it with agregated plots like probability distributions or
 cumulative distributions. The constructor takes a single piddle argument that
 represents that data to plot, and then key/value pairs that let you tweak how
-the data is visualized.
+the data is visualized:
+
+ -distribution => ds::Set($heights, ...options...)
 
 The Pair dataSet targets x/y paired data and lets you visualize trends and
 correlations between two collections of data. The constructor takes two
 arguments (the x-data and the y-data) and then key/value pairs that indicate
-your plotTypes and specify precisely how you want the data visualized. Typical
-x/y plots are plotted in such a way that the x-data is sorted in increasing
-order, but this is not required. This means that it is just as easy to draw
-a sine function as it is to draw a spiral or a scatter plot.
+your plotTypes and specify precisely how you want the data visualized:
+
+ -scatter => ds::Pair($heights, $iq, ...options...)
+
+Typical x/y plots are plotted in such a way that the x-data is sorted in
+increasing order, but this is not required. This means that it is just as
+easy to draw a sine function as it is to draw a spiral or a scatter plot.
+
+The Func dataSet lets you specify a function to plot, rather than forcing
+you to evaluate a specific function at fixed values of x. It inherits from
+the Pair dataSet (in an OO sense) and differs in that its constructor
+expects a single function reference rather than two piddles of data:
+
+ -model => ds::Func(\&my_model, ...options...)
+
+Because Func inherits from Pairs, any Pairs plotType will also work with
+a Func dataSet.
 
 The Grid dataSet is what you would use to visualize matrices or images. It
 takes a single piddle which represents a matrix of data,
 followed by key/value pairs the specify how you want the data plotted. In
 particular, there are many ways to specify the grid centers or boundaries.
+
+ -terrain => ds::Grid($landscape, ...options...)
 
 The data that you specify for the Set, Pair, and Grid dataSets do not need
 to be piddles: anything that can be converted to a piddle, including scalar
@@ -795,8 +813,8 @@ numbers and anonymous arrays of values, can be specified. That means that the
 following are valid dataset specifications:
 
  -data => ds::Pair(sequence(10), sequence(10)->sin)
- -data => ds::Pair([1, 2, 3], [1, 4, 9]);
- -data => ds::Pair(sequence(100), 5);
+ -data => ds::Pair([1, 2, 3], [1, 4, 9])
+ -data => ds::Pair(sequence(100), 5)
 
 Once you have specified the data or function that you want to plot, you can
 specify other options with key/value pairs. I discussed the
@@ -809,40 +827,41 @@ Function-based datasets also recognize the C<N_points> key, which indicates the
 number of points to use in evaluating the function.
 
 To get an idea of how this works, suppose I have some data that I want to
-compare with a fit. In this case, I would have two datasets, the data (plotted
-using error bars) and the fit (plotted using a line). I would plot this data
+compare with a model. In this case, I would have two datasets, the data (plotted
+using error bars) and the model (plotted using a line). I would plot all of this
 with code like so:
 
  plot(
      # The experimental data
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
          # I want error bars along with squares:
-         plotType => [
+         plotTypes => [
              ppair::ErrorBars(y_err => $y_errors),
              ppair::Squares(filled => 1),
          ],
-     ],
+     ),
      
-     # The linear fit:
-     -fit => [
-         \&my_fit_function,
-         # Default plotType is lines, but I'll be explicit:
+     # The model:
+     -model => ds::Func(
+         \&my_model,
+         # Default plotType is diamonds, but I want lines:
          plotType => ppair::Lines,
-     ],
+         lineStyle => lp::ShortDash,
+     ),
  );
 
-The part C<< -data => [...] >> specifies the details for how you want to plot
-the experimental data and the part C<< -fit >> specifies the details for how you
-want to plot the fit. 
+The part C<< -data => ds::Pair(...) >> specifies the details for how you want to plot
+the experimental data and the part C<< -model >> specifies the details for how you
+want to plot the model.
 
 The datasets are plotted in ASCIIbetical order, which means that in the example
-above, the fit will be drawn over the error bars and squares. If you want the data
-plotted over the fit curve, you should choose different names so that they sort
-the way you want. For example, using C<-curve> instead of C<-fit> might work.
-So would changing the names from C<-data> and C<-fit> to C<-b_data> and
-C<-a_fit>, respectively.
+above, the model will be drawn over the error bars and squares. If you want the data
+plotted over the model curve, you should choose different names so that they sort
+the way you want. For example, using C<-curve> instead of C<-model> might work.
+So would changing the names from C<-data> and C<-model> to C<-b_data> and
+C<-a_model>, respectively.
 
 =head2 Plot Options
 
@@ -893,14 +912,14 @@ one dataset, and it has only two plotTypes:
  my $y = sin($x);
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Triangles,
              ppair::Lines,
          ],
-     ],
+     ),
  );
 
 Now for something more fun. This figure uses bright colors and random circle radii.
@@ -919,10 +938,10 @@ properties for the plotTypes:
  my $colors = pal::Rainbow->apply($y);
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Blobs (
                  radius => 1 + $x->random*4,
                  colors => $colors,
@@ -931,7 +950,7 @@ properties for the plotTypes:
                  lineWidths => 3,
              ),
          ],
-     ],
+     ),
  );
 
 Here I use a black background and white foreground, and plot the circles B<over>
@@ -950,10 +969,10 @@ which I have to do in order to guarantee having Prima's color shortcuts.
  my $radius = 1 + $x->random*4;
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Lines (
                  lineWidths => 3,
              ),
@@ -962,16 +981,14 @@ which I have to do in order to guarantee having Prima's color shortcuts.
                  colors => $colors,
              ),
          ],
-     ],
+     ),
      backColor => cl::Black,
      color => cl::White,
  );
 
 I find the smaller points very difficult to see, so here's a version in which I
-'wrap' the points with a white radius. I achieve that by drawing two consecutive
-blobs, the first of which is the default color and which has a radius one larger
-than the colored radius. Of course, it might be better to use a plotType that
-makes open circles, but that's not (yet?) available.
+'wrap' the points with a white radius. I also use the Symbols plotType instead
+of the Blobs plotType because it's a bit more flexible:
 
  use strict;
  use warnings;
@@ -984,22 +1001,26 @@ makes open circles, but that's not (yet?) available.
  my $radius = 1 + $x->random*4;
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Lines (
                  lineWidths => 3,
              ),
-             ppair::Blobs(
-                 radius => 1 + $radius,
+             ppair::Symbols(
+                 size => 1 + $radius,
+                 filled => 'no',
+                 N_points => 0,
              ),
-             ppair::Blobs (
-                 radius => $radius,
+             ppair::Symbols (
+                 size => $radius,
                  colors => $colors,
+                 filled => 'yes',
+                 N_points => 0,
              ),
          ],
-     ],
+     ),
      backColor => cl::Black,
      color => cl::White,
  );

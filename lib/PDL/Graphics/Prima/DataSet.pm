@@ -215,7 +215,14 @@ sub new {
 	$self->{plotTypes} = [$self->{plotTypes}]
 		if (exists $self->{plotTypes} and ref($self->{plotTypes}) ne 'ARRAY');
 	
+	# Initialize (and validate) the dataSet
 	$self->init;
+	
+	# Make sure that the plotTypes know which dataSet they belong to:
+	for my $plotType (@{$self->{plotTypes}}) {
+		$plotType->dataset($self);
+	}
+	
 	return $self;
 }
 
@@ -441,7 +448,7 @@ sub ds::Pair {
 		. ' supplied an odd number of arguments') if @_ % 2 == 1;
 	my ($x_data, $y_data) = (shift, shift);
 	return PDL::Graphics::Prima::DataSet::Pair->new(@_
-		, x => $data, y => $y_data);
+		, x => $x_data, y => $y_data);
 }
 
 =item expected_plot_class
@@ -482,8 +489,8 @@ piddles in a list.
 
 =cut
 
-sub get_xs { $_[0]->{xs} }
-sub get_ys { $_[0]->{ys} }
+sub get_xs { $_[0]->{x} }
+sub get_ys { $_[0]->{y} }
 # This is really a convenience function that wraps the other two. However,
 # it really wraps them, so that to override the behavior you simply need to
 # override get_xs and get_ys.
@@ -745,6 +752,8 @@ sub centers {
 	return $self->{$axis . '_centers'};
 }
 
+use PDL::NiceSlice;
+
 sub compute_centers {
 	my ($self, $axis) = @_;
 	my $data = $self->{$axis . '_edges'};
@@ -806,8 +815,6 @@ working here - clarify that last bit with an example
 #	my $data	= exists $self->{"$axis-edges"}		? $self->{"$axis-edges"}
 #				: exists $self->{"$axis-centers"}	? $self->{"$axis-edges"}
 #				: die "Huh?";
-
-use PDL::NiceSlice;
 
 sub guess_scaling_for {
 	my ($self, $data) = @_;
@@ -907,9 +914,9 @@ sub init {
 		unless ref($self->{func}) and ref($self->{func}) eq 'CODE';
 
 	# Set the default number of data points (for evaluated data) to 200:
-	$dataset->{N_points} ||= 200;
+	$self->{N_points} ||= 200;
 	croak("N_points must be a positive number")
-		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0;
+		unless $self->{N_points} =~ /^\d+$/ and $self->{N_points} > 0;
 }
 
 =item get_xs, get_ys
@@ -1047,7 +1054,7 @@ sub STORE {
 	
 	# They must pass in a DataSet object:
 	croak('You can only add dataSet objects to the collection of dataSets')
-		unless eval {$dataset->isa('PDL::Graphics::Prima::DataSet')});
+		unless eval {$dataset->isa('PDL::Graphics::Prima::DataSet')};
 	
 	# Store it:
 	$self->{$name} = $dataset;
