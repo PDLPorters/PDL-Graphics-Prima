@@ -2246,6 +2246,12 @@ Set plot-types that come to mind include many fitting types, such as:
 
 etc
 
+=item PairSet
+
+A plot type that bins Pair data in x/y bins and plots a greyscale. This
+would be useful for visualizing huge quantities of x/y data, when plotting
+with points would fail due to too many in the same place.
+
 =back
 
 =item simpler image support

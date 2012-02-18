@@ -483,8 +483,12 @@ piddles in a list.
 
 sub get_xs { $_[0]->{xs} }
 sub get_ys { $_[0]->{ys} }
+# This is really a convenience function that wraps the other two. However,
+# it really wraps them, so that to override the behavior you simply need to
+# override get_xs and get_ys.
 sub get_data {
-	return ($_[0]->{xs}, $_[0]->{ys});
+	my $self = shift;
+	return ($self->get_xs, $self->get_ys);
 }
 
 =item get_data_as_pixels
@@ -785,7 +789,7 @@ Returns the piddle containing the data.
 =cut
 
 sub get_data {
-	return $_[0]>{data};
+	return $_[0]->{data};
 }
 
 
@@ -871,14 +875,16 @@ a reference to a subroutine, or an anonymous sub. For example,
 
 =for example
 
+ # Reference to a subroutine,
+ # PDL's exponential function:
+ ds::Func (\&PDL::exp)
+ 
  # Using an anonymous subroutine:
  ds::Func ( sub {
      my $xs = shift;
      return $xs->exp;
  })
- 
- # Using PDL's exponential function:
- ds::Func (\&PDL::exp)
+
 
 =cut
 
@@ -889,7 +895,9 @@ sub ds::Func {
 }
 
 # Even less to do for this than for a normal dataset. Just verify the function,
-# store it in $self, and ensure we have a sensible value for N_points:
+# store it in $self, and ensure we have a sensible value for N_points. Note
+# that there is no way to ensure that the supplied function takes a piddle;
+# we'll just have to take it on faith.
 sub init {
 	my $self = shift;
 	
@@ -902,6 +910,14 @@ sub init {
 	croak("N_points must be a positive number")
 		unless $dataset->{N_points} =~ /^\d+$/ and $dataset->{N_points} > 0;
 }
+
+=item get_xs, get_ys
+
+These functions override the default Pair behavior by generating the x-data
+and using that to compute the y-data. The x-data is uniformly sampled
+according to the x-axis scaling.
+
+=cut
 
 sub get_xs {
 	my ($self) = @_;
@@ -917,16 +933,20 @@ sub get_ys {
 	return $self->{func}->($xs);
 }
 
-sub get_data {
-	my ($dataset) = @_;
-	
-	my $xs = $dataset->get_xs;
-	return ($xs, $dataset->{func}->($xs));
-}
+=item compute_collated_min_max_for
+
+This function is supposed to provide information for autoscaling. This is a
+sensible thing to do for the the y-values of functions, but it makes no
+situation with the x-values since these are taken from the x-axis min and
+max already.
+
+This could be smarter, methinks, so please give me your ideas if you have
+them. :-)
+
+=cut
 
 # Function-based datasets need to return a collection of bad values for x-axis
 # requirements.
-
 sub compute_collated_min_max_for {
 	# Must get the collated min max for each plot type for this data:
 	my ($self, $axis_name, $pixel_extent) = @_;
@@ -968,6 +988,10 @@ sub compute_collated_min_max_for {
 	return ($collated_min, $collated_max);
 }
 
+
+#############################################################################
+#                            Dataset::Collection                            #
+#############################################################################
 
 =head2 DataSet::Collection
 
@@ -1045,10 +1069,6 @@ sub STORE {
 =head1 TODO
 
 Add optional bounds to function-based DataSets.
-
-PairSet: an unordered collection of pairs of data, like collections of
-individuals' height and weight. These data would be binned in two dimensions
-and the binning counts would be visualized with a grid.
 
 Captitalization for plotType, etc.
 
