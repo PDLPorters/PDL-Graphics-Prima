@@ -15,13 +15,13 @@ my $black = pdl(0,0,0)->rgb_to_color;
 # Plots error bars and triangles at the point.
 plot(
 	title => 'Simple Error Bars',
-	-data => [
+	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			pseq::ErrorBars(y_err => $y_err, colors => $black),
-			pseq::Triangles(colors => $red),
+			ppair::ErrorBars(y_err => $y_err, colors => $black),
+			ppair::Triangles(colors => $red, size => 10),
 		],
-	],
+	),
 );
 
 # Notice that the error bars ran through the middle of the triangles in
@@ -29,18 +29,19 @@ plot(
 # triangle outlines.
 plot(
 	title => '"Unfilled" Triangles',
-	-data => [
+	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			pseq::ErrorBars(y_err => $y_err, colors => $black),
-			pseq::Triangles(
+			ppair::ErrorBars(y_err => $y_err, colors => $black),
+			ppair::Triangles(
 				filled => 'yes',
 				colors => $white,
 				orientation => 'up',
+				size => 10,
 			),
-			pseq::Triangles(colors => $red),
+			ppair::Triangles(colors => $red, size => 10),
 		],
-	],
+	),
 );
 
 # I can achieve the same thing using PDL threading, which I'll use to even
@@ -48,16 +49,17 @@ plot(
 my $colors = cat($white, $red)->transpose;
 plot(
 	title => 'Threaded Error Bars',
-	-data => [
+	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			pseq::ErrorBars(y_err => $y_err, colors => $black),
-			pseq::Triangles(
+			ppair::ErrorBars(y_err => $y_err, colors => $black),
+			ppair::Triangles(
 				filled => pdl(1, 0)->transpose,
 				colors => $colors,
+				size => 10,
 			),
 		],
-	],
+	),
 );
 
 # You may notice (it's particularly obvious if you zoom out) that triangles
@@ -65,15 +67,16 @@ plot(
 # reversing the order of the threaded drawing operations for the triangles:
 plot(
 	title => 'Better-looking Threaded',
-	-data => [
+	-data => ds::Pair(
 		$x->transpose, $y->transpose,
 		plotType => [
-			pseq::ErrorBars(y_err => $y_err->transpose, colors => $black),
-			pseq::Triangles(
+			ppair::ErrorBars(y_err => $y_err->transpose, colors => $black),
+			ppair::Triangles(
 				filled => pdl(1, 0),
 				colors => $colors->transpose,
+				size => 10,
 			),
 		],
-	],
+	),
 );
 

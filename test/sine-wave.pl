@@ -4,10 +4,10 @@ use PDL;
 use blib;
 use PDL::Graphics::Prima::Simple -sequential;
 
-my $x = sequence(100)/10;
+my $x = sequence(100)/10 + 0.1;
 my $y = sin($x);
 plot(
-	-data => [$x, sin $x],
+	-data => ds::Pair($x, sin $x),
 	title => 'Sine Wave',
 	onKeyUp => sub {
 		print "You clicked the mouse\n";
@@ -16,8 +16,11 @@ plot(
 );
 
 plot(
-	-data => [$x, cos $x],
+	-data => ds::Pair($x, cos $x),
 	title => 'Cosine Wave',
+	x => {
+		scaling => sc::Log,
+	},
 	onKeyUp => sub {
 		print "You clicked the mouse\n";
 		print "Got args [", join('], [', @_), "]\n";
