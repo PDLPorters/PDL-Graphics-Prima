@@ -372,10 +372,16 @@ sub scaling {
 
 =head2 reals_to_relatives, relatives_to_reals
 
+=for sig
+
+ Signature: $axis->reals_to_relatives($data, [$min, $max])
+
 Converts real values (i.e. numbers in the set of reals, as opposed to the set
 of complex numbers, or integers) to their relative pixel positions within the
 plot window, where by relative, I mean the result is a number between 0 and 1.
-This takes the scaling (logarithmic, linear, etc) into account.
+This takes the scaling (logarithmic, linear, etc) into account. The min and
+the max are optional and the axis's min and max values will be used if a min
+and max are not supplied.
 
 Actually, it can be less than 0 or greater than 1. If you have a real number
 that is less than the plot's minimum value, it will have a negative relative
@@ -386,11 +392,10 @@ understood through a few examples.
 Suppose your graph has a min/max of 0 and 100. For linear scaling, a value
 of 50 would have a relative position of 0.5, a value of 10 would have a relative
 position of 0.1, 200 would have a relative position of 2, and -10 would have a
-relative position of -0.1. Real numbers that are less than the min get negative
+relative position of -0.1.
 
-
-=for details
-Note that the internal min/max values are stored in C<minValue> and C<maxValue>.
+If you do not provide a min or a max value, the axis's current min and max
+are used by default.
 
 =cut
 
@@ -418,11 +423,15 @@ widget, so this both rescales the numbers and includes the appropriate offset.
 
 sub pixels_to_relatives {
 	my ($axis, $dataset) = @_;
+	# Recall: $axis->{edgeWidth} is the width of the plot in pixels, computed
+	# during the edge_requirements updates
 	return ($dataset - $axis->{lowerEdge}) / $axis->{edgeWidth};
 }
 
 sub relatives_to_pixels {
 	my ($axis, $dataset) = @_;
+	# Recall: $axis->{edgeWidth} is the width of the plot in pixels, computed
+	# during the edge_requirements updates
 	return $axis->{edgeWidth} * $dataset + $axis->{lowerEdge};
 }
 
@@ -453,18 +462,32 @@ Draws the axis, including the bounding box, ticks, and tick labels
 sub draw {
 	my ($axis, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top) = @_;
 	
-	# Get the locations for the major and minor ticks:
-	my ($Ticks, $ticks) = $axis->{scaling}->compute_ticks($axis->minmax);
-	
-	# Extend major ticks with extra labels, for a smoother scrolling effect
-	my ( $Ticks_first, $Ticks_last ) = ( 0, $Ticks-> nelem - 1 );
-	if ( 1 < $Ticks-> nelem ) {
-		my $dTicks = $Ticks-> at(1) - $Ticks-> at(0);
-		$Ticks = pdl( $Ticks-> at(0) - $dTicks, $Ticks-> list, $Ticks-> at(-1) + $dTicks);
-		$Ticks_first++;
-		$Ticks_last++;
+	# We're going to ask for tick marks that extend slightly beyond the edge
+	# of the viewable area so that we can do fancy tick labeling that slides
+	# off the edge
+	my $em_height = $axis->{em_height};
+	my $em_width = $axis->{em_width};
+	my ($padded_min, $padded_max);
+	if ($axis->name eq 'x') {
+		$padded_min = $axis->pixels_to_reals(
+							$axis->reals_to_pixels(scalar $axis->min) - $em_width);
+		$padded_max = $axis->pixels_to_reals(
+							$axis->reals_to_pixels(scalar $axis->max) + $em_width);
 	}
-
+	else {
+		$padded_min = $axis->pixels_to_reals(
+							$axis->reals_to_pixels(scalar $axis->min) - $em_height/2);
+		$padded_max = $axis->pixels_to_reals(
+							$axis->reals_to_pixels(scalar $axis->max) + $em_height/2);
+	}
+	
+	# Get the locations for the major and minor ticks:
+	my ($Ticks, $ticks) = $axis->{scaling}->compute_ticks($padded_min, $padded_max);
+	croak("Something is wrong with the axis scaling type " . ref($axis->{scaling})
+		. ": it returned only a single major tick mark for the axis range "
+		. $axis->min . " to " . $axis->max)
+		if $Ticks->nelem < 2;
+	
 	# Rescale to pixels:
 	my $ticks_pixels = $axis->reals_to_pixels($ticks);
 	my $Ticks_pixels = $axis->reals_to_pixels($Ticks);
@@ -480,12 +503,12 @@ sub draw {
 	my $top_bottom = pdl($clip_bottom, $clip_top)->transpose;
 	my $left_right = pdl($clip_left, $clip_right)->transpose;
 	
-	my $em_height = $axis->{em_height};
 	# working here - remove when pdl functions are 'atomic'
 	my $lineWidth = $canvas->lineWidth;
 	
 	if ($axis->name eq 'x') {
-		$canvas-> clipRect( $clip_left, 0, $clip_right, $canvas-> height);
+		# Ensure the tick marks are exactly clipped:
+		$canvas->clipRect($clip_left, 0, $clip_right, $canvas->height);
 
 		# Draw the minor tick marks:
 		$canvas->pdl_lines($ticks_pixels, $top_bottom, $ticks_pixels, $top_bottom + $tick_size
@@ -502,9 +525,14 @@ sub draw {
 		# Figure out the top of the axis labels:
 		my $label_top = $clip_bottom - $axis->{em_height}/4;
 		
+		# Ensure that the text can flow slightly beyond the edges, but not
+		# too far:
+		$canvas-> clipRect( $clip_left - $em_width/2, 0
+				, $clip_right + $em_width/2, $canvas-> height);
+		
 		# Draw all the labels, storing the minimum and maximum extent used
 		# for future calls to the draw function:
-		my ($left_edge, $right_edge) = (1e20, 0);
+#		my ($left_edge, $right_edge) = (1e20, 0);
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $x = $Ticks_pixels->at($i);
 			my $string = sprintf("%1.8g", $Ticks->at($i));
@@ -515,22 +543,23 @@ sub draw {
 				| dt::UseExternalLeading);
 			
 			# Compute their widths:
-			if ( $i >= $Ticks_first and $i <= $Ticks_last ) {
-				my $half_width = $canvas->get_text_width($string) / 2;
-				$left_edge = $x - $half_width if $x - $half_width < $left_edge;
-				$right_edge = $x + $half_width if $x + $half_width > $right_edge;
-			}
+#			my $half_width = $canvas->get_text_width($string) / 2;
+#			$left_edge = $x - $half_width if $x - $half_width < $left_edge;
+#			$right_edge = $x + $half_width if $x + $half_width > $right_edge;
 		}
 		# Store these left and right edges:
-		$axis->{edge_requirements}->[0]
-			= ($clip_left > $left_edge + $em_height) ? $clip_left - $left_edge : $em_height;
-		$axis->{edge_requirements}->[2]
-			= ($right_edge > $clip_right + $em_height) ? $right_edge - $clip_right : $em_height;
+#		$axis->{edge_requirements}->[0]
+#			= ($clip_left > $left_edge + $em_height) ? $clip_left - $left_edge : $em_height;
+#		$axis->{edge_requirements}->[2]
+#			= ($right_edge > $clip_right + $em_height) ? $right_edge - $clip_right : $em_height;
 		# Recompute the lowerEdge and edgeWidth.
 		my @edges = $axis->owner->get_edge_requirements;
 		$axis->{lowerEdge} = $edges[0];
 		$axis->{edgeWidth} = $axis->owner->width - $edges[2] - $edges[0];
 		
+		# Restore the canvas clipping
+		$canvas-> clipRect( 0, 0, $canvas->size);
+
 		# Draw the label, if it exists
 		if ($axis->{label}) {
 			$canvas->draw_text($axis->{label}, $clip_left, 0, $clip_right
@@ -539,9 +568,11 @@ sub draw {
 					| dt::UseExternalLeading);
 		}
 	}
-	else {
-		$canvas-> clipRect( 0, $clip_bottom, $canvas-> width, $clip_top);
-
+	else { # y-axis drawing
+		# Clip the canvas so the tick marks are not drawn outside the
+		# boundign box:
+		$canvas->clipRect(0, $clip_bottom, $canvas->width, $clip_top);
+		
 		# draw the minor tick marks:
 		$canvas->pdl_lines($left_right, $ticks_pixels, $left_right + $tick_size, $ticks_pixels
 				, lineWidths => 2);
@@ -557,6 +588,10 @@ sub draw {
 		# Figure out the right edge of the axis labels:
 		my $label_right = $clip_left - $axis->{em_height}/4;
 		
+		# Clip the canvas so that the tick labels can flow off the screen
+		$canvas-> clipRect( 0, $clip_bottom - $em_height/2
+				, $canvas-> width, $clip_top + $em_height/2);
+
 		# Draw all the labels, storing the minimum left edge used, so that
 		# future calls to the draw function look reasonable:
 		my $largest_width = 0;
@@ -570,15 +605,16 @@ sub draw {
 				| dt::UseExternalLeading);
 			
 			# Compute its left extent:
-			if ( $i >= $Ticks_first and $i <= $Ticks_last ) {
-				my $points = $canvas->get_text_box($string);
-				$largest_width = $points->[4] if $points->[4] > $largest_width;
-			}
+			my $points = $canvas->get_text_box($string);
+			$largest_width = $points->[4] if $points->[4] > $largest_width;
 		}
 		$axis->{edge_requirements}->[0] = $largest_width + $em_height/2;
 		$axis->{edge_requirements}->[0] += $em_height * 1.5
 			if (defined $axis->{label} and $axis->{label} ne '');
 		
+		# Restore the canvas clipping
+		$canvas-> clipRect( 0, 0, $canvas->size);
+
 		# Draw the label if it exists
 		if ($axis->{label}) {
 			# Determine the width of the text that we will draw:
