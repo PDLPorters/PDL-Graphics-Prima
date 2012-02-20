@@ -706,7 +706,15 @@ plots
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011 David Mertens. All rights reserved.
+Portions of this module's code are copyright (c) 2011 The Board of Trustees at
+the University of Illinois.
+
+Portions of this module's code are copyright (c) 2011-2012 Northwestern
+University.
+
+This module's documentation are copyright (c) 2011-2012 David Mertens.
+
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
