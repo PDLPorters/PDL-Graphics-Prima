@@ -15,6 +15,87 @@ use constant Hold => -$inf;
 # Here's a package to handle the axes for me:
 package PDL::Graphics::Prima::Axis;
 
+=head1 NAME
+
+PDL::Graphics::Prima::Axis - class for axis handling
+
+=head1 SYNOPSIS
+
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Specify details for an axis during plot construction:
+ plot(
+     -data => ds::Pair($x, $y),
+     
+     # Details for x-axis:
+     x => {
+         # Scaling can be either sc::Log or sc::Linear (the default)
+         scaling => sc::Log,
+         # Labels are optional:
+         label => 'Time [s]',
+     },
+     # Details for y-axis:
+     y => {
+         # explicitly specify min/max if you like
+         min => 0,
+         max => 100,
+         onChangeLabel => sub {
+             my $self = shift;
+             print "You changed the label to ", $self->label, "\n";
+         },
+     },
+ );
+ 
+ # Get the current x-min:
+ my $x_min = $plot->x->min;
+ # Get the x-max and inquire if it's autoscaling:
+ my ($x_min, $is_auto) = $plot->x->min;
+ # Set the current y-min to -5:
+ $plot->y->min(-5);
+ # Turn on x min autoscaling:
+ $plot->x->min(lm::Auto);
+ # Stop autoscaling, use the current max:
+ $plot->x->max(lm::Hold);
+ # ... which is equivalent to:
+ $plot->x->max( scalar $plot->x->max );
+ 
+ # Note: All changes to min/max values
+ # fire the ChangeBounds notification
+ 
+ # Get the x-label:
+ my $x_label = $plot->x->label;
+ # Set the x-label:
+ $plot->x->label($new_label);
+ 
+ # Note: All changes to the label
+ # fire the ChangeLabel notification
+ 
+ # Conversion among real, relative, and pixel positions,
+ # useful for plotType drawing operations
+ $x_rels = $plot->x->reals_to_relatives($xs);
+ $xs = $plot->x->relatives_to_reals($x_rels);
+ $x_pixels = $plot->x->relatives_to_pixels($x_rels);
+ $x_rels = $plot->x->pixels_to_relatives($x_pixels);
+ $x_pixels = $plot->x->reals_to_pixels($xs);
+ $xs = $plot->x->pixels_to_reals($x_pixels);
+ 
+ # Get the current scaling object/class:
+ $x_scaling = $plot->x->scaling;
+ # Set the current scaling object/class:
+ $plot->x->scaling(sc::Log);
+
+ # Note: All changes to the scaling
+ # fire the ChangeScaling notification
+ 
+=head1 DESCRIPTION
+
+C<PDL::Graphics::Prima> handles the axes with full Prima objects for both the
+x- and the y-axes. Although the current implementation is not terribly
+flexible, it is still quite useful and poweful, and ripe for extensions and
+improvements.
+
+=cut
+
 use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Scaling;
 use Carp;
@@ -170,7 +251,7 @@ sub get_edge_requirements {
 
 Updates the internal storage of the edge data and initiates a recomputation
 of the autoscaling, if appropriate. This is usually triggered by a window
-resize or a new or modified dataset.
+resize, a new or modified dataset, or a label change.
 
 =cut
 
@@ -647,11 +728,62 @@ sub draw {
 
 =head1 TODO
 
-When drawing, I need to have the axes query the Scaling to see if any special
-drawing needs to happen. I am thinking at the moment about broken axes.
+=over
+
+=item tick customization
+
+Lots more customization, including inward vs outward tick marks, more automatic
+tick algorithms (including customizable ticks), or even no ticks
+
+=item hard minima/maxima
 
 Add abs_min, abs_max, etc, which means "*Never* make this axis less than than
 (or greater than) specified value.
+
+=item multiple axes
+
+Allow for multiple x- and y-axes. This is likely to impact PDL::Graphics::Prima
+more than this module, but the upshot is that instead of calling an axis C<x>
+or C<y>, any key prefixed with C<x> or C<y> would be assumed to be an axis
+specification. This way, you could have:
+
+ plot(
+     ...
+     x_power => axis::log('x'
+         , on => 'bottom'
+         , label => 'Power (W)'
+         , x_decibels => sub {
+             # computes the decibels when the min/max Power is changed:
+             my ($self, $power) = @_;
+             # Assume a normalizatin of 1 Watt:
+             return log($power)/log(10);
+         },
+     ),
+     x_decibels => axis::linear('x'
+         , on => 'top'
+         , label => 'Decibels (dB)'
+         , x_intensity => sub {
+             # Computes the power when the min/max decibels are changed:
+             my ($self, $decibels) = @_;
+             return 10**$decibels;
+         },
+     ),
+ );
+
+This would have logarithmic Power scaling tick marks on the bottom axis and
+linear Decibel scaling tick marks on the top, with proper conversion functions
+so that if the min or max of one changes, the min/max of the other is properly
+changed as well. However, this code sketch suggests an interface that is far
+from finalized, and the implementation details (especially regarding autoscaling
+and collation) will require some major work in order to make this function
+correctly.
+
+=item special drawing
+
+When drawing, I need to have the axes query the Scaling to see if any special
+drawing needs to happen. I am thinking at the moment about broken axes.
+
+=back
 
 =head1 AUTHOR
 

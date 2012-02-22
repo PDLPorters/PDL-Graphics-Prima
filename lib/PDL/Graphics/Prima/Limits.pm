@@ -20,9 +20,55 @@ PDL::Graphics::Prima::Limits - defining a couple of useful constants
 
 =head1 DESCRIPTION
 
-You probably won't ever need to use this module explicitly. It defines the
-constants C<lm::Auto> and C<lm::Hold>, which are described in
+You probably won't ever need to use this module explicitly, but you will likely
+use the constants defined here to manipulate axis autoscaling. This module defines
+the constants C<lm::Auto> and C<lm::Hold>. If the explanation below does not
+make sense, these constants are also discussed in
 L<PDL::Graphics::Prima::Axis>, L<PDL::Graphics::Prima::Simple>, and elsewhere.
+
+=over
+
+=item lm::Auto
+
+When you set an axis's min or max to C<lm::Auto>, you turn on min or max
+autoscaling:
+
+ # Set the x-min to -5 for now...
+ $plot->x->min(-5);
+ 
+ # Turn on autoscaling for x-min:
+ $plot->x->min(lm::Auto);
+
+=item lm::Hold
+
+This constant gives a shorthand for changing from autoscaling to non-autoscaling.
+For example, suppose you are building a plot from multiple data sets and want
+to autoscale based on the first few but not for the remaining. In that case you
+might say:
+
+ $plot->dataSets->{'data'} = ds::Pair($x, $y);
+ $plot->y->minmax(lm::Hold, lm::Hold);
+ $plot->dataSets->{'model'} = ds::Func(\&my_func);
+
+You can achieve the same ends like so:
+
+ $plot->dataSets->{'data'} = ds::Pair($x, $y);
+ $plot->y->minmax($plot->y->minmax);
+ $plot->dataSets->{'model'} = ds::Func(\&my_func);
+
+If you just wanted to set the min to hold, you could use C<lm::Hold> like this:
+
+ $plot->y->min(lm::Hold);
+
+which is equivalent to:
+
+ $plot->y->min($plot->y->min);
+
+Also note that the return value of C<< $plot->y->min >> returns different things
+depending on whether you are using scalar or list context. (Yes, that's an Axis
+thing, not a Limits thing, but it bears repeating here anyway.)
+
+=back
 
 =head1 AUTHOR
 
