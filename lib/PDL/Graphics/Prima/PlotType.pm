@@ -1956,8 +1956,7 @@ Shorthand: Returns the result of calling the dataset's get_data function.
 =cut
 
 sub widget {
-	$_[0]->{widget} = $_[1] if (@_ == 2);
-	return $_[0]->{widget};
+	return $_[0]->dataset->widget;
 }
 
 sub dataset {

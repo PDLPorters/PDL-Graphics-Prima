@@ -772,6 +772,66 @@ sub copy_to_clipboard {
 
 1;
 
+=head1 RESPONSIBILITIES
+
+The Plot object itself has to coordinate a number of sub-systems in order to get
+a functioning plot. As these responsiblities are not always clear even to their
+author, here is a list of what the plot is responsible for handling.
+
+=over
+
+=item knowing the plot title
+
+Although the axes are responsible for knowing the axis labels, the plot itself
+is responsible for knowing the plot title.
+
+=item initiating drawing operations
+
+The drawing of the axes, data, and plot title are all coordinated, ultimately,
+by the plot object.
+
+=item initiating autoscaling
+
+Autoscaling for either of the axes is initiated by a call to the plot object's
+C<compute_min_max_for>, which computes the minima and maxima for a given axis.
+Most of the calculations necessary for this operation are performed by the
+dataset and the underlying plotTypes, but they are coordinated and synthesized
+by the plot object.
+
+=item managing the dataset container
+
+The plot does not manage the datasets directly, but it owns the dataset
+container that is responsible for this.
+
+=item handling user interaction
+
+All user interaction (which at the moment is limited to mouse interaction) is
+handled by the plot object. Drag and zoom events ultimately lead to changes in
+the axes' minima and maxima (the axes are responsible for these pieces of
+information), but these changes are initiated through the plot object.
+
+=back
+
+Many things are B<not> the responsiblity of the plot object but are instead
+handled by other objects, usually held as objects within the plot object itself.
+
+=over
+
+=item tick and axis details
+
+All axis and tick details, including minima and maxima, scaling, tick mark
+locations, axis labels, and conversion from real x and y data values to pixel
+offsets are handled by the axis objects.
+
+=item managing datasets or plotTypes
+
+The datasets are managed by the dataset collection hashref defined in
+L<PDL::Graphics::Prima::DataSet>. Any access to the datasets (outside of 
+declaring them directly in the constructor, which is a special-case) is managed
+throug the dataSet collection. Any access to the specific plot types are 
+themselves handled by the datasets themselves.
+
+=back
 
 =head1 TODO
 

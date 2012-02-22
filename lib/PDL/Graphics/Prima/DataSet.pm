@@ -86,15 +86,9 @@ sub widget {
 	# Simply return the widget if it's a getter:
 	return $_[0]->{widget} if @_ == 1;
 	
-	# It's a setter call, so set self's and all plotTypes' widget
+	# It's a setter call, so set self's widget
 	my ($self, $widget) = @_;
 	$self->{widget} = $widget;
-	
-	# Set the widget for all plotTypes
-	my $plotTypes = $self->{plotTypes};
-	foreach (@$plotTypes) {
-		$_->widget($widget);
-	}
 }
 
 =item draw
@@ -1123,7 +1117,7 @@ sub compute_collated_min_max_for {
 #                            Dataset::Collection                            #
 #############################################################################
 
-=head2 DataSet::Collection
+=head1 DataSet::Collection
 
 The dataset collection is the thing that actually holds the datasets in the
 plot widget object. The Collection is a tied hash, so you access all of its
@@ -1195,6 +1189,83 @@ sub STORE {
 
 
 1;
+
+=head1 RESPONSIBILITIES
+
+The datasets and the dataset collection have a number of responsibilities, and
+a number of things for whch they are not responsible. 
+
+The dataset container is responsible for:
+
+=over
+
+=item knowing the plot widget
+
+The container always maintains knowledge of the plot widget to which it belongs.
+Put a bit differently, a dataset container cannot belong to multiple plot
+widgets (at least, not at the moment).
+
+=item informing datasets of their container and plot widget
+
+When a dataset is added to a dataset collection, the collection is responsible
+for informing the dataset of the plot object and the dataset collection to which
+the dataset belongs.
+
+=back
+
+Datasets themselves are responsible for:
+
+=over
+
+=item knowing and managing the plotTypes
+
+The datasets are responsible for maintaining the list of plotTypes that are to
+be applied to their data.
+
+=item knowing per-dataset properties
+
+Drawing properties can be specified on a per-dataset scope. The dataset is
+responsible for maintaining a list of these properties and providing them to
+the plot types when they perform drawing operations.
+
+=item knowing the dataset container and the plot widget
+
+All datasets know the dataset container and the plot widget to which they belong.
+Although they could retrieve the widget through a method on the container, the
+
+
+=item informing plotTyes' plot widget
+
+The plot types all know the widget (and dataset) to which they belong, and it is
+the 
+
+=item managing the drawing operations of plotTypes
+
+Although datasets themselves do not need to draw anything, they do call the
+drawing operations of the different plot types that they contain. 
+
+=item knowing and supplying the data
+
+A key responsibility for the dataSets is holding the data that are drawn by the
+plot types. Althrough the plot types may hold specialized data, the dataset
+holds the actual data the underlies the plot types and provides a specific
+interface for the plot types to access that data.
+
+=back
+
+On the other hand, datasets are not responsible for knowing or doing any of the
+following:
+
+=over
+
+=item knowing axes
+
+The plot object is responsible for knowing the x- and y-axis objects. However,
+if the axis system is changed to allow for multiple x- and y-axes, then this
+burden will shift to the dataset as it will need to know which axis to use when
+performing data <-> pixel conversions.
+
+=back
 
 =head1 TODO
 

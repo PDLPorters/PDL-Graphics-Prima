@@ -86,7 +86,7 @@ PDL::Graphics::Prima::Axis - class for axis handling
 
  # Note: All changes to the scaling
  # fire the ChangeScaling notification
- 
+
 =head1 DESCRIPTION
 
 C<PDL::Graphics::Prima> handles the axes with full Prima objects for both the
@@ -726,6 +726,59 @@ sub draw {
 
 1;
 
+=head2 RESPONSIBILITIES
+
+The axes of a plot are responsible for knowing and doing the following:
+
+=over
+
+=item knowing min/max
+
+Axes know the min and max values, and whether or not the plot is autoscaling in
+their axis.
+
+=item knowing axis labels
+
+Axis labels are the property of the axis, not the plot. This is important for
+the next item...
+
+=item reporting the space it needs for tick and axis labels
+
+Both tick labels and axis labels (descriptions) are known to the axis, so it
+is responsible for determining and reporting (upon request) the amount of space
+it needs to draw these items.
+
+=item tracking 
+
+=item converting data <-> pixels
+
+Utilizing the Scaling object/class and knowing the data's min and max, the
+axis can coordinate the calculation of data values to relative positions to
+pixel offsets, and back, important for drawing operations and for autoscaling
+calculations.
+
+=item drawing tick marks
+
+Although the Scaling object/class determines the tick mark locations, the
+axis itself is responsible for drawing them.
+
+=back
+
+The axes of a plot are B<not> responsible for knowing or doing the following:
+
+=over
+
+=item mouse interaction
+
+All user interaction with the mouse is handled by the plot object itself
+
+=item calculating tick mark locations
+
+The Scaling object or class that is held by the axis is responsible for
+calculating the locations of the tick marks
+
+=back
+
 =head1 TODO
 
 =over
@@ -733,7 +786,10 @@ sub draw {
 =item tick customization
 
 Lots more customization, including inward vs outward tick marks, more automatic
-tick algorithms (including customizable ticks), or even no ticks
+tick algorithms (including customizable ticks), or even no ticks. Actually,
+the tick algorithms are controlled by the Scaling object/class, not the Axis
+class. But still. Other tick properties, like the font size and style, need to
+be adjustable.
 
 =item hard minima/maxima
 
