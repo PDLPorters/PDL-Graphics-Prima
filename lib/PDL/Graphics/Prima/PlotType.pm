@@ -1548,6 +1548,71 @@ package PDL::Graphics::Prima::PlotType::Pair::Area;
 our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 
 
+#############################################################################
+#                                Raster Role                                #
+#############################################################################
+
+# This provides a couple of functions that are used by two distinctly
+# different classes, namely basic images and matrix grids.
+
+package PDL::Graphics::Prima::PlotType::Role::Raster;
+
+# Collation function is really, really simple - just figure out the edges.
+# This requires that the consuming class provides a dataset that knows how
+# to report its edges.
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	# Get the list of properties for which we need to look for bad values:
+	my %properties
+		= $self->generate_properties(@PDL::Drawing::Prima::bars_props);
+
+	my $to_check = $self->dataset->edges($axis_name);
+	my ($left_check, $right_check, $left_extra, $right_extra);
+	if ($axis_name eq 'x') {
+		$left_check = $to_check(:-2);
+		$right_check = $to_check(1:);
+		$left_extra = $self->dataset->edges('y')->(1:)->dummy(0);
+		$right_extra = $self->dataset->edges('y')->(:-2)->dummy(0);
+	}
+	else {
+		$left_check = $to_check(:-2)->dummy(0);
+		$right_check = $to_check(1:)->dummy(0);
+		$left_extra = $self->dataset->edges('x')->(1:);
+		$right_extra = $self->dataset->edges('x')->(:-2);
+	}
+	
+	# Fudging a little bith with $extra, this could probably be improved
+	# working here
+	return PDL::collate_min_max_wrt_many($left_check, 0, $right_check, 0
+		, $pixel_extent, values %properties, $left_extra, $right_extra);
+}
+
+# Drawing is fairly straight-forward. The consuming class must provide a
+# get_colored_data function.
+sub draw {
+	my ($self) = @_;
+	my $dataset = $self->dataset;
+	my $widget = $self->widget;
+	
+	# Convert the x and y edges to coordinate edges:
+	my $xs = $widget->x->reals_to_pixels($dataset->edges('x'));
+	my $ys = $widget->y->reals_to_pixels($dataset->edges('y'));
+	
+	# Gather the properties that I will need to use in the plotting.
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
+	
+	# Set up the x- and y- dimension lists for proper threading:
+	my $colors = $self->get_colored_data;
+	$xs = $xs->dummy(1, $colors->dim(1));
+	$ys = $ys->dummy(0, $colors->dim(0));
+
+	# Now draw the bars for each rectangle:
+	$widget->pdl_bars($xs(:-2), $ys(0,:-2), $xs(1:), $ys(0,1:), %properties
+		, colors => $colors);
+}
+
+
+
 ###############################################################################
 #                            Grid-based Plot Types                            #
 ###############################################################################
@@ -1557,8 +1622,10 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType::Pair);
 =head2 Grid-based plot types
 
 Other plots focus on using color or greyscale to visualize data that is a
-function of two variables. If you need to plot a 2D histogram or you want to
-visualize the elements of a matrix, you will likely use these plot types.
+function of two variables. If you need to visualize the elements of a matrix,
+you will use these plot types. If would like to
+visualize an image and have already computed the RGB, HSV, or similar values,
+you should use pimage::Basic instead.
 
 =over
 
@@ -1571,65 +1638,46 @@ use base 'PDL::Graphics::Prima::PlotType';
 # PDL::Graphics::Prima::PlotType::Grid::Contour #
 #################################################
 
-package PDL::Graphics::Prima::PlotType::Grid::Contour;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Contour);
+#package PDL::Graphics::Prima::PlotType::Grid::Contour;
+#our @ISA = qw(PDL::Graphics::Prima::PlotType::Contour);
 
 # working here - contour plot visualization of gridded data
 
-###############################################
-# PDL::Graphics::Prima::PlotType::Grid::Color #
-###############################################
-# Plots a matrix
+################################################
+# PDL::Graphics::Prima::PlotType::Grid::Matrix #
+################################################
+# Plots a matrix with a specified palette
 
-package PDL::Graphics::Prima::PlotType::Grid::Color;
+package PDL::Graphics::Prima::PlotType::Grid::Matrix;
 our @ISA = qw(PDL::Graphics::Prima::PlotType::Grid);
 
 use Carp 'croak';
 
-=item pgrid::Color
+=item pgrid::Matrix
 
 =for ref
 
- pgrid::Color( [palette => PDL::Graphics::Prima::Palette],
-                [xs => PDL], [ys => PDL], options )
+ pgrid::Matrix( [palette => PDL::Graphics::Prima::Palette], options )
 
-This plot type lets you specify colors or values on a grid, primarily for making
-color contour plots (as opposed to line contour plots). Put differently, it lets
-you visualize a two-dimensional histogram by using colors. It also forms the
-basis for the Matrix and Func2D plot types. This plot type uses the colors, x,
-and y piddles a bit differently than the other plot types---in particular, it
-requires that you supply a value for colors. However, you can safely mix it with
-other plot types if you wish.
+This plot type lets you specify colors or values on a grid to visualize
+rasterized contour plots (as opposed to line contour plots).
+The default palette is a greyscale one but you can specify whichever
+palette you like. See L<PDL::Graphics::Prima::Palette>. If would like to
+visualize an image and have already computed the RGB, HSV, or similar values,
+you should use pimage::Basic instead.
 
-The default palette is a greyscale one. However, you can specify whichever
-palette you like. See L<PDL::Graphics::Prima::Palette>. In particular, if
-the piddle holding your colors are already converted to Prima color values,
-you should explicitly specify an undefined value for the paletter.
+The x- and y-bounds of your Grid are taken from the dataset x- and y-bounds,
+so look into L<PDL::Graphics::Prima::DataSet> for details.
 
-ColorGrid (and its derivatives) uses the x and y data to determine the grid
-dimensions. In the simplest use case, the x and y piddles each contain two
-elements, representing the grid's x min/max and y min/max. In that case, the
-spacing between each of the grid's rectangles is sampled lineary. Alternatively,
-you can specify all the x and y grid boundaries, in which case if the colors
-matrix has dimensions M x N, you will need to specify M + 1 values for x and
-N + 1 values for y.
-
-At this point, you should see the potential pitfalls of mixing this plot type
-with others. If you plot a quadratic function and include a ColorGrid plot type,
-the ColorGrid will interpret the x and y values as being the spacings for
-the ColorGrid. For this reason, I am considering pulling ColorGrid and all
-other such plotTypes out and creating a new dataSet that works with grid
-data.
+working here - expand, give an example
 
 =cut
 
 # Install the short-name constructor:
-sub pgrid::Color {
-	PDL::Graphics::Prima::PlotType::Grid::Color->new(@_);
+sub pgrid::Matrix {
+	PDL::Graphics::Prima::PlotType::Grid::Matrix->new(@_);
 }
 
-# Needed for function topdl:
-use PDL::Core ':Internal';
 use PDL::Graphics::Prima::Palette;
 
 # In the initialization, check that they supplied a color grid. I'd check the
@@ -1638,59 +1686,6 @@ sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	
-	# Check that they have colors and that it is a meaningful value:
-	croak("You must supply colors to ColorGrid")
-		unless exists $self->{colors};
-	eval { $self->{colors} = topdl $self->{colors} };
-	if ($@) {
-		my $to_croak = $@;
-		$to_croak =~ s/ at.*/.\n/s;
-		$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's colors";
-		croak($to_croak);
-	}
-	
-	# If they supplied xs and/or ys, set them up as piddles:
-	if (exists $self->{xs}) {
-		# Ensure we're working with a piddle and not something else:
-		eval { $self->{xs} = topdl($self->{xs}) };
-		# If tha last line ran into trouble, it's because they didn't supply
-		# a meaningful expression for the xs, so croak:
-		if ($@) {
-			my $to_croak = $@;
-			$to_croak =~ s/ at.*/.\n/s;
-			$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's xs";
-			croak($to_croak);
-		}
-		
-		# Now make sure that we have the correct dimensions:
-		my $xs = $self->{xs};
-		
-		croak("xs first dimension must either be of length 2 or M+1, where"
-			. " M is the size of color's first dim")
-				unless $xs->dim(0) == 2
-					or $xs->dim(0) == $self->{colors}->dim(0) + 1;
-	}
-	if (exists $self->{ys}) {
-		# Ensure we're working with a piddle and not something else:
-		eval { $self->{ys} = topdl($self->{ys}) };
-		# If tha last line ran into trouble, it's because they didn't supply
-		# a meaningful expression for the ys, so croak:
-		if ($@) {
-			my $to_croak = $@;
-			$to_croak =~ s/ at.*/.\n/s;
-			$to_croak .= "  You must supply a piddle or an array ref for ColorGrid's ys";
-			croak($to_croak);
-		}
-		
-		# Now make sure that we have the correct dimensions:
-		my $ys = $self->{ys};
-		
-		croak("ys first dimension must either be of length 2 or N+1, where"
-			. " N is the size of color's second dim")
-				unless $ys->dim(0) == 2
-					or $ys->dim(0) == $self->{colors}->dim(1) + 1;
-	}
-	
 	# make sure we have a basic palette:
 	unless (exists $self->{palette}) {
 		$self->{palette} = pal::WhiteToBlack;
@@ -1698,121 +1693,62 @@ sub initialize {
 	$self->{palette}->plotType($self) if defined $self->{palette};
 }
 
-# Collation function is really, really simple
-sub compute_collated_min_max_for {
-	my ($self, $axis_name, $pixel_extent) = @_;
-	# Get the list of properties for which we need to look for bad values:
-	my %properties
-		= $self->generate_properties(@PDL::Drawing::Prima::bars_props);
-	
-	my ($xs, $ys) = $self->dataset->get_data;
-	my $widget = $self->widget;
-	# Use the custom xs and ys if supplied:
-	$xs = $self->{xs} if exists $self->{xs};
-	$ys = $self->{ys} if exists $self->{ys};
-	
-	my ($to_check, $extra) = ($xs, $ys);
-	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
-	
-	# Fudging a little bith with $extra, this could be improved
-	# working here
-	return PDL::collate_min_max_wrt_many($to_check(:-2), 0, $to_check(1:), 0
-		, $pixel_extent, values %properties, $extra(1:));
+# Collation and drawing are handled by the raster role, but require the
+# existence of the get_colored_data function:
+*compute_collated_min_max_for
+= \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
+*draw = \&PDL::Graphics::Prima::PlotType::Role::Raster::draw;
+
+sub get_colored_data {
+	my $self = shift;
+	return $self->{palette}->apply($self->dataset->get_data);
 }
 
-sub draw {
-	my ($self) = @_;
-	my ($xs, $ys) = $self->dataset->get_data;
-	my $widget = $self->widget;
-	# Use the custom xs and ys if supplied:
-	$xs = $self->{xs} if exists $self->{xs};
-	$ys = $self->{ys} if exists $self->{ys};
-	
-	# Pull the colors out of self:
-	my $colors = $self->{colors};
-	
-	# sort the xs and ys:
-	$xs = $xs->qsort;
-	$ys = $ys->qsort;
-	
-	# How we proceed depends on how many dimensions x and y have:
-	if ($xs->dim(0) == 2) {
-		my @dims = $xs->dims;
-		$dims[0] = $colors->dim(0) + 1;
-		# Create N+1 values that run exactly from 0 to 1:
-		my $new_xs = PDL->zeroes(@dims)->xvals / $colors->dim(0);
-		# Rescale the xs by the widths x(1) - x(0):
-		$new_xs *= $xs(1) - $xs(0);
-		# Shift the xs by the min, x(0):
-		$new_xs += $xs(0);
-		# Finally, set the variable xs to hold these new values. This will not
-		# overwrite the original data from the dataset:
-		$xs = $new_xs;
-	}
-	elsif ($xs->dim(0) != $colors->dim(0) + 1) {
-		# Check that the the x- and color-dims agree:
-		croak("ColorGrid: x-data's first dimension must be of size M+1, "
-			. "where M is the size of color's first dimension");
-	}
-	if ($ys->dim(0) == 2) {
-		my @dims = $ys->dims;
-		$dims[0] = $colors->dim(1) + 1;
-		# Create N+1 values that run exactly from 0 to 1:
-		my $new_ys = PDL->zeroes(@dims)->xvals / $colors->dim(1);
-		# Rescale the ys by the widths y(1) - y(0):
-		$new_ys *= $ys(1) - $ys(0);
-		# Shift the ys by the min, y(0):
-		$new_ys += $ys(0);
-		# Finally, set the variable ys to hold these new values. This will not
-		# overwrite the original data from the dataset:
-		$ys = $new_ys;
-	}
-	elsif ($ys->dim(0) != $colors->dim(1) + 1) {
-		# Check that the the y- and color-dims agree:
-		croak("ColorGrid: y-data's first dimension must be of size N+1, "
-			. "where N is the size of color's second dimension");
-	}
-	
-	# Convert the xs and ys to the coordinate values:
-	$ys = $widget->y->reals_to_pixels($ys);
-	$xs = $widget->x->reals_to_pixels($xs);
-	
-	# Gather the properties that I will need to use in the plotting.
-	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
-	
-	# Check if a palette was supplied, and if so replace the colors with
-	# their palettized equivalent:
-	if (defined $self->{palette}) {
-		$properties{colors} = $self->{palette}->apply($colors);
-	}
-	
-	# Set up the x- and y- dimension lists for proper threading:
-	$xs = $xs->dummy(1, $colors->dim(1));
-	$ys = $ys->dummy(0, $colors->dim(0));
+##############################################################################
+#                           Image-based Plot Types                           #
+##############################################################################
 
-	# Now draw the bars for each rectangle:
-	$widget->pdl_bars($xs(:-2), $ys(,:-2), $xs(1:), $ys(,1:), %properties);
-}
-
-##########################################
-# PDL::Graphics::Prima::PlotType::Matrix #
-##########################################
-# Plots a matrix
-
-#package PDL::Graphics::Prima::PlotType::Matrix;
-#our @ISA = qw(PDL::Graphics::Prima::PlotType::ColorGrid);
-#
-#=head2 Matrix
-#
-#Makes a simple visualization of a matrix. 
-#
-#=cut
-
-# working here - consider adding counter lines
+package PDL::Graphics::Prima::PlotType::Image;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =back
 
+=head2 Image-based Plot Types
+
+While Grid-based plots focus on imaging data with a specified palette,
+Image-based plots focus on plotting data that has already been converted to
+a color representation.
+
+working here - more details
+
 =cut
+
+package PDL::Graphics::Prima::PlotType::Image::Basic;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Image);
+
+use Carp 'croak';
+
+# short form constructor:
+sub pimage::Basic {
+	PDL::Graphics::Prima::PlotType::Image::Basic->new(@_);
+}
+
+# no need for initialize because there is nothing special to handle!
+# sub initialize {
+#	my $self = shift;
+#	$self->SUPER::initialize(@_);
+#}
+
+# Collation and drawing are handled by the raster role, but require the
+# existence of the get_colored_data function:
+*compute_collated_min_max_for
+= \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
+*draw = \&PDL::Graphics::Prima::PlotType::Role::Raster::draw;
+
+sub get_colored_data {
+	return $_[0]->dataset->get_prima_color_data;
+}
+
 
 ###############################################################################
 #                         Creating your own Plot Type                         #
@@ -1822,6 +1758,8 @@ sub draw {
 package PDL::Graphics::Prima::PlotType;
 
 use Carp 'croak';
+
+=back
 
 =head2 Creating new plot types
 

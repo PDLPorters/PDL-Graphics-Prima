@@ -1,5 +1,7 @@
 use strict;
 use warnings;
+use PDL::Graphics::Prima::PlotType;
+use PDL::Graphics::Prima::Palette;
 
 # Codifies the different kinds of dataset plotting that you can do, and defines
 # the class for the tied dataset array.
@@ -20,7 +22,12 @@ PDL::Graphics::Prima::DataSet - the way we think about data
      $matrix, bounds => [$left, $bottom, $right, $top],
               y_edges => $ys, x_bounds => [$left, $right],
               x_edges => $xs, y_bounds => [$bottom, $top],
-              plotType => pgrid::Color(palette => $palette),
+              plotType => pgrid::Matrix(palette => $palette),
+ ),
+ -image => ds::Image(
+     $image, format => 'string',
+             ... ds::Grid bounder options ...
+             plotType => pimage::Basic,
  ),
  -function => ds::Func(
      $func_ref, xmin => $left, xmax => $right, N_points => 200,
@@ -355,7 +362,7 @@ sub init {
 	my $self = shift;
 	
 	# Supply a default plot type:
-	$self->{plotTypes} = [pset::CDF] unless exists $self->{plotTypes};
+	$self->{plotTypes} = [pset::CDF()] unless exists $self->{plotTypes};
 	
 	# Check that the plotTypes are valid:
 	$self->check_plot_types(@{$self->{plotTypes}});
@@ -530,6 +537,7 @@ use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
 use strict;
 use warnings;
+use PDL;
 
 =head2 Grids
 
@@ -543,7 +551,7 @@ is C<pgrid::Color>.
 This is the least well thought-out dataSet. As such, it may change in the
 future. All such changes will, hopefully, be backwards compatible.
 
-At the moment, there is only one way to visualize grid data: C<pseq::Color>.
+At the moment, there is only one way to visualize grid data: C<pseq::Matrix>.
 Although I can conceive of a contour plot, it has yet to be implemented. As
 such, it is hard to specify the dimension requirements for dataset-wide
 properties. There are a few dataset-wide properties discussed in the
@@ -670,6 +678,7 @@ C<PDL::Graphics::Prima::PlotType::Grid>.
 =cut
 
 sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Grid'}
+sub default_plot_type { pgrid::Matrix() }
 
 # Usual initialization, ensure that the data is a piddle, and ensure that we
 # have enough information for the bounds.
@@ -677,7 +686,8 @@ sub init {
 	my $self = shift;
 	
 	# Supply a default plot type:
-	$self->{plotTypes} = [pgrid::Color] unless exists $self->{plotTypes};
+	$self->{plotTypes} = [$self->default_plot_type]
+		unless exists $self->{plotTypes};
 	
 	# Check that the plotTypes are valid:
 	$self->check_plot_types(@{$self->{plotTypes}});
@@ -705,19 +715,42 @@ sub init {
 		croak("Must specify bounds or a combination of other bounders")
 			unless $bounders[0] eq 'bounds';
 		
-		# working here
+		$self->{x_bounds} = [$self->{bounds}->[0], $self->{bounds}->[2]];
+		$self->{y_bounds} = [$self->{bounds}->[1], $self->{bounds}->[3]];
+		
+		delete $self->{bounds};
 	}
-	# Handle bounds pairs:
 	else {
+		# make sure they specified bounds pairs:
 		croak('Must specify one x and one y bounder')
 			unless 1 == grep {/^x/} @bounders and 1 == grep {/^y/} @bounders;
-		
-		# working here
 	}
-	
-	
-}
 
+	# Handle the x-bounds
+	if (grep {/^x_edges$/} @bounders) {
+		$self->compute_centers('x');
+	}
+	elsif (grep {/^x_centers$/} @bounders) {
+		$self->compute_edges('x');
+	}
+	elsif (grep {/^(x_)?bounds$/} @bounders) {
+		my $x_edges = zeroes($self->get_data->dim(0) + 1)
+			->xlinvals(@{$self->{x_bounds}});
+		$self->edges('x', $x_edges);
+	}
+	# Handle the y-bounds
+	if (grep {/^y_edges$/} @bounders) {
+		$self->compute_centers('y');
+	}
+	elsif (grep {/^y_centers$/} @bounders) {
+		$self->compute_edges('y');
+	}
+	elsif (grep {/^(y_)?bounds$/} @bounders) {
+		my $y_edges = zeroes($self->get_data->dim(1) + 1)
+			->xlinvals(@{$self->{y_bounds}});
+		$self->edges('y', $y_edges);
+	}
+}
 
 
 # Getter and setter
@@ -744,7 +777,7 @@ sub centers {
 	# Called as a setter
 	if (@_) {
 		$self->{$axis . '_centers'} = PDL::Core::topdl($_[0]);
-		$self->compute_edges('x');
+		$self->compute_edges($axis);
 		return;
 	}
 	
@@ -763,8 +796,11 @@ sub compute_centers {
 	if ($type eq 'linear') {
 		$results = $data(0:-2) + $spacing / 2;
 	}
-	else {
+	elsif ($type eq 'log') {
 		$results = $data(0:-2) * sqrt($spacing);
+	}
+	else {
+		croak ("Unknown scaling type $type; I only know about linear and log scaling");
 	}
 	
 	$self->{$axis . '_centers'} = $results;
@@ -782,9 +818,12 @@ sub compute_edges {
 		$results(0:-2) .= $data - $spacing / 2;
 		$results(-1) .= $data(-1) + $spacing / 2;
 	}
-	else {
+	elsif ($type eq 'log') {
 		$results(0:-2) = $data / sqrt($spacing);
 		$results(-1) .= $data(-1) * sqrt($spacing);
+	}
+	else {
+		croak ("Unknown scaling type $type; I only know about linear and log scaling");
 	}
 	
 	$self->{$axis . '_edges'} = $results;
@@ -798,9 +837,7 @@ Returns the piddle containing the data.
 
 =cut
 
-sub get_data {
-	return $_[0]->{data};
-}
+sub get_data { return $_[0]->{data} }
 
 
 =item guess_scaling_for
@@ -818,6 +855,8 @@ working here - clarify that last bit with an example
 
 sub guess_scaling_for {
 	my ($self, $data) = @_;
+	
+	Carp::confess("data is not defined") if not defined $data;
 	
 	# One point is not allowed:
 	croak("Cannot determine scaling with only one point!")
@@ -843,6 +882,86 @@ sub guess_scaling_for {
 
 =cut
 
+
+#############################################################################
+#                                   Image                                   #
+#############################################################################
+
+=head2 Image
+
+=cut
+
+package PDL::Graphics::Prima::DataSet::Image;
+use base 'PDL::Graphics::Prima::DataSet::Grid';
+use Carp 'croak';
+use strict;
+use warnings;
+
+sub ds::Image {
+	croak('ds::Image expects data and then key => value pairs, but you'
+		. ' supplied an even number of arguments') if @_ % 2 == 0;
+	my $data = shift;
+	return PDL::Graphics::Prima::DataSet::Image->new(@_, data => $data);
+}
+
+
+# A color conversion lookup table. This converts any of the specified
+# formats into a Prima color piddle. At some point this needs to be
+# extracted into something more general.
+my %color_convert_func_for = (
+	prima => sub { return $_[0]->mv(-1,0)->clump(2) },
+	rgb => sub { return $_[0]->mv(-1,0)->rgb_to_color },
+	hsv => sub { return $_[0]->mv(-1,0)->hsv_to_rgb->rgb_to_color },
+);
+my @known_formats = keys %color_convert_func_for;
+
+sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Image'}
+sub default_plot_type { pimage::Basic() }
+
+=pod
+
+Color formats are case insensitive; default is C<rgb>
+
+=cut
+
+sub init {
+	my $self = shift;
+	
+	# Ensure the data is a piddle:
+	eval {
+		$self->{data} = PDL::Core::topdl($self->{data});
+		1;
+	} or croak('For Image datasets, the data must be piddles '
+		. 'or scalars that pdl() knows how to process');
+	
+	# Move the color dims to the back so Grid operations work without
+	# modifiction. Note that PrimaColors is a special case that does not need
+	# a first dimension in the way that the other formats do. To make it work
+	# just like the other formats, add a dummy dimension of size 1 if no
+	# first dimension exists.
+	$self->{data} = $self->{data}->dummy(0)
+		if $self->{color_format} and $self->{color_format} eq 'prima'
+				and $self->{data}->dim(0) ne 1;
+	$self->{data} = $self->{data}->mv(0,-1);
+	
+	# Initialize the parent class:
+	$self->SUPER::init;
+	
+	# Assume RGB if no color format is given:
+	$self->{color_format} ||= 'rgb';
+	$self->{color_format} = lc $self->{color_format};
+	# Make sure a valid color format is given:
+	croak($self->{color_format} . ' is not a known color format')
+		unless grep { lc $self->{color_format} eq $_ } @known_formats;
+}
+
+# Converts the current data into a Prima color format.
+use PDL::Drawing::Prima::Utils;
+no PDL::NiceSlice;
+sub get_prima_color_data {
+	my $self = shift;
+	return $color_convert_func_for{$self->{color_format}}->($self->get_data);
+}
 
 ##############################################################################
 #                                    Func                                    #

@@ -34,11 +34,20 @@ my $xs = sequence(3)**2 + 3;
 my $ys = $xs**2;
 
 $wDisplay->insert('Plot',
-	-spot => [[0, 1], [0, 1], plotType => pt::ColorGrid(colors => $colors, palette => undef)],
-	-funny => [$xs, $ys, plotType => pt::ColorGrid(colors => $funny_colors, palette => undef)],
+	-spot => ds::Image($colors,
+		bounds => [0, 0, 1, 1],
+		color_format => 'prima',
+	),
+	-funny => ds::Image($funny_colors,
+		x_edges => $xs,
+		y_edges => $ys,
+		color_format => 'prima',
+	),
 	pack => { fill => 'both', expand => 1},
 #	y => {scaling => sc::Log},
-	-basic => [[3,4], [3,4], plotType => pt::ColorGrid(colors => sequence(20,20))], 
+	-basic => ds::Grid(sequence(20,20),
+		bounds => [3,3,4,4],
+	),
 );
 
 run Prima;
