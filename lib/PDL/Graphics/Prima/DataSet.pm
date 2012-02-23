@@ -1025,7 +1025,10 @@ sub init {
 	croak('Func datasets require a function reference, but what you supplied '
 		. 'is not a function reference')
 		unless ref($self->{func}) and ref($self->{func}) eq 'CODE';
-
+	
+	# Supply a default plot type:
+	$self->{plotTypes} = [ppair::Lines] unless exists $self->{plotTypes};
+	
 	# Set the default number of data points (for evaluated data) to 200:
 	$self->{N_points} ||= 200;
 	croak("N_points must be a positive number")
