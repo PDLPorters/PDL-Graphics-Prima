@@ -18,10 +18,10 @@ my $wDisplay = Prima::MainWindow->create(
 );
 
 $wDisplay->insert('Plot',
-	-data => [
+	-data => ds::Pair(
 		pdl(1, 50), pdl(0,0),
-		plotType => pseq::Blobs(radius => pdl(5, 100))
-		],
+		plotType => ppair::Blobs(radius => pdl(5, 100))
+		),
 	pack => { fill => 'both', expand => 1},
 );
 

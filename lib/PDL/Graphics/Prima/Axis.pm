@@ -247,11 +247,47 @@ sub get_edge_requirements {
 	return @{$_[0]->{edge_requirements}};
 }
 
+=head2 recalculate_edge_requirements
+
+Calculates the edge requirements to draw tick labels based on the current
+min/max. This B<does not> initiate an autoscaling recalculation, precisely
+because it is meant to be used B<within> that calculation. An identical
+calculation is performed during drawing operations (though that may change
+in the future).
+
+=cut
+
+sub recalculate_edge_requirements {
+	my ($axis, $canvas) = @_;
+	
+	# x edge requirements never change (at the moment)
+	return if $axis->name eq 'x';
+	
+	my ($Ticks) = $axis->get_Ticks_and_ticks;
+	my $em_height = $axis->{em_height};
+	my $em_width = $axis->{em_width};
+	
+	my $largest_width = 0;
+	for (my $i = 0; $i < $Ticks->nelem; $i++) {
+		# Compute its left extent:
+		my $string = sprintf("%1.8g", $Ticks->at($i));
+		my $points = $canvas->get_text_box($string);
+		$largest_width = $points->[4] if $points->[4] > $largest_width;
+	}
+	$axis->{edge_requirements}->[0] = $largest_width + $em_height/2;
+	$axis->{edge_requirements}->[0] += $em_height * 1.5
+		if (defined $axis->{label} and $axis->{label} ne '');
+}
+
 =head2 update_edges
 
-Updates the internal storage of the edge data and initiates a recomputation
+Updates the cached edge data and initiates a recomputation
 of the autoscaling, if appropriate. This is usually triggered by a window
-resize, a new or modified dataset, or a label change.
+resize, a new or modified dataset, or a label change, and it does not change
+
+This function's semantics (or even its presence) is likely to
+change in the future, so do not depend on its behavior unless you are willing
+to keep on top of updates to this library.
 
 =cut
 
@@ -270,16 +306,26 @@ sub update_edges {
 		$self->{edgeWidth} = $self->owner->height - $edges[3] - $edges[1];
 	}
 	
-	# All done, unless we need to do rescaling, too:
 	return unless $self->{minAuto} or $self->{maxAuto};
-	
 	my ($min, $max) = $self->owner->compute_min_max_for($self->name);
 	
-	# Weird edge case, do nothing if undef was returned:
-	return unless defined $min and defined $max;
+	# Weird but important edge case: do nothing if undef was returned:
+	if (defined $min and defined $max) {
+		$self->{minValue} = $min if $self->{minAuto};
+		$self->{maxValue} = $max if $self->{maxAuto};
+	}
 	
-	$self->{minValue} = $min if $self->{minAuto};
-	$self->{maxValue} = $max if $self->{maxAuto};
+	# Get and store the new edges, again, as autoscaling might have changed
+	# things:
+	@edges = $self->owner->get_edge_requirements;
+	if ($self->name eq 'x') {
+		$self->{lowerEdge} = $edges[0];
+		$self->{edgeWidth} = $self->owner->width - $edges[2] - $edges[0];
+	}
+	else {
+		$self->{lowerEdge} = $edges[1];
+		$self->{edgeWidth} = $self->owner->height - $edges[3] - $edges[1];
+	}
 }
 
 =head1 Properties
@@ -539,16 +585,13 @@ Draws the axis, including the bounding box, ticks, and tick labels
 
 =cut
 
-
-sub draw {
-	my ($axis, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top) = @_;
+sub get_Ticks_and_ticks {
+	my $axis = shift;
 	
-	# We're going to ask for tick marks that extend slightly beyond the edge
-	# of the viewable area so that we can do fancy tick labeling that slides
-	# off the edge
 	my $em_height = $axis->{em_height};
 	my $em_width = $axis->{em_width};
 	my ($padded_min, $padded_max);
+	
 	if ($axis->name eq 'x') {
 		$padded_min = $axis->pixels_to_reals(
 							$axis->reals_to_pixels(scalar $axis->min) - $em_width);
@@ -568,6 +611,19 @@ sub draw {
 		. ": it returned only a single major tick mark for the axis range "
 		. $axis->min . " to " . $axis->max)
 		if $Ticks->nelem < 2;
+	
+	return ($Ticks, $ticks);
+}
+
+sub draw {
+	my ($axis, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top) = @_;
+	
+	# We're going to ask for tick marks that extend slightly beyond the edge
+	# of the viewable area so that we can do fancy tick labeling that slides
+	# off the edge
+	my $em_height = $axis->{em_height};
+	my $em_width = $axis->{em_width};
+	my ($Ticks, $ticks) = $axis->get_Ticks_and_ticks;
 	
 	# Rescale to pixels:
 	my $ticks_pixels = $axis->reals_to_pixels($ticks);

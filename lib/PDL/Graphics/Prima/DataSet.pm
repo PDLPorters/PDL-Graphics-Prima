@@ -1155,12 +1155,14 @@ sub DELETE {
 	my ($this, $key) = @_;
 	return if $key eq 'widget';
 	delete $this->{$key};
+	$this->{widget}->notify('ChangeData');
 }
 
 # Clear the contents of the hash while preserving the widget:
 sub CLEAR {
 	my ($this) = @_;
-	%{$this} = (widget => $this->{widget}); 
+	%{$this} = (widget => $this->{widget});
+	$this->{widget}->notify('ChangeData');
 }
 
 sub STORE {
@@ -1184,8 +1186,7 @@ sub STORE {
 #	$dataset->initialize_plot_types;
 	
 	# Recompute the auto min/max values:
-	$self->{widget}->x->update_edges;
-	$self->{widget}->y->update_edges;
+	$self->{widget}->notify('ChangeData');
 }
 
 

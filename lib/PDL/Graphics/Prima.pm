@@ -99,13 +99,13 @@ stones to create more complex plots. Depending on your plotting needs, you may
 not need anything more complicated than L<PDL::Graphics::Prima::Simple>. However,
 C<PDL::Graphics::Prima> offers much greater flexibility and interactivity than
 the options available in the Simple interface, so once you feel comfortable,
-you should come back to this manual page and learn how to create and utelize
+you should come back to this manual page and learn how to create and utilize
 Plot widgets in conjunction with the Prima GUI toolkit.
 
 =head1 DESCRIPTION
 
 PDL::Graphics::Prima is a plotting interface for creating and exploring 2D data
-visualizations. The core of this interace is a new Plot widget that can be
+visualizations. The core of this interace is a Plot widget that can be
 incorporated into Prima applications. 
 
 =cut
@@ -188,25 +188,57 @@ sub init {
 
 sub on_size {
 	my $self = shift;
-	$self->x->update_edges;
+	# Note: order here is important as x needs to access information about y
+	# in its calculations
 	$self->y->update_edges;
+	$self->x->update_edges;
 }
 
 my $inf = -PDL->new(0)->log->at(0);
 
+
+sub collect_collated_min_max_for;
+sub pair_down_collation;
+
 sub compute_min_max_for {
+	my ($self, $axis_name) = @_;
+	
+	# Special handling for x-axis stuff:
+	if ($axis_name eq 'x') {
+		# First perform all of this on y so that the edge requirements are
+		# correctly computed for x-calculations later.
+		
+		# Perform the collation:
+		my ($trimmed_minima, $trimmed_maxima)
+			= $self->collect_collated_min_max_for('y');
+		return if not defined $trimmed_maxima;
+		
+		# Perform a round of minimazation:
+		my ($min, $max)
+			= $self->pair_down_collation('y', $trimmed_minima, $trimmed_maxima);
+		
+		# Update the axis min/max and redo the pair-down:
+		$self->{'y'}->_min($min);
+		$self->{'y'}->_max($max);
+		$self->{'y'}->recalculate_edge_requirements($self);
+	}
+	
+	# Perform the collation:
+	my ($trimmed_minima, $trimmed_maxima)
+			= $self->collect_collated_min_max_for($axis_name);
+	return if not defined $trimmed_maxima;
+	
+	return $self->pair_down_collation($axis_name, $trimmed_minima, $trimmed_maxima);
+}
+
+sub get_pixel_extent_for;
+
+sub collect_collated_min_max_for {
 	my ($self, $axis_name) = @_;
 	
 	# Get plotting pixel extent, which I'll need to send to the dataSets in
 	# order for them to compute their pyramids.
-	my ($left, $bottom, $right, $top) = $self->get_edge_requirements;
-	my $pixel_extent;
-	if ($axis_name eq 'x') {
-		$pixel_extent = $self->width - $left - $right;
-	}
-	else {
-		$pixel_extent = $self->height - $top - $bottom;
-	}
+	my $pixel_extent = $self->get_pixel_extent_for($axis_name);
 	return if $pixel_extent <= 0;
 	
 	my $datasets = $self->{dataSets};
@@ -245,6 +277,12 @@ sub compute_min_max_for {
 	my $trimmed_minima = $minima->whereND($minima(:,0;-)->isgood);
 	my $trimmed_maxima = $maxima->whereND($maxima(:,0;-)->isgood);
 	
+	return ($trimmed_minima, $trimmed_maxima);
+}
+
+sub pair_down_collation {
+	my ($self, $axis_name, $trimmed_minima, $trimmed_maxima) = @_;
+	
 	my $min_mask = $trimmed_minima->trim_collated_min;
 	my $max_mask = $trimmed_maxima->trim_collated_max;
 	$trimmed_minima = $trimmed_minima->whereND($min_mask);
@@ -256,6 +294,7 @@ sub compute_min_max_for {
 	my ($min_pix, $max_pix) = ($trimmed_minima->at(0,1), $trimmed_maxima->at(0,1));
 	# virtual_pixel_extent is the room available to plot the data when the
 	# real pixel extent is reduced by the requested pixel padding:
+	my $pixel_extent = $self->get_pixel_extent_for($axis_name);
 	my $virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
 	# min_data and max_data are the actual min and max values of the data
 	# that are supposed to fit within the virtual pixel extent.
@@ -312,6 +351,19 @@ sub compute_min_max_for {
 	return ($min, $max);
 }
 
+sub get_pixel_extent_for {
+	my ($self, $axis_name) = @_;
+	
+	my ($left, $bottom, $right, $top) = $self->get_edge_requirements;
+	my $pixel_extent;
+	if ($axis_name eq 'x') {
+		$pixel_extent = $self->width - $left - $right;
+	}
+	else {
+		$pixel_extent = $self->height - $top - $bottom;
+	}
+	return $pixel_extent;
+}
 
 # This should distinguish between shared space and exclusive space. For
 # example, the title requests exclusive space (a height of titleSpace),
@@ -397,18 +449,21 @@ sub dataSets {
 		$self->{dataSets}->{$key} = $dataset;
 	}
 	
-	# Finish by issuing a notification:
-	$_[0]->notify('ChangeData');
+	# Don't need to issue a notification because that already happened with
+	# the above assignments.
+	#$self->notify('ChangeData');
 }
 
 # For a change in title, recompute the autoscaling and replot.
-# Make sure this 
 sub on_changetitle {
 	my $self = shift;
 	$self->x->update_edges;
 	$self->y->update_edges;
 	$self->notify('Replot');
 }
+
+# for now, this is a replica of the above:
+*on_changedata = \&on_changetitle;
 
 # Sets up a timer in self that eventually calls the paint notification:
 sub on_replot {
@@ -419,11 +474,11 @@ sub on_replot {
 
 =head1 Events
 
-You can send notifications and tie callbacks for the following events:
+You can send notifications and hook callbacks for the following events:
 
 =head2 ChangeTitle
 
-Called when the title of titleSpace gets changed
+Called when the title or titleSpace gets changed
 
 =head2 Replot
 
@@ -431,7 +486,8 @@ Called when the widget needs to replot
 
 =head2 ChangeData
 
-Called when the dataSet changes
+Called when the dataSet container changes (not the datasets themselves, but
+the whole container). 
 
 =cut
 
@@ -441,11 +497,10 @@ Called when the dataSet changes
 # Add a new notification_type for each of the notifications just defined.
 {
 	# Keep the notifications hash in its own lexically scoped block so that
-	# other's can't mess with it (at least, not without using PadWalker or some
-	# such).
+	# other's can't mess with it.
 	my %notifications = (
 		%{Prima::Widget-> notification_types()},
-		# working here - choose a better signal type
+		# working here - choose a better signal type?
 		'Replot' => nt::Default,
 		map { ("Change$_" => nt::Default) } qw(Title Data),
 	);
