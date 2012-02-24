@@ -16,8 +16,8 @@ my $wDisplay = Prima::MainWindow->create(
 );
 
 $wDisplay->insert('Plot',
-	-function => [\&PDL::exp, color => cl::Blue],
-	-data => [$t_data, $y_data, color => cl::Red],
+	-function => ds::Func(\&PDL::exp, color => cl::Blue),
+	-data => ds::Pair($t_data, $y_data, color => cl::Red),
 	pack => { fill => 'both', expand => 1},
 #	y => {scaling => sc::Log},
 );

@@ -14,14 +14,14 @@ my $wDisplay = Prima::MainWindow->create(
 );
 
 $wDisplay->insert('Plot',
-	-data => [
+	-data => ds::Pair(
 		3 * grandom($N_points), 3 * grandom($N_points),
-		plotType => [
-			pseq::ErrorBars(y_err => grandom($N_points), colors => cl::LightRed,
+		plotTypes => [
+			ppair::ErrorBars(y_err => grandom($N_points), colors => cl::LightRed,
 				x_left_err => grandom($N_points), x_err => grandom($N_points)),
-			pseq::Blobs(radius => 4),
+			ppair::Blobs(radius => 4),
 		]
-	],
+	),
 	pack => { fill => 'both', expand => 1},
 	x => {
 		label => 'x data',
