@@ -8,16 +8,16 @@ my $xs = sequence(100)/10;
 my $ys = sin($xs) + 3 * sequence(3)->transpose;
 my $colors = pal::Rainbow->apply(sequence(3)->transpose);
 plot(
-	-data => [$xs, $ys,
+	-data => ds::Pair($xs, $ys,
 		plotType => [
-			pseq::Blobs,
-			pseq::Lines(thread_like => 'points'),
+			ppair::Diamonds,
+			ppair::Lines(thread_like => 'points'),
 		],
 		colors => $colors,
-	],
+	),
 );
 
 plot(
-	-data => [$xs, $ys],
+	-data => ds::Pair($xs, $ys),
 	color => cl::LightGreen,
 );

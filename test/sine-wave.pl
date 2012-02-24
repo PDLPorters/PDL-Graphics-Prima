@@ -10,7 +10,7 @@ plot(
 	-data => ds::Pair($x, sin $x),
 	title => 'Sine Wave',
 	onKeyUp => sub {
-		print "You clicked the mouse\n";
+		print "You pressed a key!\n";
 		print "Got args [", join('], [', @_), "]\n";
 	},
 );
@@ -22,7 +22,7 @@ plot(
 		scaling => sc::Log,
 	},
 	onKeyUp => sub {
-		print "You clicked the mouse\n";
+		print "You pressed a key!\n";
 		print "Got args [", join('], [', @_), "]\n";
 	},
 );

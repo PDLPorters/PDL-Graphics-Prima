@@ -10,11 +10,11 @@ my $xs = sequence(100)/10 - 6;
 my $ys = 3 - 2 * $xs + $xs->grandom;
 my $colors = pal::Rainbow->apply($xs);
 plot(
-	-data => [$xs, $ys,
-		plotType => [
-			pseq::Blobs,
-			pseq::TrendLines(thread_like => 'points'),
+	-data => ds::Pair($xs, $ys,
+		plotTypes => [
+			ppair::Blobs,
+			ppair::TrendLines(thread_like => 'points'),
 		],
 		colors => $colors,
-	],
+	),
 );
