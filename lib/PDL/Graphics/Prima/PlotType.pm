@@ -1986,12 +1986,12 @@ have properly converted the points you are trying to plot.
 
 =cut
 
-sub draw {
-	my $invocant = shift;
-	my $class = ref($invocant) ? ref($invocant) : $invocant;
-	croak("Plot type $class does not define its own drawing function. Please "
-		. 'report this bug to the author');
-}
+#sub draw {
+#	my $invocant = shift;
+#	my $class = ref($invocant) ? ref($invocant) : $invocant;
+#	croak("Plot type $class does not define its own drawing function. Please "
+#		. 'report this bug to the author');
+#}
 
 
 ############################################
@@ -2023,7 +2023,7 @@ If you like the way that a class operates but want to use your own drawing
 routines, you can specify a base class and a drawing callback like so:
 
  my $smiley_plot_type = pt::CallBack(
- 	base_class => 'PDL::Graphics::Prima::PlotType::Blobs',
+ 	base_class => 'PDL::Graphics::Prima::PlotType::Pair::Blobs',
  	draw => sub {
  		my ($self, $dataset, $widget) = @_;
  		
@@ -2058,14 +2058,16 @@ sub initialize {
 	PDL::Graphics::Prima::PlotType::initialize($self, @_);
 	
 	# Default the base class to the most basic one:
-	$self->{base_class} ||= 'PDL::Graphics::Prima::PlotType';
+	croak("You must supply a base class") unless $self->{base_class};
+	croak('Base class must be a valid PlotType')
+		unless eval{$self->{base_class}->isa('PDL::Graphics::Prima::PlotType')};
 	
 	# Call the superclass initialization:
 	my $init = $self->{base_class}->can('initialize');
 	&$init($self, @_);
 	
 	# Make sure that we have a valid draw function:
-	if ($self->{base_class} eq 'PDL::Graphics::Prima::PlotType') {
+	unless ($self->{base_class}->can('draw')) {
 		croak('You must supply a draw function or a drawable base class to the CallBack plot class')
 			unless exists $self->{draw} and ref ($self->{draw})
 				and ref ($self->{draw}) eq 'CODE';
@@ -2079,10 +2081,9 @@ sub draw {
 	
 	if (not exists $self->{draw}) {
 		# Didn't supply a draw function, so call the base class's draw function:
-		if ($self->{base_class} eq 'PDL::Graphics::Prima::PlotType') {
-			croak('CallBack plot type must supply a drawing function or '
-				. 'a base class that can draw itself.');
-		}
+		croak('CallBack plot type must supply a drawing function or '
+			. 'a base class that can draw itself.')
+			unless $self->{base_class}->can('draw');
 		
 		# Masquerade as the base class:
 		my $class = ref($self);

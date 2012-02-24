@@ -241,7 +241,9 @@ sub check_plot_types {
 	my $expected_plot_class = $self->expected_plot_class;
 	foreach (@plotTypes) {
 		croak("Plottype should be of type $expected_plot_class, but it is of type "
-			. ref($_)) unless eval{$_->isa($expected_plot_class)};
+			. ref($_)) unless eval{$_->isa($expected_plot_class)}
+						or eval{$_->isa('PDL::Graphics::Prima::PlotType::CallBack')}
+							and eval{$_->{base_class}->isa($expected_plot_class)};
 	}
 }
 

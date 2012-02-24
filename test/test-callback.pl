@@ -15,7 +15,7 @@ my $wDisplay = Prima::MainWindow->create(
 );
 
  my $smiley_plot_type = pt::CallBack(
- 	base_class => 'PDL::Graphics::Prima::PlotType::Blobs',
+ 	base_class => 'PDL::Graphics::Prima::PlotType::Pair::Blobs',
  	draw => sub {
  		my ($self) = @_;
  		
@@ -34,10 +34,8 @@ my $wDisplay = Prima::MainWindow->create(
 
 
 $wDisplay->insert('Plot',
-#	-data => [$t_series, $heights],
-	-data => [$t_series, $heights, plotType => $smiley_plot_type],
+	-data => ds::Pair($t_series, $heights, plotType => $smiley_plot_type),
 	pack => { fill => 'both', expand => 1},
-#	y => {scaling => sc::Log},
 );
 
 run Prima;
