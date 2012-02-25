@@ -821,9 +821,13 @@ sub save_to_postscript {
 			close $fh;
 		},
 		pageSize => [$self->size],
-#		Resolution => 20,
+		pageMargins => [0, 0, 0, 0],
+		scale => [3, 3],
+		font => {
+			size => 8,
+		},
 	);
-	croak("error: $@") unless $ps->begin_doc;
+	croak("Error generating Postscript output: $@") unless $ps->begin_doc;
 	
 	$self->on_paint($ps);
 	$ps->end_doc;
