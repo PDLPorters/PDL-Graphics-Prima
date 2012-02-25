@@ -13,7 +13,7 @@ use Prima::Utils;
 
 use base 'Prima::Widget';
 
-use Carp qw(croak cluck confess);
+use Carp;
 use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
@@ -792,13 +792,20 @@ sub on_mouseup {
 
 sub get_image {
 	my $self = shift;
-#	print "Got ", $::application->get_image($self->client_to_screen($self->origin), $self->size), "\n";
-	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
 	
+	# Build a prima image canvas and draw to it:
+	my $image = Prima::Image->create(
+		height => $self->height,
+		width => $self->width,
+#		size => [$self->size],
+		backColor => $self->backColor,
+	) or die "Can't create an image!\n";
+	$self->on_paint($image);
+	return $image;
+#	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
 }
 
 use Prima::PS::Drawable;
- 
 use Prima::FileDialog;
 
 sub save_to_postscript {
@@ -806,7 +813,13 @@ sub save_to_postscript {
 	my ($self, $filename) = @_;
 	
 	unless ($filename) {
-		my $save_dialog = Prima::SaveDialog-> new(defaultExt => 'ps');
+		my $save_dialog = Prima::SaveDialog-> new(
+			defaultExt => 'ps',
+			filter => [
+				['Postscript files' => '*.ps'],
+				['All files' => '*'],
+			],
+		);
 		# Return if they cancel out:
 		return unless $save_dialog->execute;
 		# Otherwise get the filename:
@@ -827,7 +840,18 @@ sub save_to_postscript {
 			size => 8,
 		},
 	);
-	croak("Error generating Postscript output: $@") unless $ps->begin_doc;
+	
+	$ps->begin_doc
+		or do {
+			my $message = "Error generating Postscript output: $@";
+			if (defined $::application) {
+				Prima::MsgBox::message($message, mb::Ok);
+				carp $message;
+			}
+			else {
+				croak($message);
+			}
+		};
 	
 	$self->on_paint($ps);
 	$ps->end_doc;
@@ -850,8 +874,17 @@ sub save_to_file {
 	}
 	
 	# If they specified a filename, simply save it:
-	$image-> save($filename) or
-		Prima::MsgBox::message("Unable to save plot to '$filename'", mb::Ok);
+	$image-> save($filename)
+		or do {
+			my $message = "Error generating figure output: $@";
+			if (defined $::application) {
+				Prima::MsgBox::message($message, mb::Ok);
+				carp $message;
+			}
+			else {
+				croak($message);
+			}
+		};
 }
 
 sub copy_to_clipboard {
