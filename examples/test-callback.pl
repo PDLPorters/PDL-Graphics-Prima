@@ -17,7 +17,7 @@ my $wDisplay = Prima::MainWindow->create(
  my $smiley_plot_type = pt::CallBack(
  	base_class => 'PDL::Graphics::Prima::PlotType::Pair::Blobs',
  	draw => sub {
- 		my ($self) = @_;
+ 		my ($self, $canvas) = @_;
  		
  		# Retrieve the data from the dataset:
  		my $widget = $self->widget;

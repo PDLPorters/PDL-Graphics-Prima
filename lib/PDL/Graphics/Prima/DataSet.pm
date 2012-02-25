@@ -101,7 +101,7 @@ supplied to the dataset.
 
 # Calls all the drawing functions for the plotTypes for this dataset:
 sub draw {
-	my ($dataset) = @_;
+	my ($dataset, $canvas) = @_;
 	my $widget = $dataset->widget;
 	
 	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
@@ -121,10 +121,10 @@ sub draw {
 	# Call each plot type's drawing function, in the order specified:
 	foreach my $plotType (@{$dataset->{plotTypes}}) {
 		# set the default drawing parameters and draw the plot type
-		$widget->set(%backups);
-		$plotType->draw;
+		$canvas->set(%backups);
+		$plotType->draw($canvas);
 	}
-	$widget->set(%backups);
+	$canvas->set(%backups);
 }
 
 =item compute_collated_min_max_for

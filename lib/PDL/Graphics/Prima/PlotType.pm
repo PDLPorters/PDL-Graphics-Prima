@@ -174,7 +174,7 @@ sub compute_collated_min_max_for {
 
 # This draws the CDFS:
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	my %properties = $self->generate_properties(
 		@PDL::Drawing::Prima::polylines_props);
@@ -191,7 +191,7 @@ sub draw {
 	$ys = $self->widget->y->reals_to_pixels($ys);
 	
 	# Draw the curves:
-	$self->widget->pdl_polylines($xs, $ys, %properties);
+	$canvas->pdl_polylines($xs, $ys, %properties);
 }
 
 
@@ -339,7 +339,7 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
@@ -358,11 +358,11 @@ sub draw {
 		my $left_ys = $ys->copy;
 		my $right_ys = $ys->copy;
 		$right_ys(0:-2) .= $left_ys(1:-1) .= ($ys(1:-1) + $ys(0:-2)) / 2;
-		$self->widget->pdl_lines($left_xs, $left_ys, $right_xs, $right_ys, %properties);
+		$canvas->pdl_lines($left_xs, $left_ys, $right_xs, $right_ys, %properties);
 	}
 	else {
 		# Draw the lines as single curves:
-		$self->widget->pdl_polylines($xs, $ys, %properties);
+		$canvas->pdl_polylines($xs, $ys, %properties);
 	}
 }
 
@@ -560,7 +560,7 @@ sub compute_collated_min_max_for {
 
 # Here is the method for drawing spikes:
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::lines_props);
@@ -580,7 +580,7 @@ sub draw {
 			$baseline .= $ys->min;
 		}
 		# Draw the lines:
-		$widget->pdl_lines($xs, $ys, $xs, $baseline, %properties);
+		$canvas->pdl_lines($xs, $ys, $xs, $baseline, %properties);
 	}
 	else {
 		my $baseline = $xs->zeroes;
@@ -592,7 +592,7 @@ sub draw {
 			$baseline .= $xs->min;
 		}
 		# Draw the lines:
-		$widget->pdl_lines($xs, $ys, $baseline, $ys, %properties);
+		$canvas->pdl_lines($xs, $ys, $baseline, $ys, %properties);
 	}
 }
 
@@ -689,7 +689,7 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::fill_ellipses_props);
@@ -698,7 +698,7 @@ sub draw {
 	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
 
 	# plot it:
-	$self->widget->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
+	$canvas->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
 		, %properties);
 }
 
@@ -877,14 +877,14 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %props = $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
 	
 	# Retrieve the data from the dataset:
 	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
-	$self->widget->pdl_symbols($xs, $ys, $self->{N_points}
+	$canvas->pdl_symbols($xs, $ys, $self->{N_points}
 		, $self->{orientation}, $self->{filled}, $self->{size}
 		, $self->{skip}, %props);
 }
@@ -1213,7 +1213,7 @@ sub compute_collated_min_max_for {
 
 
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	my $dataset = $self->dataset;
 	my $widget = $self->widget;
 	
@@ -1226,7 +1226,7 @@ sub draw {
 	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline});
 	my $ys = $widget->y->reals_to_pixels($dataset->get_ys);
 	
-	$widget->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
+	$canvas->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
 			, $pixel_edges(1:-1), $ys, %properties);
 }
 
@@ -1455,7 +1455,7 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	my ($xs, $ys) = $self->dataset->get_data;
 	my $widget = $self->widget;
 	
@@ -1472,10 +1472,10 @@ sub draw {
 		my $local_ys = $widget->y->reals_to_pixels($ys);
 
 		# Draw the line from the point to the edge:
-		$widget->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
+		$canvas->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
 		# Draw the end caps:
 		my $width = $self->{x_err_width}/2;
-		$widget->pdl_lines($left_xs, $local_ys + $width, $left_xs
+		$canvas->pdl_lines($left_xs, $local_ys + $width, $left_xs
 			, $local_ys - $width, %properties);
 	}
 	
@@ -1489,10 +1489,10 @@ sub draw {
 		my $local_ys = $widget->y->reals_to_pixels($ys); #--
 
 		# Draw the line from the point to the edge:
-		$widget->pdl_lines($local_xs, $local_ys, $right_xs, $local_ys, %properties);
+		$canvas->pdl_lines($local_xs, $local_ys, $right_xs, $local_ys, %properties);
 		# Draw the end caps:
 		my $width = $self->{x_err_width} / 2;
-		$widget->pdl_lines($right_xs, $local_ys + $width, $right_xs
+		$canvas->pdl_lines($right_xs, $local_ys + $width, $right_xs
 			, $local_ys - $width, %properties);
 	}
 	
@@ -1506,10 +1506,10 @@ sub draw {
 		my $local_ys = $widget->y->reals_to_pixels($ys); #--
 
 		# Draw the line from the point to the edge
-		$widget->pdl_lines($local_xs, $local_ys, $local_xs, $upper_ys, %properties);
+		$canvas->pdl_lines($local_xs, $local_ys, $local_xs, $upper_ys, %properties);
 		# Draw the caps:
 		my $width = $self->{y_err_width} / 2;
-		$widget->pdl_lines($local_xs - $width, $upper_ys, $local_xs + $width
+		$canvas->pdl_lines($local_xs - $width, $upper_ys, $local_xs + $width
 			, $upper_ys, %properties);
 	}
 	
@@ -1523,10 +1523,10 @@ sub draw {
 		my $local_ys = $widget->y->reals_to_pixels($ys); #--
 
 		# Draw the line from the point to the edge:
-		$widget->pdl_lines($local_xs, $local_ys, $local_xs, $lower_ys, %properties);
+		$canvas->pdl_lines($local_xs, $local_ys, $local_xs, $lower_ys, %properties);
 		# Draw the caps
 		my $width = $self->{y_err_width} / 2;
-		$widget->pdl_lines($local_xs - $width, $lower_ys, $local_xs + $width
+		$canvas->pdl_lines($local_xs - $width, $lower_ys, $local_xs + $width
 			, $lower_ys, %properties);
 	}
 }
@@ -1590,7 +1590,7 @@ sub compute_collated_min_max_for {
 # Drawing is fairly straight-forward. The consuming class must provide a
 # get_colored_data function.
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	my $dataset = $self->dataset;
 	my $widget = $self->widget;
 	
@@ -1607,7 +1607,7 @@ sub draw {
 	$ys = $ys->dummy(0, $colors->dim(0));
 
 	# Now draw the bars for each rectangle:
-	$widget->pdl_bars($xs(:-2), $ys(0,:-2), $xs(1:), $ys(0,1:), %properties
+	$canvas->pdl_bars($xs(:-2), $ys(0,:-2), $xs(1:), $ys(0,1:), %properties
 		, colors => $colors);
 }
 
@@ -2025,16 +2025,16 @@ routines, you can specify a base class and a drawing callback like so:
  my $smiley_plot_type = pt::CallBack(
  	base_class => 'PDL::Graphics::Prima::PlotType::Pair::Blobs',
  	draw => sub {
- 		my ($self, $dataset, $widget) = @_;
+ 		my ($self, $canvas) = @_;
  		
  		# Retrieve the data from the dataset:
- 		my ($xs, $ys) = $dataset->get_data_as_pixels($widget);
+ 		my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
  		
  		# Draw the smileys:
- 		$widget->pdl_ellipses($xs, $ys, 10, 10);	# face
- 		$widget->pdl_fill_ellipses($xs - 5, $ys + 4, 2, 2);	# left eye
- 		$widget->pdl_fill_ellipses($xs + 5, $ys + 4, 2, 2); # right eye
- 		$widget->pdl_fill_chords($xs, $ys + 3, 10, 10, 200, 340); # smiling mouth
+ 		$canvas->pdl_ellipses($xs, $ys, 10, 10);	# face
+ 		$canvas->pdl_fill_ellipses($xs - 5, $ys + 4, 2, 2);	# left eye
+ 		$canvas->pdl_fill_ellipses($xs + 5, $ys + 4, 2, 2); # right eye
+ 		$canvas->pdl_fill_chords($xs, $ys + 3, 10, 10, 200, 340); # smiling mouth
  	},
  	radius => 10,	# be sure to coordinate with pdl_ellipses, above
  );
@@ -2077,7 +2077,7 @@ sub initialize {
 
 # Dynamic drawing based upon values of the draw key and/or the base class:
 sub draw {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	if (not exists $self->{draw}) {
 		# Didn't supply a draw function, so call the base class's draw function:
@@ -2088,7 +2088,7 @@ sub draw {
 		# Masquerade as the base class:
 		my $class = ref($self);
 		bless $self, $self->{base_class};
-		$self->draw;
+		$self->draw($canvas);
 		bless $self, $class;
 		return;
 	}

@@ -839,6 +839,11 @@ calculating the locations of the tick marks
 
 =over
 
+=item better autoscaling for function datasets
+
+The ds::Func dataset does not get proper y-axis spacing. This needs to be
+figured out an fixed.
+
 =item tick customization
 
 Lots more customization, including inward vs outward tick marks, more automatic

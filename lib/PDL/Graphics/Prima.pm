@@ -509,10 +509,11 @@ the whole container).
 }
 
 sub on_paint {
-	my ($self) = @_;
+	my ($self, $canvas) = @_;
 	
 	# Clear the canvas:
-	$self->clear;
+	$canvas = $self if not defined $canvas;
+	$canvas->clear;
 	
 	# Get the clipping rectangle for the actual drawing space:
 	my ($clip_left, $clip_bottom, $right_edge, $top_edge)
@@ -520,11 +521,11 @@ sub on_paint {
 	
 	# The right and top edge values should be subtracted from the width and
 	# height, respectively:
-	my $clip_right = $self->width - $right_edge;
-	my $clip_top = $self->height - $top_edge;
+	my $clip_right = $canvas->width - $right_edge;
+	my $clip_top = $canvas->height - $top_edge;
 	
 	# Clip the widget before we begin drawing
-	$self->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
+	$canvas->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
 	
 	# backup the drawing parameters:
 	# working here - consider writing PDL::Drawing::Prima to back these up
@@ -532,16 +533,16 @@ sub on_paint {
 	# also, consider a better way than listing them here explicitly
 	my @to_backup = qw(color backColor linePattern lineWidth lineJoin
 			lineEnd rop rop2);
-	my %backups = map {$_ => $self->$_} (@to_backup);
+	my %backups = map {$_ => $canvas->$_} (@to_backup);
 	
 	# Draw the data, sorted by key name:
 	foreach my $key (sort keys %{$self->{dataSets}}) {
 		next if $key eq 'widget';
 		my $dataset = $self->{dataSets}->{$key};
-		$dataset->draw;
+		$dataset->draw($canvas);
 		
 		# Restore the drawing parameters after each draw function:
-		$self->set(%backups);
+		$canvas->set(%backups);
 	}
 
 	# Draw the zoom-rectangle, if there is one
@@ -550,32 +551,32 @@ sub on_paint {
 		my ($x_start_rel, $y_start_rel) = @{$self->{mouse_down_rel}->{mb::Right}};
 		my $x_start_pixel = $self->x->relatives_to_pixels($x_start_rel);
 		my $y_start_pixel = $self->y->relatives_to_pixels($y_start_rel);
-		$self->rectangle($x_start_pixel, $y_start_pixel, $x, $y);
+		$canvas->rectangle($x_start_pixel, $y_start_pixel, $x, $y);
 	}
 	
 	# Draw the axes
-	$self->clipRect(0, 0, $self->size);
-	$self->x->draw($self, $clip_left, $clip_bottom, $clip_right, $clip_top);
-	$self->y->draw($self, $clip_left, $clip_bottom, $clip_right, $clip_top);
+	$canvas->clipRect(0, 0, $self->size);
+	$self->x->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top);
+	$self->y->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top);
 	
 	# Draw the title:
 	if ($self->{titleSpace}) {
-		my ($width, $height) = $self->size;
+		my ($width, $height) = $canvas->size;
 		# Set up the font characteristics:
-		my $font_height = $self->font->height;
-		$self->font->height($font_height * 1.5);
-		my $style = $self->font->style;
-		$self->font->style(fs::Bold);
+		my $font_height = $canvas->font->height;
+		$canvas->font->height($font_height * 1.5);
+		my $style = $canvas->font->style;
+		$canvas->font->style(fs::Bold);
 		
 		# Draw the title:
-		$self->draw_text($self->{title}, 0, $height - $self->{titleSpace}
+		$canvas->draw_text($self->{title}, 0, $height - $self->{titleSpace}
 				, $width, $height
 				, dt::Center | dt::VCenter | dt::NewLineBreak | dt::NoWordWrap
 				| dt::UseExternalLeading);
 		
 		# Reset the font characteristics:
-		$self->font->height($font_height);
-		$self->font->style($style);
+		$canvas->font->height($font_height);
+		$canvas->font->style($style);
 	}
 }
 
@@ -765,6 +766,9 @@ sub on_mouseup {
 							},
 						)->start;
 					}],
+					['Save As ~Postscript...' => sub {
+						$self->save_to_postscript;
+					}],
 					['~Save As...' => sub {
 						Prima::Timer->create(
 							timeout => 250,
@@ -791,6 +795,38 @@ sub get_image {
 #	print "Got ", $::application->get_image($self->client_to_screen($self->origin), $self->size), "\n";
 	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
 	
+}
+
+use Prima::PS::Drawable;
+ 
+use Prima::FileDialog;
+
+sub save_to_postscript {
+	# Get the filename as an argument, or from the save-as dialog.
+	my ($self, $filename) = @_;
+	
+	unless ($filename) {
+		my $save_dialog = Prima::SaveDialog-> new(defaultExt => 'ps');
+		# Return if they cancel out:
+		return unless $save_dialog->execute;
+		# Otherwise get the filename:
+		$filename = $save_dialog->fileName;
+	}
+	unlink $filename if -f $filename;
+	
+	# Create the postscript canvas and plot to it:
+	my $ps = Prima::PS::Drawable-> create( onSpool => sub {
+			open my $fh, ">>", $filename;
+			print $fh $_[1];
+			close $fh;
+		},
+		pageSize => [$self->size],
+#		Resolution => 20,
+	);
+	croak("error: $@") unless $ps->begin_doc;
+	
+	$self->on_paint($ps);
+	$ps->end_doc;
 }
 
 # A routine to save the current plot to a rasterized file:
