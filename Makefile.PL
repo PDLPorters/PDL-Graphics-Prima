@@ -2,5 +2,8 @@
 
 # Should require whichever PDL has whereND
 use ExtUtils::MakeMaker;
-WriteMakefile();
+WriteMakefile(
+	NAME => 'PDL::Graphics::Prima',
+	VERSION_FROM => 'lib/PDL/Graphics/Prima.pm',
+);
 
