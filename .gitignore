@@ -11,3 +11,5 @@ script.pl
 .DS_Store
 test*.pl
 MYMETA.*
+Build
+_build
