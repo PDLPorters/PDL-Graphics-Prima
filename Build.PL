@@ -10,7 +10,7 @@ my $build = Module::Build->new(
 		# I need 5.10 for defined-or. This ought to be removed and relaxed
 		# after the initial release:
 		perl					=> '5.10.0',
-		'PDL::Graphics::Prima'	=> 0.01,
+		'PDL::Drawing::Prima'	=> 0.01,
 	},
 );
 
