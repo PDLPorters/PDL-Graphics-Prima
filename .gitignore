@@ -13,3 +13,4 @@ test*.pl
 MYMETA.*
 Build
 _build
+META*

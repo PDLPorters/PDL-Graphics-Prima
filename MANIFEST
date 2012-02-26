@@ -28,3 +28,5 @@ examples/test-spikes.pl
 examples/test3.pl
 t/00-load-main.t
 t/01-load-simple.t
+META.yml
+META.json
