@@ -1,5 +1,5 @@
 MANIFEST
-Makefile.PL
+Build.PL
 README.pod
 lib/PDL/Graphics/Prima.pm
 lib/PDL/Graphics/Prima/Axis.pm

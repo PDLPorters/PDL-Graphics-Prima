@@ -1,16 +1,8 @@
 use strict;
 use warnings;
 
-# Defines the lm (limits) package:
-package lm;
-my $inf;
-BEGIN {
-	use PDL::Lite;
-	$inf = -PDL->pdl(0)->log->at(0);
-}
-
-use constant Auto => $inf;
-use constant Hold => -$inf;
+# We'll make extensive use of limits in this:
+use PDL::Graphics::Prima::Limits;
 
 # Here's a package to handle the axes for me:
 package PDL::Graphics::Prima::Axis;
