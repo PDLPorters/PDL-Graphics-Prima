@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package PDL::Graphics::Prima;
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 package Prima::Plot;
 use PDL::Lite;
@@ -61,9 +61,11 @@ PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
  # and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines       => [$x, $y],
-     -color_blobs => [$x, $y + 1, colors => $colors,
-                      plotType => pt::Blobs],
+     -lines       => ds::Pair($x, $y),
+     -color_blobs => ds::Pair($x, $y + 1,
+                  colors => $colors,
+                  plotType => pt::Blobs
+     ),
      x => { label => 'Time' },
      y => { label => 'Sine' },
  );
@@ -83,8 +85,8 @@ PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
  );
  
  $wDisplay->insert('Plot',
-     -function => [\&PDL::exp, color => cl::Blue],
-     -data => [$t_data, $y_data, color => cl::Red],
+     -function => ds::Func(\&PDL::exp, color => cl::Blue),
+     -data => ds::Pair($t_data, $y_data, color => cl::Red),
      pack => { fill => 'both', expand => 1},
  );
  
