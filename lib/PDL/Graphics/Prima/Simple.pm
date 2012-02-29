@@ -446,7 +446,7 @@ y-points to be plotted. Here are some examples:
  # Plot PDL's exponential function:
  func_plot (1, 5, \&PDL::exp);
  # this time with higher resolution:
- func_plot (1, 5, \&PDL::exp
+ func_plot (1, 5, \&PDL::exp, 1000);
  
  # Plot a rescaled tangent function:
  func_plot (1, 5, sub {
@@ -1042,10 +1042,10 @@ only using one Blobs plotType instead of two.
  my $radius = cat($inner_radius + 1, $inner_radius);
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Lines (
                  lineWidths => 3,
              ),
@@ -1054,7 +1054,7 @@ only using one Blobs plotType instead of two.
                  colors => $colors,
              ),
          ],
-     ],
+     ),
      backColor => cl::Black,
      color => cl::White,
  );
@@ -1090,19 +1090,19 @@ ErrorBars plotType and the use of function-based data sets.
  use PDL::Graphics::Prima::Simple;
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Diamonds(filled => 'yes'),
              ppair::ErrorBars(y_err => $y_err),
          ],
-     ],
-     -func => [
+     ),
+     -func => ds::Func(
          sub { $y0 + $slope * $_[0] },
          lineWidth => 2,
          color => pdl(255, 0, 0)->rgb_to_color,
-     ],
+     ),
  );
 
 That example used a function-based dataset, but we could just as easily have
@@ -1122,10 +1122,10 @@ end of the data.
  use PDL::Graphics::Prima::Simple;
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Diamonds(filled => 'yes'),
              ppair::ErrorBars(y_err => $y_err),
              ppair::TrendLines(
@@ -1134,7 +1134,7 @@ end of the data.
                  colors => pdl(255, 0, 0)->rgb_to_color,
              ),
          ],
-     ],
+     ),
  );
 
 
@@ -1162,14 +1162,14 @@ interesting:
  my $y = sin($x);
  
  plot(
-     -data => [
+     -data => ds::Pair(
          $x,
          $y,
-         plotType => [
+         plotTypes => [
              ppair::Xs,
              ppair::Lines,
          ],
-     ],
+     ),
      onMouseMove => sub {
          # Get the widget and the coordinates:
          my ($self, $button_and_modifier, $x_pixel, $y_pixel) = @_;
