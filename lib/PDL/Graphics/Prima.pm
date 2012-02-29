@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package PDL::Graphics::Prima;
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 
 package Prima::Plot;
 use PDL::Lite;
