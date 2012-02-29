@@ -12,6 +12,7 @@ my $build = Module::Build->new(
 		perl					=> '5.10.0',
 		'PDL::Drawing::Prima'	=> 0.01,
 		PDL						=> '2.4.0',
+		Prima					=> 1.32,
 	},
 );
 
