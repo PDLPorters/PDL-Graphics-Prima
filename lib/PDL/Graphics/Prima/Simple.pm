@@ -356,7 +356,7 @@ sub diamond_plot {
 
 =item cross_plot ($x, $y)
 
-Plots crosses (i.e. plus symbols) at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+Plots crosses (i.e. plus symbols) at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Crosses));
@@ -379,7 +379,7 @@ sub cross_plot {
 
 =item X_plot ($x, $y)
 
-Plots X symbols at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+Plots X symbols at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Xs));
@@ -403,7 +403,7 @@ sub X_plot {
 
 =item asterisk_plot ($x, $y)
 
-Plots five-pointed asterisks at (x, y). EquivalentL<plot|/"PLOT FUNCTION">
+Plots five-pointed asterisks at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
 commands include:
 
  plot(-data => ds::Pair(
