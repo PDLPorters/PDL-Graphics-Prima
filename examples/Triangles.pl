@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use PDL;
-use blib;
 use PDL::Graphics::Prima::Simple;
 use PDL::NiceSlice;
 

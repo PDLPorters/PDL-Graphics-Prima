@@ -7,7 +7,6 @@
 use strict;
 use warnings;
 use PDL;
-use blib;
 use Prima qw(Application);
 use PDL::Graphics::Prima;
 use PDL::NiceSlice;
