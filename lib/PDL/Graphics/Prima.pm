@@ -23,7 +23,7 @@ use PDL::Graphics::Prima::DataSet;
 
 =head1 NAME
 
-PDL::Graphics::Prima - an interactive graph widget for PDL and Prima
+PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Prima
 
 =head1 SIMPLE SYNOPSIS
 
