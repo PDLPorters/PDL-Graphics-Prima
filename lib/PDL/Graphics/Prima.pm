@@ -143,16 +143,23 @@ sub init {
 	
 	# Create the x- and y-axis objects, overriding the owner and axis name
 	# properties if they are set in the profile.
-	$self->{x} = PDL::Graphics::Prima::Axis->create(
-		  %{$profile{x}}
-		, owner => $self
-		, name => 'x'
-		);
-	$self->{y} = PDL::Graphics::Prima::Axis->create(
-		  %{$profile{y}}
-		, owner => $self
-		, name => 'y'
-		);
+	for ('x', 'y') {
+		if (eval{$profile{$_}->isa('PDL::Graphics::Prima::Axis')}) {
+			$self->{$_} = $profile{$_};
+			$self->{$_}->owner($self);
+			$self->{$_}->name($_);
+		}
+		elsif (ref ($profile{$_}) eq 'HASH') {
+			$self->{$_} = PDL::Graphics::Prima::Axis->create(
+				%{$profile{$_}}
+				, owner => $self
+				, name => $_
+			);
+		}
+		else {
+			croak("Unable to create $_-axis from $profile{$_}");
+		}
+	}
 	
 	$self->{timer} = Prima::Timer->create(
 		timeout => $profile{replotDuration},
