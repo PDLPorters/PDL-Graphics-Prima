@@ -167,7 +167,7 @@ sub init {
 		$self->{minValue} = 1;
 	}
 	else {
-		croak ("min value must be a real number, lm::Auto, or lm::Hold")
+		croak ("min value must be a real number or lm::Auto")
 			if $profile{min} != $profile{min};
 		$self->{minValue} = $profile{min};
 		$self->{minAuto} = 0;
@@ -177,7 +177,7 @@ sub init {
 		$self->{maxValue} = 2;
 	}
 	else {
-		croak ("max value must be a real number, lm::Auto, or lm::Hold")
+		croak ("max value must be a real number or lm::Auto")
 			if $profile{max} != $profile{max};
 		$self->{maxAuto} = 0;
 		$self->{maxValue} = $profile{max};
