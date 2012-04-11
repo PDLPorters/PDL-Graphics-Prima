@@ -13,7 +13,8 @@ use PDL::Graphics::Prima::DataSet;
 
 =head1 NAME
 
-PDL::Graphics::Prima::Simple - a very simple plotting interface
+PDL::Graphics::Prima::Simple - a very simple plotting interface for
+PDL::Graphics::Prima
 
 =head1 SYNOPSIS
 
@@ -569,13 +570,13 @@ and its equivalent L<plot|/"PLOT FUNCTION"> commands are:
 
  plot(-image => ds::Grid(
      $matrix,
-     x_edges => [0, 1],
-     y_edges => [0, 1],
+     x_bounds => [0, 1],
+     y_bounds => [0, 1],
  ));
  plot(-image => ds::Grid(
      $matrix,
-     x_edges => [0, 1],
-     y_edges => [0, 1],
+     x_bounds => [0, 1],
+     y_bounds => [0, 1],
      plotType => pgrid::Color,
  ));
 
@@ -587,8 +588,8 @@ and the quivalent is:
 
  plot(-image => ds::Grid(
      $matrix,
-     x_edges => [0, 5],
-     y_edges => [1, 10],
+     x_bounds => [0, 5],
+     y_bounds => [1, 10],
      plotType => pgrid::Color,
  ));
 
@@ -611,8 +612,8 @@ sub matrix_plot {
 	
 	plot(-image => ds::Grid(
 		$matrix,
-		x_edges => $x,
-		y_edges => $y,
+		x_bounds => $x,
+		y_bounds => $y,
 	));
 }
 
