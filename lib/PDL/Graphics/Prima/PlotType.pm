@@ -1152,7 +1152,7 @@ sub get_bin_edges {
 	my @dims = $xs->dims;
 	$dims[0]++;
 	my $widths = $xs(1,) - $xs(0,);
-	my $edges = xvals(@dims) * $widths + $xs(0,);
+	my $edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
 	# working here - croak on bad bounds?
 	
 	# Store these bin edges if the underlying dataset is static:
