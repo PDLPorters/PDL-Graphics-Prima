@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use PDL;
-use blib;
 use PDL::Graphics::Prima::Simple;
 
 my $xs = sequence(100)/10 - 6;

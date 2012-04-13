@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use PDL;
-use blib;
 use Prima qw(Application noX11);
 use PDL::Graphics::Prima;
 use PDL::NiceSlice;

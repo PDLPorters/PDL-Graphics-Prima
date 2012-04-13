@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use PDL;
-use blib;
 use PDL::Graphics::Prima::Simple -sequential;
 
 my $x = sequence(100)/10 + 0.1;
