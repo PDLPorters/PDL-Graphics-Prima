@@ -15,6 +15,8 @@ use Carp;
 
 sub order_of_magnitude {
 	my $number = shift;
+	confess("Internal error: non-positive numbers are not allowed in order_of_magnitude (I received $number)")
+		if $number <= 0;
 	my $exponent = log($number) / log(10);
 	# Correct for truncation of negative numbers:
 	$exponent-- if $exponent < 0;
@@ -26,8 +28,15 @@ sub order_of_magnitude {
 # unless that value is zero (in which case I return +-1).
 sub min_max_for_degenerate {
 	my ($class, $value) = @_;
-	return (-1, 1) if $value == 0;
-	return (0.5*$value,1.5 * $value);
+	if ($value == 0) {
+		return (-1, 1);
+	}
+	elsif ($value > 0) {
+		return (0.5*$value, 1.5 * $value);
+	}
+	else {
+		return (1.5*$value, 0.5 * $value);
+	}
 }
 
 sub _adjusted_position {

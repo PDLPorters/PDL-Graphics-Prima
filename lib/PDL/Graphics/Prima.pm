@@ -289,6 +289,10 @@ sub collect_collated_min_max_for {
 	return ($trimmed_minima, $trimmed_maxima);
 }
 
+# Given a collated set of mininam and maxima (from collect_collated_min_max_for)
+# this function determines that minimum and maximum necessary for viewing *all*
+# the data.
+
 sub pair_down_collation {
 	my ($self, $axis_name, $trimmed_minima, $trimmed_maxima) = @_;
 	
@@ -305,6 +309,9 @@ sub pair_down_collation {
 	# real pixel extent is reduced by the requested pixel padding:
 	my $pixel_extent = $self->get_pixel_extent_for($axis_name);
 	my $virtual_pixel_extent = $pixel_extent - $min_pix - $max_pix;
+	# working here - come up with something better than just croaking.
+	die "Internal error: virtual pixel extent is non-positive"
+		if $virtual_pixel_extent <= 0;
 	# min_data and max_data are the actual min and max values of the data
 	# that are supposed to fit within the virtual pixel extent.
 	my ($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
@@ -314,6 +321,8 @@ sub pair_down_collation {
 		, -$min_pix/$virtual_pixel_extent);
 	my $max = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
 		, 1 + $max_pix/$virtual_pixel_extent);
+	# working here - come up with something better than just croaking.
+	die "Internal error: min ($min) is greater than max ($max)" if $min > $max;
 	
 	# It is possible that all the x-data or all the y-data are identical. In
 	# that case, this scheme would normally be degenerate and return nan,
