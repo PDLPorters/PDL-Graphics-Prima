@@ -139,9 +139,10 @@ sub new {
 sub apply {
 	my ($self, $data) = @_;
 	
-	# Get the data and scale it from zero to one:
+	# Get the data and scale it from zero to one, taking care to correctly
+	# handle collections of identical values:
 	my ($min, $max) = $data->minmax;
-	my $scaled_data = ($data - $min) / ($max - $min);
+	my $scaled_data = $min == $max ? $data->zeroes : ($data - $min) / ($max - $min);
 	
 	# Compute the associated hue, saturation, and vaue:
 	my $h = $scaled_data * ($self->{h_stop} - $self->{h_start})
