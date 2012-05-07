@@ -1194,13 +1194,15 @@ sub compute_collated_min_max_for {
 	my ($xs, $ys) = $self->dataset->get_data;
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
+		my $to_check = $ys->append(zeroes(1) + $self->{baseline});
 		my $top_padding = $lineWidths;
-		$top_padding += $self->{topPadding} if any $ys > $self->{baseline};
+		$top_padding += $self->{topPadding} if any $to_check > $self->{baseline};
 		my $bottom_padding = $lineWidths;
-		$bottom_padding += $self->{topPadding} if any $ys < $self->{baseline};
-		return PDL::collate_min_max_wrt_many($ys, $bottom_padding
-			, $ys, $top_padding, $pixel_extent
-			, $xs, values %properties);
+		$bottom_padding += $self->{topPadding} if any $to_check < $self->{baseline};
+		
+		return PDL::collate_min_max_wrt_many($to_check, $bottom_padding
+			, $to_check, $top_padding, $pixel_extent
+			, $xs->append(zeroes(1)), values %properties);
 	}
 	# For the x min/max, get the bin edges and collate by line width:
 	else {
