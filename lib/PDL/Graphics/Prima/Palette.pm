@@ -152,7 +152,9 @@ sub apply {
 	my $v = $scaled_data * ($self->{v_stop} - $self->{v_start})
 		+ $self->{v_start};
 	
-	return $h->cat($s, $v)->mv(-1,0)->hsv_to_rgb->rgb_to_color;
+	# changed $h->cat($s, $v) to PDL->pdl($h, $s, $v) because it's robust
+	# against empty piddles.
+	return PDL->pdl($h, $s, $v)->mv(-1,0)->hsv_to_rgb->rgb_to_color;
 }
 
 =head1 Special Palettes
