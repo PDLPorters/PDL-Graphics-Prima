@@ -213,7 +213,8 @@ sub compute_min_max_for {
 	my ($self, $axis_name) = @_;
 	
 	# Special handling for x-axis stuff:
-	if ($axis_name eq 'x') {
+	my (undef, $y_max_is_auto) = $self->y->max;
+	if ($axis_name eq 'x' and $y_max_is_auto) {
 		# First perform all of this on y so that the edge requirements are
 		# correctly computed for x-calculations later.
 		
