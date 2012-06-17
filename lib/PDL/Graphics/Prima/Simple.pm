@@ -657,6 +657,19 @@ and the quivalent is:
      ),
  ));
 
+NOTE: For viewing astronomical images, I find it is better to examine
+the logarithm of the reported values. I am considering revising this function
+to handle this, so THIS FUNCTION MAY CHANGE. For now, I have had best luck
+scaling my images like so:
+
+ my $imag = get_image();
+ imag_plot( log($imag + $imag->max/300) );
+
+The precise scaling value (300 in this case) will likely need to be tweaked
+based on your image's dynamic range. Evenually, I hope to make this function
+operate in a fashion similar to L<PDL::Graphics::PGPLOT>'s C<imag>.
+Thoughts and/or implementation suggestions are welcome!
+
 =cut
 
 sub imag_plot {
