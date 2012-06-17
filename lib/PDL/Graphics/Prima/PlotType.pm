@@ -2118,30 +2118,6 @@ I have lots of things that need to happen to improve this library.
 Are string-properties OK, or should they be constants? (threadlike, for example)
 Should properties be threadable?
 
-=item Some plot types are characteristically different
-
-I need to split the plotTypes up based upon the nature of the data.
-For example, ColorGrids fundamentally works with gridded 2d data, and
-should be put into a different group from Lines, which fundamentally works
-with 1d time series. This also suggests a collection of plot types for 0d data,
-by which I guess I mean sets of numbers. In that situation, cumulative
-distibution plots and probability distribution plots (i.e. histograms)
-would be good.
-
-here's a potential naming scheme for the different plot types that I can
-think of:
-
- pdist::CDF - plot distribution, cumulative distribution function
- ppair::Lines - plot sequence, Lines
- pgrid::Colors - plot grid, Colors (ColorGrid)
-
-This would then be associated with different dataSets, which would have
-constructor names like:
-
- ds::Set
- ds::Pair
- ds::Grid
-
 =item Add support for 3d Plots
 
 Dmitry has written a proof-of-concept widget that uses openGL and it should

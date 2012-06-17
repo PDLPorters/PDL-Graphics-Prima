@@ -59,10 +59,12 @@ PDL::Graphics::Prima
              + sin(sequence(100)/20)->transpose;
  
  # Generate a greyscale image:
- matrix_plot($image);
+ matrix_plot($image);  # smallest is white
+ imag_plot($image);    # smallest is black
  
  # Set the    left, right,  bottom, top
  matrix_plot([0,    1],    [0,      2],  $image);
+ imag_plot(  [0,    1],    [0,      2],  $image);
  
  
  # --( More complex plots )--
@@ -120,6 +122,7 @@ takes two piddles, one for the bin centers and one for the heights, and plots
 a histogram
 
 =item matrix_plot ($xbounds, $ybounds, $matrix)
+=item imag_plot($xbounds, $ybounds, $matrix)
 
 takes three arguments, the first two of which specify the x-bounds and the
 y-bounds, the third of which is the matrix to plot
@@ -577,7 +580,7 @@ and its equivalent L<plot|/"PLOT FUNCTION"> commands are:
      $matrix,
      x_bounds => [0, 1],
      y_bounds => [0, 1],
-     plotType => pgrid::Color,
+     plotType => pgrid::Matrix,
  ));
 
 Specifying edges looks like this:
@@ -590,7 +593,7 @@ and the quivalent is:
      $matrix,
      x_bounds => [0, 5],
      y_bounds => [1, 10],
-     plotType => pgrid::Color,
+     plotType => pgrid::Matrix,
  ));
 
 =cut
@@ -614,6 +617,70 @@ sub matrix_plot {
 		$matrix,
 		x_bounds => $x,
 		y_bounds => $y,
+	));
+}
+
+=item imag_plot ([$x_edges, $y_edges,] $matrix)
+
+The C<imag_plot> function is identical to C<matrix_plot> except that the
+color scaling runs from black (lowest) to white (highest). This form is
+especially useful for plotting images, in which the brightest points should
+be white, in contrast to data, in which the largest values should be black.
+
+Omitting edges, the command looks like this:
+
+ imag_plot($matrix);
+
+which has the equivalent L<plot|/"PLOT FUNCTION"> command:
+
+ plot(-image => ds::Grid(
+     $matrix,
+     x_bounds => [0, 1],
+     y_bounds => [0, 1],
+     plotType => pgrid::Matrix(
+         palette => pal::BlackToWhite
+     ),
+ ));
+
+Specifying edges looks like this:
+
+ imag_plot ([0 => 5], [1 => 10], $matrix);
+
+and the quivalent is:
+
+ plot(-image => ds::Grid(
+     $matrix,
+     x_bounds => [0, 5],
+     y_bounds => [1, 10],
+     plotType => pgrid::Matrix(
+         palette => pal::BlackToWhite
+     ),
+ ));
+
+=cut
+
+sub imag_plot {
+	my ($x, $y, $matrix);
+	if (@_ == 1) {
+		$x = [0, 1];
+		$y = [0, 1];
+		($matrix) = @_;
+	}
+	elsif (@_ == 3) {
+		($x, $y, $matrix) = @_;
+	}
+	else {
+		croak("imag_plot expects an image, optionally preceeded by its x- and y-limits:\n"
+			. "imag_plot ([x0, xf], [y0, yf], \$image)")
+	}
+	
+	plot(-image => ds::Grid(
+		$matrix,
+		x_bounds => $x,
+		y_bounds => $y,
+		plotType => pgrid::Matrix(
+			palette => pal::BlackToWhite
+		),
 	));
 }
 
@@ -1330,7 +1397,8 @@ properly fork a seperate process under Windows.)
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = our @EXPORT = qw(plot line_plot circle_plot triangle_plot
-	square_plot diamond_plot cross_plot X_plot asterisk_plot hist_plot matrix_plot func_plot);
+	square_plot diamond_plot cross_plot X_plot asterisk_plot hist_plot
+	matrix_plot imag_plot func_plot);
 
 our @default_sizes = (400, 400);
 
