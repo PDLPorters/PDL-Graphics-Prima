@@ -1281,6 +1281,18 @@ Captitalization for plotType, etc.
 
 Use PDL documentation conventions for signatures, ref, etc.
 
+Additional datset, a two-tone grid. Imagine that you want to overlay the
+population density of a country and the average rainfall (at the granularity
+of counties, let's say). You could use the intensity of the red channel to
+indicate population and the intensity of blue to indicate rainfall. Highly
+populated areas with low rainfall would be bright red, while highly populated
+areas with high rainfall would be purple, and low populated areas with high
+rainfall would be blue. The color scale would be indicated
+with a square with a color gradient (rather than a horizontal or vertical bar
+with a color gradient, as in a normal ColorGrid). Anyway, this differs from
+a normal grid dataset because it would require two datasets, one for each
+tone.
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)
