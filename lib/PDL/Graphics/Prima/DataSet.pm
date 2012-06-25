@@ -1140,7 +1140,7 @@ package PDL::Graphics::Prima::DataSet::Collection;
 # data validation for the array setting operations.
 
 use Tie::Hash;
-use parent -norequire, 'Tie::StdHash';
+our @ISA = qw(Tie::StdHash);
 
 # Validate and convert the data, and set the graph's min/max values if they are
 # on auto mode.
