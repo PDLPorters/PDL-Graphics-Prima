@@ -210,14 +210,15 @@ In all of these plots, bad values in x and y are simply omitted.
 
 =over
 
-=item line_plot ($x, $y)
+=item line_plot ([$x], $y)
 
-The C<line_plot> function takes two arguments---a piddle with your x data and
-a piddle with your y data---and plots them by drawing black lines on a white
-background from one point to the next. Usually C<$x> and C<$y> will have the
-same dimensions, but you can use any data that are PDL-thread compatible. For
-example, here's a way to compare three sets of data that have the exact same
-x-values:
+The C<line_plot> function takes either one or two arguments. In the one-argument
+form, the argument is a piddle with your y data. In the two argument form the
+arguments are a piddle with your x data and a piddle with your y data. The
+function plots them by drawing black lines on a white background from one point
+to the next. Usually C<$x> and C<$y> will have the same dimensions, but you can
+use any data that are PDL-thread compatible. For example, here's a way to
+compare three sets of data that have the exact same x-values:
 
  my $x = sequence(100)/10;
  my $y = sequence(3)->transpose + sin($x);
@@ -236,25 +237,49 @@ wave oscillating horizontally:
  my $x = sin($y);
  line_plot($x, $y);
 
+For the truly lazy, you can simply supply the y-values:
+
+ my $y = sin(sequence(100)/10);
+ line_plot($y);
+
 Bad values in your data, if they exist, will simply be skipped, inserting a
 gap into the line.
 
-To generate the same plot using the L<plot|/"PLOT FUNCTION"> command, you would type this:
+For the two-argument form, to generate the same plot using the
+L<plot|/"PLOT FUNCTION"> command, you would type this:
 
- plot(-data => ds::Pair(@_, plotType => ppair::Lines));
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Lines));
+
+For the one-argument form, you would type this:
+
+ plot(-data => ds::Pair($y->xvals, $y, plotType => ppair::Lines));
 
 =cut
 
-sub line_plot {
-	croak("line_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Lines));
+sub _get_pairwise_data {
+	# If one arg, and it's a piddle, return a sequence and that piddle as x/y
+	if (@_ == 1 and eval { $_[0]->isa('PDL') } ) {
+		return (PDL->sequence($_[0]->dim(0)), $_[0]);
+	}
+	# If two args, and both are piddles, return them as x/y
+	elsif (@_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')} ) {
+		return @_;
+	}
+	
+	# Neither of the above conditions applied: determine the function name, croak
+	my $function_name = (caller(1))[3];
+	$function_name =~ s/.*:://;
+	croak("$function_name expects either one piddle (y-data) or two piddles (x- and y-data)");
 }
 
-=item circle_plot ($x, $y)
+sub line_plot {
+	plot(-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Lines));
+}
 
-Plots filled circles at (x, y). Equivalent L<plot|/"PLOT FUNCTION"> commands
-include:
+=item circle_plot ([$x], $y)
+
+Plots filled circles at (x, y). (See line_plot for a more detailed description.)
+Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument forms include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Blobs));
  plot(-data => ds::Pair(
@@ -269,15 +294,14 @@ include:
 =cut
 
 sub circle_plot {
-	croak("circle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Blobs));
+	plot(-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Blobs));
 }
 
-=item triangle_plot ($x, $y)
+=item triangle_plot ([$x], $y)
 
-Plots filled upright triangles at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots filled upright triangles at (x, y). (See line_plot for a more detailed
+description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
+form include:
 
  plot(-data => ds::Pair(
      $x,
@@ -297,15 +321,14 @@ commands include:
 =cut
 
 sub triangle_plot {
-	croak("triangle_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Triangles(filled => 1)));
+	plot(-data => ds::Pair(_get_pairwise_data(@_)
+		, plotType => ppair::Triangles(filled => 1)));
 }
 
-=item square_plot ($x, $y)
+=item square_plot ([$x], $y)
 
-Plots filled squares at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots filled squares at (x, y). (See line_plot for a more detailed description.)
+Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair(
      $x,
@@ -325,15 +348,14 @@ commands include:
 =cut
 
 sub square_plot {
-	croak("square_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Squares(filled => 1)));
+	plot(-data => ds::Pair(_get_pairwise_data(@_)
+		, plotType => ppair::Squares(filled => 1)));
 }
 
-=item diamond_plot ($x, $y)
+=item diamond_plot ([$x], $y)
 
-Plots filled diamonds at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots filled diamonds at (x, y). (See line_plot for a more detailed description.)
+Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair($x, $y));
  plot(-data => ds::Pair(
@@ -353,15 +375,14 @@ commands include:
 =cut
 
 sub diamond_plot {
-	croak("diamond_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_));
+	plot(-data => ds::Pair(_get_pairwise_data(@_)));
 }
 
-=item cross_plot ($x, $y)
+=item cross_plot ([$x], $y)
 
-Plots crosses (i.e. plus symbols) at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots crosses (i.e. plus symbols) at (x, y). (See line_plot for a more detailed
+description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
+form include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Crosses));
  plot(-data => ds::Pair(
@@ -376,15 +397,13 @@ commands include:
 =cut
 
 sub cross_plot {
-	croak("cross_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Crosses));
+	plot(-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Crosses));
 }
 
-=item X_plot ($x, $y)
+=item X_plot ([$x], $y)
 
-Plots X symbols at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots X symbols at (x, y). (See line_plot for a more detailed description.)
+Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Xs));
  plot(-data => ds::Pair(
@@ -400,15 +419,14 @@ commands include:
 =cut
 
 sub X_plot {
-	croak("X_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Xs));
+	plot(-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Xs));
 }
 
-=item asterisk_plot ($x, $y)
+=item asterisk_plot ([$x], $y)
 
-Plots five-pointed asterisks at (x, y). Equivalent L<plot|/"PLOT FUNCTION">
-commands include:
+Plots five-pointed asterisks at (x, y). (See line_plot for a more detailed
+description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
+form include:
 
  plot(-data => ds::Pair(
      $x,
@@ -428,9 +446,8 @@ commands include:
 =cut
 
 sub asterisk_plot {
-	croak("asterisk_plot expects two piddles, a set of x-coordinates and a set of y-coordinates")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	plot(-data => ds::Pair(@_, plotType => ppair::Asterisks(N_points => 5)));
+	plot(-data => ds::Pair(_get_pairwise_data(@_)
+		, plotType => ppair::Asterisks(N_points => 5)));
 }
 
 
