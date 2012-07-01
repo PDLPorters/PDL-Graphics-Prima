@@ -93,7 +93,7 @@ sub widget {
 
 =item draw
 
-Calls all of the drawing functions for each plotType of the dataset. This also
+Calls all of the drawing functions for each plotType of the dataSet. This also
 applies all the global drawing options (like C<color>, for example) that were
 supplied to the dataset.
 

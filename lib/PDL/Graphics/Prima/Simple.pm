@@ -28,20 +28,18 @@ PDL::Graphics::Prima
  my $x = sequence(100) / 20;
  my $y = sin($x);
  
- # Draw a line connecting each x/y pair:
- line_plot($x, $y);
+ # Draw x/y pairs. Default x-value are sequential:
+ line_plot($y);        line_plot($x, $y);
+ circle_plot($y);      circle_plot($x, $y);
+ triangle_plot($y);    triangle_plot($x, $y);
+ square_plot($y);      square_plot($x, $y);
+ diamond_plot($y);     diamond_plot($x, $y);
+ X_plot($y);           X_plot($x, $y);
+ cross_plot($y);       cross_plot($x, $y);
+ asterisk_plot($y);    asterisk_plot($x, $y);
  
- # Draw a symbol at each x/y pair:
- circle_plot($x, $y);
- triangle_plot($x, $y);
- square_plot($x, $y);
- diamond_plot($x, $y);
- X_plot($x, $y);
- cross_plot($x, $y);
- asterisk_plot($x, $y);
- 
- # Sketch a function:
- func_plot(0, 10, \&PDL::sin);
+ # Sketch the sine function, initial x from 0 to 10:
+ func_plot(0 => 10, \&PDL::sin);
  
  
  # --( Super simple histogram )--
@@ -50,6 +48,8 @@ PDL::Graphics::Prima
  hist_plot($y->hist);
  my ($bin_centers, $heights) = $y->hist;
  hist_plot($bin_centers, $heights);
+ # Even simpler, if of limited use:
+ hist_plot($heights);
  
  
  # --( Super simple matrix plots )--
@@ -62,9 +62,10 @@ PDL::Graphics::Prima
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
  
- # Set the    left, right,  bottom, top
- matrix_plot([0,    1],    [0,      2],  $image);
- imag_plot(  [0,    1],    [0,      2],  $image);
+ # Set the x and y coordinates for the image boundaries
+ #            left, right,  bottom, top
+ matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
+ imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
  
  
  # --( More complex plots )--
@@ -73,11 +74,14 @@ PDL::Graphics::Prima
  # multiple datasets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines         => ds::Pair($x, $y),										# default is now diamonds?
+     -lines         => ds::Pair($x, $y
+         , plotType => ppair::Lines
+     ),
      -color_squares => ds::Pair($x, $y + 1
-         , colors => $colors,
+         , colors   => $colors,
          , plotType => ppair::Squares(filled => 1)
      ),
+     
      x => { label   => 'Time' },
      y => { label   => 'Sine' },
  );

@@ -30,44 +30,69 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  use PDL::Graphics::Prima::Simple;
  use PDL;
  
+ 
+ # --( Super simple line and symbol plots )--
+ 
  # Generate some data - a sine curve
  my $x = sequence(100) / 20;
  my $y = sin($x);
  
- # Draw a point at each x/y pair:
- blob_plot($x, $y);
+ # Draw x/y pairs. Default x-value are sequential:
+ line_plot($y);        line_plot($x, $y);
+ circle_plot($y);      circle_plot($x, $y);
+ triangle_plot($y);    triangle_plot($x, $y);
+ square_plot($y);      square_plot($x, $y);
+ diamond_plot($y);     diamond_plot($x, $y);
+ X_plot($y);           X_plot($x, $y);
+ cross_plot($y);       cross_plot($x, $y);
+ asterisk_plot($y);    asterisk_plot($x, $y);
  
- # Draw a line connecting each x/y pair:
- line_plot($x, $y);
+ # Sketch the sine function, initial x from 0 to 10:
+ func_plot(0 => 10, \&PDL::sin);
  
- # Draw a histogram:
+ 
+ # --( Super simple histogram )--
+ 
+ # PDL hist method returns x/y data
+ hist_plot($y->hist);
  my ($bin_centers, $heights) = $y->hist;
  hist_plot($bin_centers, $heights);
- hist_plot($y->hist);  # equivalent
+ # Even simpler, if of limited use:
+ hist_plot($heights);
  
+ 
+ # --( Super simple matrix plots )--
  
  # Generate some data - a wavy pattern
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
  
  # Generate a greyscale image:
- matrix_plot($image);
+ matrix_plot($image);  # smallest is white
+ imag_plot($image);    # smallest is black
  
- # Set the    left, right,  bottom, top
- matrix_plot([0,    1],    [0,      2],  $image);
+ # Set the x and y coordinates for the image boundaries
+ #            left, right,  bottom, top
+ matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
+ imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
  
  
- # Use the more general plot for multiple datasets
- # and more plotting features:
+ # --( More complex plots )--
+ 
+ # Use the more general 'plot' function for
+ # multiple datasets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines       => ds::Pair($x, $y),
-     -color_blobs => ds::Pair($x, $y + 1,
-                  colors => $colors,
-                  plotType => pt::Blobs
+     -lines         => ds::Pair($x, $y
+         , plotType => ppair::Lines
      ),
-     x => { label => 'Time' },
-     y => { label => 'Sine' },
+     -color_squares => ds::Pair($x, $y + 1
+         , colors   => $colors,
+         , plotType => ppair::Squares(filled => 1)
+     ),
+     
+     x => { label   => 'Time' },
+     y => { label   => 'Sine' },
  );
 
 =head1 WIDGET SYNOPSIS
