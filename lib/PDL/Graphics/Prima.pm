@@ -47,7 +47,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  cross_plot($y);       cross_plot($x, $y);
  asterisk_plot($y);    asterisk_plot($x, $y);
  
- # Sketch the sine function, initial x from 0 to 10:
+ # Sketch the sine function for x initially from 0 to 10:
  func_plot(0 => 10, \&PDL::sin);
  
  
