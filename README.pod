@@ -1,8 +1,8 @@
 =head1 PDL::Graphics::Prima
 
-A PDL graphing library using the Prima toolkit.
+A PDL plotting library using the Prima toolkit.
 
-This collection of modules provides a PDL-centric 2D graphing library that
+This collection of modules provides a PDL-centric 2D plotting library that
 is fast, intelligent, multi-platform and highly interactive. Fast because
 it's built on the L<PDL::Drawing::Prima> bindings, which make use of the
 L<PDL> threading engine to quickly execute large sets of drawing operations.
@@ -15,9 +15,9 @@ like panning and zooming are built right into the widget.
 
 For more information, see the documentation for L<PDL::Graphics::Prima>. If
 you're new, you should check out the documentation for
-L<PDL::Graphics::Prima::Simple>. I have also posted a YouTube video
-demonstrating a number of cool features of the library at
-http://youtu.be/WILd2XTz3F4.
+L<PDL::Graphics::Prima::Simple>. Also, I gave a talk at the 2012 edition of
+YAPC::NA (in Madison, WI) that you can find here:
+L<http://www.youtube.com/watch?v=IE-vnnRWiOg&feature=plcp>.
 
 =head1 INSTALLATION
 
@@ -34,13 +34,16 @@ If you have your hands on the actual source code (from the git repository
 listed below, or by C<look>ing at this module from the CPAN shell), you
 would do the following:
 
-  perl Makefile.PL
-  make
-  make test
-  make install
+  # Unix-like systems       Windows systems
+  perl Build.PL             perl Build.PL
+  ./Build                   Build
+  ./Build test              Build test
+  ./Build install           Build install
 
-Windows users will need to use C<nmake> or C<dmake> instead of C<make>,
-depending on which compiler you are using.
+Users of Unix-like systems may need to invoke superuser privileges for the
+installation phase if you install the module to your system Perl. Most Perl
+folks these days avoid tinkering with their system Perl by using L<local::lib>
+or L<App::perlbrew>.
 
 Note that there are almost no tests for this distribution at the moment.
 Frankly, I'm not sure exactly how to go about testing this sort of
@@ -56,10 +59,9 @@ This module depends on L<PDL::Drawing::Prima>, which has an important and
 nontrivial list of dependencies. However, if you have that module installed,
 this module should work.
 
-L<PDL::Graphics::Prima> requires Perl 5.10, although it will soon be relaxed to
-Perl 5.8. If you don't have that version of Perl, I recommend installing
-Strawberry Perl if you're on Windows, or using perlbrew if you're on Linux
-or Mac.
+L<PDL::Graphics::Prima> requires Perl 5.8. If you don't have that version of
+Perl, I recommend installing Strawberry Perl if you're on Windows, or using
+perlbrew if you're on Linux or Mac.
 
 =head1 DEVELOPMENT STATUS AND REPOSITORY
 
