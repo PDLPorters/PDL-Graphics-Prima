@@ -190,7 +190,7 @@ sub init {
 		timeout => $profile{replotDuration},
 		onTick => sub {
 			$_[0]->stop;
-			$self->notify('Paint');
+			$self->repaint;
 		}
 	);
 	
@@ -837,18 +837,16 @@ sub on_mouseup {
 sub get_image {
 	my $self = shift;
 	
-# Not working:
-#	# Build a prima image canvas and draw to it:
-#	my $image = Prima::Image->create(
-#		height => $self->height,
-#		width => $self->width,
-##		size => [$self->size],
-#		backColor => $self->backColor,
-#	) or die "Can't create an image!\n";
-#	$self->on_paint($image);
-#	return $image;
-
-	return $::application->get_image($self->client_to_screen($self->origin), $self->size);
+	# Build a prima image canvas and draw to it:
+	my $image = Prima::Image->create(
+		height => $self->height,
+		width => $self->width,
+		backColor => $self->backColor,
+	) or die "Can't create an image!\n";
+	$image->begin_paint or die "Can't draw on image";
+	$self->on_paint($image);
+	$image->end_paint;
+	return $image;
 }
 
 use Prima::PS::Drawable;
