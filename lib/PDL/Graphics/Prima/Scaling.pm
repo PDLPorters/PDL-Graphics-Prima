@@ -255,7 +255,7 @@ sub compute_ticks {
 	my ($Ticks, $ticks) = PDL::Graphics::Prima::Scaling::Linear::compute_ticks(undef, log($min)/log(1000), log($max) / log(1000));
 	return (1000**$Ticks, 1000**$ticks);
 
-=pod
+=begin details
 	
 print "got min/max of $lin_min, $lin_max\n";
 	my $range = $max - $min;
@@ -320,6 +320,8 @@ print "got min/max of $lin_min, $lin_max\n";
 print "Ticks are ", 10**$best_Ticks, "\n";
 	return ($best_Ticks, $ticks);
 	return (10**$best_Ticks, 10**$ticks);
+
+=end details
 
 =cut
 
