@@ -873,7 +873,6 @@ sub save_to_postscript {
 		},
 		pageSize => [$self->size],
 		pageMargins => [0, 0, 0, 0],
-		scale => [3, 3],
 		font => {
 			size => 8,
 		},
