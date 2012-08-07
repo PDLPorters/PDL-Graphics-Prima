@@ -2019,13 +2019,12 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 =head1 CallBack
 
-This is a cool class, but it's not working at the moment. :-(
-
-This class lets you supply your own callbacks for auto-scaling min and max
-calculations and for the drawing routines. This may seem overly high-level, but
+This class lets you supply your own callback for drawing routines. In time,
+it may also allow you to supply your own callback for autoscaling, but that's
+not supported at the moment. This may seem overly high-level, but
 it's mostly here so that you can implement custom drawing routines, implement
 user-level tweaks to existing classes, and toy around with new plot types
-without having to write a full-blown class.
+without having to write a full-blown plot class.
 
 =head2 New Drawing Techniques
 
@@ -2035,16 +2034,16 @@ routines, you can specify a base class and a drawing callback like so:
  my $smiley_plot_type = pt::CallBack(
  	base_class => 'PDL::Graphics::Prima::PlotType::Pair::Blobs',
  	draw => sub {
- 		my ($self, $canvas) = @_;
+ 		my ($self, $canvas, $ratio) = @_;
  		
  		# Retrieve the data from the dataset:
- 		my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
+ 		my ($xs, $ys) = $self->dataset->get_data_as_pixels($ratio);
  		
  		# Draw the smileys:
- 		$canvas->pdl_ellipses($xs, $ys, 10, 10);	# face
+ 		$canvas->pdl_ellipses($xs, $ys, 20, 20);	# face
  		$canvas->pdl_fill_ellipses($xs - 5, $ys + 4, 2, 2);	# left eye
  		$canvas->pdl_fill_ellipses($xs + 5, $ys + 4, 2, 2); # right eye
- 		$canvas->pdl_fill_chords($xs, $ys + 3, 10, 10, 200, 340); # smiling mouth
+ 		$canvas->pdl_arcs($xs, $ys, 10, 10, 200, 340); # smiling mouth
  	},
  	radius => 10,	# be sure to coordinate with pdl_ellipses, above
  );
@@ -2087,7 +2086,7 @@ sub initialize {
 
 # Dynamic drawing based upon values of the draw key and/or the base class:
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	if (not exists $self->{draw}) {
 		# Didn't supply a draw function, so call the base class's draw function:
@@ -2098,7 +2097,7 @@ sub draw {
 		# Masquerade as the base class:
 		my $class = ref($self);
 		bless $self, $self->{base_class};
-		$self->draw($canvas);
+		$self->draw($canvas, $ratio);
 		bless $self, $class;
 		return;
 	}
@@ -2106,11 +2105,21 @@ sub draw {
 	if (ref($self->{draw}) and ref($self->{draw}) eq 'CODE') {
 		# They supplied a code reference, so run it:
 		my $func = $self->{draw};
-		&$func($self);
+		&$func($self, $canvas, $ratio);
 		return;
 	}
 	
 	croak('You must supply a code reference for your drawing code.');
+}
+
+sub compute_collated_min_max_for {
+	my ($self, @args) = @_;
+	# Masquerade as the base class:
+	my $class = ref($self);
+	bless $self, $self->{base_class};
+	my @to_return = $self->compute_collated_min_max_for(@args);
+	bless $self, $class;
+	return @to_return;
 }
 
 1;
