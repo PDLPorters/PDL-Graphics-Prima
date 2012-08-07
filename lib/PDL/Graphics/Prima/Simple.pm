@@ -1294,7 +1294,8 @@ This kind of immediate feedback can be very useful. It is even possible to
 capture keyboard events and respond to user interaction this way. But B<please>,
 don't do that. If you need any substantial amount of user interaction, you
 would do much better to learn to create a Prima application with buttons, lists,
-and input lines, along with the Plot widget. For that, see L<PDL::Graphics::Prima>.
+and input lines, along with the Plot widget. For that, see
+L<PDL::Graphics::Prima::InteractiveTut>.
 
 =cut
 
