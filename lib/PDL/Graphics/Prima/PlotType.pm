@@ -1919,24 +1919,32 @@ usually have a need to override it.
 # of 3):
 sub generate_properties {
 	my ($self, @prop_list) = @_;
+	
+	# Collect singular and plural properties
+	@prop_list = map {/((.*)s)/} @prop_list;
+	
 	my %properties;
 	my $dataset = $self->dataset;
 	
 	# Add all of the specified properties to a local collection that eventually
 	# gets passed to the low-level drawing routine:
-	foreach (@prop_list) {
-		if (ref($self) and exists $self->{$_}) {
-			$properties{$_} = $self->{$_};
+	if (ref($self)) {
+		foreach (@prop_list) {
+			if (exists $self->{$_}) {
+				$properties{$_} = $self->{$_};
+			}
+			elsif (exists $dataset->{$_}) {
+				$properties{$_} = $dataset->{$_};
+			}
 		}
-		elsif (exists $dataset->{$_}) {
-			$properties{$_} = $dataset->{$_};
-		}
+		
 	}
-	
-	# Add a check for the handles property of the widget. This is a hack to
-	# enable plotting to other canvases:
-	if (ref ($self) and exists $self->widget->{handles}) {
-		$properties{handles} = $self->widget->{handles};
+	else {
+		foreach (@prop_list) {
+			if (exists $dataset->{$_}) {
+				$properties{$_} = $dataset->{$_};
+			}
+		}
 	}
 	
 	return %properties;

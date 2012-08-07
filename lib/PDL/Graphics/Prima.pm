@@ -571,22 +571,10 @@ sub on_paint {
 	# Clip the widget before we begin drawing
 	$canvas->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
 	
-	# backup the drawing parameters:
-	# working here - consider writing PDL::Drawing::Prima to back these up
-	# for me automatically so I don't have to do it here
-	# also, consider a better way than listing them here explicitly
-	my @to_backup = qw(color backColor linePattern lineWidth lineJoin
-			lineEnd rop rop2);
-	my %backups = map {$_ => $canvas->$_} (@to_backup);
-	
 	# Draw the data, sorted by key name:
 	foreach my $key (sort keys %{$self->{dataSets}}) {
 		next if $key eq 'widget';
-		my $dataset = $self->{dataSets}->{$key};
-		$dataset->draw($canvas);
-		
-		# Restore the drawing parameters after each draw function:
-		$canvas->set(%backups);
+		$self->{dataSets}->{$key}->draw($canvas);
 	}
 
 	# Draw the zoom-rectangle, if there is one

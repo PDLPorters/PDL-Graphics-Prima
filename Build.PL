@@ -13,7 +13,7 @@ my $build = Module::Build->new(
 	requires => {
 		# No I will not support 5.6
 		perl					=> '5.8.0',
-		'PDL::Drawing::Prima'	=> 0.01,
+		'PDL::Drawing::Prima'	=> 0.06,
 		PDL						=> '2.4.0',
 		Prima					=> 1.32,
 	},

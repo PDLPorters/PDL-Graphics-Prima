@@ -7,9 +7,9 @@ use PDL::NiceSlice;
 my $x = 3 * grandom(30);
 my $y = 3 * grandom(30);
 my $y_err = grandom(30);
-my $white = pdl(255, 255, 255)->rgb_to_color;
-my $red = pdl(255, 0, 0)->rgb_to_color;
-my $black = pdl(0,0,0)->rgb_to_color;
+my $white = pdl(255, 255, 255)->rgb_to_color->at(0);
+my $red = pdl(255, 0, 0)->rgb_to_color->at(0);
+my $black = pdl(0,0,0)->rgb_to_color->at(0);
 
 # Plots error bars and triangles at the point.
 plot(
@@ -17,8 +17,8 @@ plot(
 	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			ppair::ErrorBars(y_err => $y_err, colors => $black),
-			ppair::Triangles(colors => $red, size => 10),
+			ppair::ErrorBars(y_err => $y_err, color => $black),
+			ppair::Triangles(color => $red, size => 10),
 		],
 	),
 );
@@ -31,27 +31,27 @@ plot(
 	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			ppair::ErrorBars(y_err => $y_err, colors => $black),
+			ppair::ErrorBars(y_err => $y_err, color => $black),
 			ppair::Triangles(
 				filled => 'yes',
-				colors => $white,
+				color => $white,
 				orientation => 'up',
 				size => 10,
 			),
-			ppair::Triangles(colors => $red, size => 10),
+			ppair::Triangles(color => $red, size => 10),
 		],
 	),
 );
 
 # I can achieve the same thing using PDL threading, which I'll use to even
 # greater effect in the next exampe:
-my $colors = cat($white, $red)->transpose;
+my $colors = pdl($white, $red)->transpose;
 plot(
 	title => 'Threaded Error Bars',
 	-data => ds::Pair(
 		$x, $y,
 		plotType => [
-			ppair::ErrorBars(y_err => $y_err, colors => $black),
+			ppair::ErrorBars(y_err => $y_err, color => $black),
 			ppair::Triangles(
 				filled => pdl(1, 0)->transpose,
 				colors => $colors,
@@ -69,7 +69,7 @@ plot(
 	-data => ds::Pair(
 		$x->transpose, $y->transpose,
 		plotType => [
-			ppair::ErrorBars(y_err => $y_err->transpose, colors => $black),
+			ppair::ErrorBars(y_err => $y_err->transpose, color => $black),
 			ppair::Triangles(
 				filled => pdl(1, 0),
 				colors => $colors->transpose,

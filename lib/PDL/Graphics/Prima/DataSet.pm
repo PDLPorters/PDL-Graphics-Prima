@@ -104,27 +104,10 @@ sub draw {
 	my ($dataset, $canvas) = @_;
 	my $widget = $dataset->widget;
 	
-	my @drawing_parameters = qw(color backColor linePattern lineWidth lineJoin
-			lineEnd rop rop2);
-	
-	# backup the dataset-wide drawing parameters:
-	my %backups;
-	foreach(@drawing_parameters) {
-		if (exists $dataset->{$_}) {
-			$backups{$_} = $dataset->{$_};
-		}
-		elsif (not exists $dataset->{$_.'s'}) {
-			$backups{$_} = $widget->$_;
-		}
-	}
-
 	# Call each plot type's drawing function, in the order specified:
 	foreach my $plotType (@{$dataset->{plotTypes}}) {
-		# set the default drawing parameters and draw the plot type
-		$canvas->set(%backups);
 		$plotType->draw($canvas);
 	}
-	$canvas->set(%backups);
 }
 
 =item compute_collated_min_max_for

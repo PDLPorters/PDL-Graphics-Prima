@@ -17,6 +17,12 @@ plot(
 );
 
 plot(
+	-data => ds::Pair($xs, $ys,
+		color => cl::LightGreen,
+	)
+);
+
+plot(
 	-data => ds::Pair($xs, $ys),
 	color => cl::LightGreen,
 );
