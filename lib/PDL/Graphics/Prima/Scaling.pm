@@ -169,11 +169,14 @@ sub compute_ticks {
 
 # Rescales the data so that the min has a value of zero and the max has a value
 # of 1.
-use Carp 'cluck';
+use Carp 'croak';
 sub transform {
 	my ($class, $min, $max, $data) = @_;
 	my $range = $max - $min;
-	cluck ("bad data?") if not defined $data;
+	croak("Scaling::Linear::transform needs min != max but got min = max = $min")
+		if $range == 0;
+	croak('Scaling::Linear::transform needs well-defined data') 
+		if not defined $data;
 	return (($data - $min) / $range);
 }
 
@@ -182,6 +185,10 @@ sub transform {
 sub inv_transform {
 	my ($class, $min, $max, $data) = @_;
 	my $range = $max - $min;
+	croak("Scaling::Linear::inv_transform needs min != max but got min = max = $min")
+		if $range == 0;
+	croak('Scaling::Linear::inv_transform needs well-defined data') 
+		if not defined $data;
 	return $range * $data + $min;
 }
 
@@ -189,6 +196,10 @@ sub inv_transform {
 # max
 sub sample_evenly {
 	my ($class, $min, $max, $N_values) = @_;
+	croak("Scaling::Linear::sample_evenly needs min != max but got min = max = $min")
+		if $min == $max;
+	croak("Scaling::Linear::sample_evenly expects N_values > 1")
+		if not defined $N_values or $N_values < 2;
 	return zeroes($N_values)->xlinvals($min, $max);
 }
 
@@ -485,8 +496,13 @@ sub _largest_previous_number {
 # of 1.
 sub transform {
 	my ($class, $min, $max, $data) = @_;
+	croak("Scaling::Log::transform needs min > 0 and max > 0 but got min = $min and max = $max")
+		unless $min > 0 and $max > 0;
 	my ($log_min, $log_max, $log_data) = (log($min), log($max), log($data));
 	my $range = $log_max - $log_min;
+	croak('Scaling::Log::transform needs min != max') if $range == 0;
+	croak('Scaling::Log::transform needs well-defined data') 
+		if not defined $data;
 	return (($log_data - $log_min) / $range);
 }
 
@@ -495,10 +511,13 @@ sub transform {
 sub inv_transform {
 	# working here - make sure this works
 	my ($class, $min, $max, $data) = @_;
-	confess ('Unable to process data with bad min/max')
-		if $min eq 'BAD' or $max eq 'BAD';
+	croak("Scaling::Log::inv_transform needs min > 0 and max > 0 but got min = $min and max = $max")
+		unless $min > 0 and $max > 0;
 	my ($log_min, $log_max) = (log($min), log($max));
 	my $range = $log_max - $log_min;
+	croak('Scaling::Log::transform needs min != max') if $range == 0;
+	croak('Scaling::Log::transform needs well-defined data') 
+		if not defined $data;
 	return exp($range * $data + $log_min);
 }
 
@@ -506,6 +525,10 @@ sub inv_transform {
 # max
 sub sample_evenly {
 	my ($class, $min, $max, $N_values) = @_;
+	croak("Scaling::Log::sample_evenly needs min != max but got min = max = $min")
+		if $min == $max;
+	croak("Scaling::Log::sample_evenly expects N_values > 1")
+		if not defined $N_values or $N_values < 2;
 	return zeroes($N_values)->xlogvals($min, $max);
 }
 
