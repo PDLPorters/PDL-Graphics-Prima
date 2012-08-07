@@ -873,10 +873,9 @@ sub save_to_postscript {
 		},
 		pageSize => [$self->size],
 		pageMargins => [0, 0, 0, 0],
-		font => {
-			size => 8,
-		},
 	);
+	$ps->resolution($self->resolution);
+	$ps->font(size => 16);
 	
 	$ps->begin_doc
 		or do {

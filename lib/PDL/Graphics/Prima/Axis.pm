@@ -623,11 +623,6 @@ sub draw {
 	my ($axis, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top
 		, $ratio) = @_;
 	
-#	my ($c_width, $c_height) = $canvas->size;
-#	print "Canvas width = $c_width, height = $c_height, ";
-#	my $resolution = $canvas->resolution;
-#	print "resolution = $resolution\n";
-	
 	# We're going to ask for tick marks that extend slightly beyond the edge
 	# of the viewable area so that we can do fancy tick labeling that slides
 	# off the edge
