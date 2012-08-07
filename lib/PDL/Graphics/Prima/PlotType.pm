@@ -1698,7 +1698,7 @@ sub initialize {
 # Collation and drawing are handled by the raster role, but require the
 # existence of the get_colored_data function:
 *compute_collated_min_max_for
-= \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
+ = \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
 *draw = \&PDL::Graphics::Prima::PlotType::Role::Raster::draw;
 
 sub get_colored_data {
@@ -1744,7 +1744,7 @@ sub pimage::Basic {
 # Collation and drawing are handled by the raster role, but require the
 # existence of the get_colored_data function:
 *compute_collated_min_max_for
-= \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
+ = \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
 *draw = \&PDL::Graphics::Prima::PlotType::Role::Raster::draw;
 
 sub get_colored_data {
