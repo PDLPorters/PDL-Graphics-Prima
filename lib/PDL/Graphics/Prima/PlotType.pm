@@ -174,7 +174,7 @@ sub compute_collated_min_max_for {
 
 # This draws the CDFS:
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	my %properties = $self->generate_properties(
 		@PDL::Drawing::Prima::polylines_props);
@@ -187,8 +187,8 @@ sub draw {
 	$ys /= $xs->maximum->dummy(0) if $self->{normalized};
 	
 	# Convert these xs and ys to pixels:
-	$xs = $self->widget->x->reals_to_pixels($xs);
-	$ys = $self->widget->y->reals_to_pixels($ys);
+	$xs = $self->widget->x->reals_to_pixels($xs, $ratio);
+	$ys = $self->widget->y->reals_to_pixels($ys, $ratio);
 	
 	# Draw the curves:
 	$canvas->pdl_polylines($xs, $ys, %properties);
@@ -219,11 +219,11 @@ use base 'PDL::Graphics::Prima::PlotType';
 
 # A function that gets the data and performs the real-to-pixel conversion:
 sub get_data_as_pixels {
-	my $self = shift;
+	my ($self, $ratio) = @_;
 	my ($xs, $ys) = $self->get_data;
 	
-	return ($self->widget->x->reals_to_pixels($xs)
-		, $self->widget->y->reals_to_pixels($ys));
+	return ($self->widget->x->reals_to_pixels($xs, $ratio)
+		, $self->widget->y->reals_to_pixels($ys, $ratio));
 }
 
 
@@ -339,7 +339,7 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my @prop_list = $self->{thread_like} eq 'lines'	? @PDL::Drawing::Prima::polylines_props
@@ -347,7 +347,7 @@ sub draw {
 	my %properties = $self->generate_properties(@prop_list);
 
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->get_data_as_pixels;
+	my ($xs, $ys) = $self->get_data_as_pixels($ratio);
 	
 	if ($self->{thread_like} eq 'points') {
 		# Draw from the points to their half-way points:
@@ -560,20 +560,20 @@ sub compute_collated_min_max_for {
 
 # Here is the method for drawing spikes:
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::lines_props);
 
 	# Retrieve the data from the dataset:
 	my $widget = $self->widget;
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels($widget);
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels($ratio);
 	
 	# Draw the lines, either horizontal or vertical, based on the given baseline
 	if (exists $self->{y_baseline}) {
 		my $baseline = $ys->zeroes;
 		if (defined $self->{y_baseline}) {
-			$baseline = $widget->y->reals_to_pixels($baseline + $self->{y_baseline});
+			$baseline = $widget->y->reals_to_pixels($baseline + $self->{y_baseline}, $ratio);
 		}
 		else {
 			# working here - make threadable?
@@ -585,7 +585,7 @@ sub draw {
 	else {
 		my $baseline = $xs->zeroes;
 		if (defined $self->{x_baseline}) {
-			$baseline = $widget->x->reals_to_pixels($baseline + $self->{x_baseline});
+			$baseline = $widget->x->reals_to_pixels($baseline + $self->{x_baseline}, $ratio);
 		}
 		else {
 			# working here - make threadable?
@@ -689,13 +689,13 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::fill_ellipses_props);
 	
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels($ratio);
 
 	# plot it:
 	$canvas->pdl_fill_ellipses($xs, $ys, 2*$self->{xRadius}, 2*$self->{yRadius}
@@ -877,13 +877,13 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	
 	# Assemble the various properties from the plot-type object and the dataset
 	my %props = $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
 	
 	# Retrieve the data from the dataset:
-	my ($xs, $ys) = $self->dataset->get_data_as_pixels;
+	my ($xs, $ys) = $self->dataset->get_data_as_pixels($ratio);
 	$canvas->pdl_symbols($xs, $ys, $self->{N_points}
 		, $self->{orientation}, $self->{filled}, $self->{size}
 		, $self->{skip}, %props);
@@ -1215,7 +1215,7 @@ sub compute_collated_min_max_for {
 
 
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	my $dataset = $self->dataset;
 	my $widget = $self->widget;
 	
@@ -1224,9 +1224,9 @@ sub draw {
 	
 	# Get the edges and convert everything to pixels:
 	my $edges = $self->get_bin_edges($dataset, $widget);
-	my $pixel_edges = $widget->x->reals_to_pixels($edges);
-	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline});
-	my $ys = $widget->y->reals_to_pixels($dataset->get_ys);
+	my $pixel_edges = $widget->x->reals_to_pixels($edges, $ratio);
+	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline}, $ratio);
+	my $ys = $widget->y->reals_to_pixels($dataset->get_ys, $ratio);
 	
 	$canvas->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
 			, $pixel_edges(1:-1), $ys, %properties);
@@ -1457,7 +1457,7 @@ sub compute_collated_min_max_for {
 }
 
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	my ($xs, $ys) = $self->dataset->get_data;
 	my $widget = $self->widget;
 	
@@ -1469,9 +1469,9 @@ sub draw {
 		my $left_xs = $xs - $self->{left_bars};
 		
 		# Convert from points to pixels:
-		$left_xs = $widget->x->reals_to_pixels($left_xs);
-		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys);
+		$left_xs = $widget->x->reals_to_pixels($left_xs, $ratio);
+		my $local_xs = $widget->x->reals_to_pixels($xs, $ratio);
+		my $local_ys = $widget->y->reals_to_pixels($ys, $ratio);
 
 		# Draw the line from the point to the edge:
 		$canvas->pdl_lines($left_xs, $local_ys, $local_xs, $local_ys, %properties);
@@ -1486,9 +1486,9 @@ sub draw {
 		my $right_xs = $xs + $self->{right_bars};
 		
 		# Convert from points to pixels:
-		$right_xs = $widget->x->reals_to_pixels($right_xs);
-		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+		$right_xs = $widget->x->reals_to_pixels($right_xs, $ratio);
+		my $local_xs = $widget->x->reals_to_pixels($xs, $ratio);
+		my $local_ys = $widget->y->reals_to_pixels($ys, $ratio);
 
 		# Draw the line from the point to the edge:
 		$canvas->pdl_lines($local_xs, $local_ys, $right_xs, $local_ys, %properties);
@@ -1503,9 +1503,9 @@ sub draw {
 		my $upper_ys = $ys + $self->{upper_bars};
 		
 		# Convert from points to pixels:
-		$upper_ys = $widget->y->reals_to_pixels($upper_ys); #--
-		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+		$upper_ys = $widget->y->reals_to_pixels($upper_ys, $ratio);
+		my $local_xs = $widget->x->reals_to_pixels($xs, $ratio);
+		my $local_ys = $widget->y->reals_to_pixels($ys, $ratio);
 
 		# Draw the line from the point to the edge
 		$canvas->pdl_lines($local_xs, $local_ys, $local_xs, $upper_ys, %properties);
@@ -1520,9 +1520,9 @@ sub draw {
 		my $lower_ys = $ys - $self->{lower_bars};
 		
 		# Convert from points to pixels:
-		$lower_ys = $widget->y->reals_to_pixels($lower_ys); #--
-		my $local_xs = $widget->x->reals_to_pixels($xs);
-		my $local_ys = $widget->y->reals_to_pixels($ys); #--
+		$lower_ys = $widget->y->reals_to_pixels($lower_ys, $ratio);
+		my $local_xs = $widget->x->reals_to_pixels($xs, $ratio);
+		my $local_ys = $widget->y->reals_to_pixels($ys, $ratio);
 
 		# Draw the line from the point to the edge:
 		$canvas->pdl_lines($local_xs, $local_ys, $local_xs, $lower_ys, %properties);
@@ -1592,13 +1592,13 @@ sub compute_collated_min_max_for {
 # Drawing is fairly straight-forward. The consuming class must provide a
 # get_colored_data function.
 sub draw {
-	my ($self, $canvas) = @_;
+	my ($self, $canvas, $ratio) = @_;
 	my $dataset = $self->dataset;
 	my $widget = $self->widget;
 	
 	# Convert the x and y edges to coordinate edges:
-	my $xs = $widget->x->reals_to_pixels($dataset->edges('x'));
-	my $ys = $widget->y->reals_to_pixels($dataset->edges('y'));
+	my $xs = $widget->x->reals_to_pixels($dataset->edges('x'), $ratio);
+	my $ys = $widget->y->reals_to_pixels($dataset->edges('y'), $ratio);
 	
 	# Gather the properties that I will need to use in the plotting.
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
@@ -1983,13 +1983,15 @@ sub get_data {
 
 Needs explanation and examples. This function will be called whenever the
 plot widget needs to redraw your plotType (window resizes, zooms, etc). It is
-a simple method call, and is called with the plotType object as the first and
-only argument.
+a simple method call, and is called with the plotType object as the first
+argument, the canvas upon which to draw as the second argument (typically the
+widget, but sometimes not), and the canvas ratio if the canvas's size is not
+the same as the widget's size.
 
 Now, something that I I<always> forget to do is to convert the data values to
 pixel values. You do that with the widget's x- and y-axis objects with code like
 
- my $x_to_plot = $self->widget->x->reals_to_pixels($xs)
+ my $x_to_plot = $self->widget->x->reals_to_pixels($xs, $ratio)
 
 If it seems like your new plot type is not plotting anything, be sure that you
 have properly converted the points you are trying to plot.

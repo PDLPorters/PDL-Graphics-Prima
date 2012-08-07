@@ -563,10 +563,16 @@ sub on_paint {
 	my ($clip_left, $clip_bottom, $right_edge, $top_edge)
 		= $self->get_edge_requirements;
 	
+	my $ratio = $canvas->height / $self->height;
+	
 	# The right and top edge values should be subtracted from the width and
 	# height, respectively:
-	my $clip_right = $canvas->width - $right_edge;
-	my $clip_top = $canvas->height - $top_edge;
+	my $clip_right = $canvas->width - $ratio * $right_edge;
+	my $clip_top = $canvas->height - $ratio * $top_edge;
+	
+	# Correct the left and bottom clipping for the canvas ratio
+	$clip_left *= $ratio;
+	$clip_bottom *= $ratio;
 	
 	# Clip the widget before we begin drawing
 	$canvas->clipRect($clip_left, $clip_bottom, $clip_right, $clip_top);
@@ -574,22 +580,22 @@ sub on_paint {
 	# Draw the data, sorted by key name:
 	foreach my $key (sort keys %{$self->{dataSets}}) {
 		next if $key eq 'widget';
-		$self->{dataSets}->{$key}->draw($canvas);
+		$self->{dataSets}->{$key}->draw($canvas, $ratio);
 	}
 
 	# Draw the zoom-rectangle, if there is one
 	if (exists $self->{mouse_down_rel}->{mb::Right}) {
 		my ($x, $y) = $self->pointerPos;
 		my ($x_start_rel, $y_start_rel) = @{$self->{mouse_down_rel}->{mb::Right}};
-		my $x_start_pixel = $self->x->relatives_to_pixels($x_start_rel);
-		my $y_start_pixel = $self->y->relatives_to_pixels($y_start_rel);
+		my $x_start_pixel = $self->x->relatives_to_pixels($x_start_rel, $ratio);
+		my $y_start_pixel = $self->y->relatives_to_pixels($y_start_rel, $ratio);
 		$canvas->rectangle($x_start_pixel, $y_start_pixel, $x, $y);
 	}
 	
 	# Draw the axes
 	$canvas->clipRect(0, 0, $self->size);
-	$self->x->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top);
-	$self->y->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top);
+	$self->x->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top, $ratio);
+	$self->y->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top, $ratio);
 	
 	# Draw the title:
 	if ($self->{titleSpace}) {
@@ -601,7 +607,7 @@ sub on_paint {
 		$canvas->font->style(fs::Bold);
 		
 		# Draw the title:
-		$canvas->draw_text($self->{title}, 0, $height - $self->{titleSpace}
+		$canvas->draw_text($self->{title}, 0, $height - $self->{titleSpace} * $ratio
 				, $width, $height
 				, dt::Center | dt::VCenter | dt::NewLineBreak | dt::NoWordWrap
 				| dt::UseExternalLeading);

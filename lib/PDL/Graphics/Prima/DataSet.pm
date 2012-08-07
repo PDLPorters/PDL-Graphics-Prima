@@ -101,12 +101,12 @@ supplied to the dataset.
 
 # Calls all the drawing functions for the plotTypes for this dataset:
 sub draw {
-	my ($dataset, $canvas) = @_;
+	my ($dataset, $canvas, $ratio) = @_;
 	my $widget = $dataset->widget;
 	
 	# Call each plot type's drawing function, in the order specified:
 	foreach my $plotType (@{$dataset->{plotTypes}}) {
-		$plotType->draw($canvas);
+		$plotType->draw($canvas, $ratio);
 	}
 }
 
@@ -493,11 +493,11 @@ values of the x- and y- data to actual pixel positions in the widget.
 =cut
 
 sub get_data_as_pixels {
-	my ($dataset) = @_;
+	my ($dataset, $ratio) = @_;
 	my $widget = $dataset->widget;
 	
 	my ($xs, $ys) = $dataset->get_data;
-	return ($widget->x->reals_to_pixels($xs), $widget->y->reals_to_pixels($ys));
+	return ($widget->x->reals_to_pixels($xs, $ratio), $widget->y->reals_to_pixels($ys, $ratio));
 }
 
 =back
