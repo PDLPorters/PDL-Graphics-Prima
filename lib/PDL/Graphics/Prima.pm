@@ -368,12 +368,12 @@ sub pair_down_collation {
 		# updated min/max calculated values:
 		$trimmed_minima(:,2)
 			.= $self->{$axis_name}->pixels_to_reals(
-				$self->{$axis_name}->reals_to_pixels($trimmed_minima(:,0), $min, $max)
-					- $trimmed_minima(:,1), $min, $max);
+				$self->{$axis_name}->reals_to_pixels($trimmed_minima(:,0), 1, $min, $max)
+					- $trimmed_minima(:,1), 1, $min, $max);
 		$trimmed_maxima(:,2)
 			.= $self->{$axis_name}->pixels_to_reals(
-				$self->{$axis_name}->reals_to_pixels($trimmed_maxima(:,0), $min, $max)
-					+ $trimmed_maxima(:,1), $min, $max);
+				$self->{$axis_name}->reals_to_pixels($trimmed_maxima(:,0), 1, $min, $max)
+					+ $trimmed_maxima(:,1), 1, $min, $max);
 		
 		# Trim again:
 		$min_mask = $trimmed_minima->trim_collated_min;
