@@ -340,7 +340,15 @@ sub pair_down_collation {
 		if $virtual_pixel_extent <= 0;
 	# min_data and max_data are the actual min and max values of the data
 	# that are supposed to fit within the virtual pixel extent.
-	my ($min_data, $max_data) = ($trimmed_minima->at(0,2), $trimmed_maxima->at(0,2));
+	my ($min_data, $max_data)
+		= ($trimmed_minima(:,(2))->min, $trimmed_maxima(:,(2))->max);
+	
+	# It is possible that all the x-data or all the y-data are identical.
+	# Check if the current min/max values are identical and return the
+	# scaling's response in such a situation:
+	return $self->{$axis_name}->scaling->min_max_for_degenerate($min_data)
+		if $min_data == $max_data;
+	
 	# min and max are the final minimal and maximal values that we use for
 	# the axis so that all the data can be drawn within the plot.
 	my $min = $self->{$axis_name}->scaling->inv_transform($min_data, $max_data
@@ -349,14 +357,6 @@ sub pair_down_collation {
 		, 1 + $max_pix/$virtual_pixel_extent);
 	# working here - come up with something better than just croaking.
 	die "Internal error: min ($min) is greater than max ($max)" if $min > $max;
-	
-	# It is possible that all the x-data or all the y-data are identical. In
-	# that case, this scheme would normally be degenerate and return nan,
-	# which makes things croak. To solve this problem, we check if the
-	# current min/max values are identical and return the scaling's response
-	# in such a situation:
-	return $self->{$axis_name}->scaling->min_max_for_degenerate($min)
-		if $min == $max;
 	
 	# We will iterate until we stop removing rows, at which point the lowest
 	# level of the pyramid is what we want.
