@@ -96,30 +96,6 @@ use PDL;
 use Prima;
 our @ISA = qw(Prima::Component);
 
-#################
-# Notifications #
-#################
-# Add a new notification_type for each of the notifications just defined.
-{
-	# Keep the notifications hash in its own lexically scoped block so that
-	# other's can't mess with it (at least, not without using PadWalker or some
-	# such).
-	my %notifications = (
-		%{Prima::Component-> notification_types()},
-		map { ("Change$_" => nt::Default) } qw(Bounds Scaling Label)
-	);
-	
-	sub notification_types { return \%notifications }
-}
-
-sub repaint_parent {
-	my $axis = shift;
-	$axis->owner->notify('Replot')
-}
-*on_changebounds = \&repaint_parent;
-*on_changescaling = \&repaint_parent;
-*on_changelabel = \&update_edges;
-
 ###################
 # Default Profile #
 ###################
@@ -490,6 +466,53 @@ sub scaling {
 	$_[0]->notify('ChangeScaling');
 }
 
+=head1 NOTIFICATIONS
+
+Axis widgets provide a handful of notifications that are useful for handling
+user or other interaction.
+
+=cut
+
+#################
+# Notifications #
+#################
+# Add a new notification_type for each of the notifications.
+{
+	# Keep the notifications hash in its own lexically scoped block so that
+	# other's can't mess with it.
+	my %notifications = (
+		%{Prima::Component-> notification_types()},
+		map { ("Change$_" => nt::Default) } qw(Bounds Scaling Label)
+	);
+	
+	sub notification_types { return \%notifications }
+}
+
+sub repaint_parent {
+	my $axis = shift;
+	$axis->owner->notify('Replot')
+}
+*on_changebounds = \&repaint_parent;
+*on_changescaling = \&repaint_parent;
+*on_changelabel = \&update_edges;
+
+=head2 ChangeBounds
+
+This event is fired immediately after the bounds are changed, whether the
+change is due to the user's mouse interaction or by a setter call of L</min>,
+L</max>, or L</minmax>.
+
+=head2 ChangeScaling
+
+This event is fired immediately after the axis' scaling type is changed
+(i.e. from linear to logarithmic).
+
+=head2 ChangeLabel
+
+This event is fired immediately after setting, changing, or removing the
+axis' label.
+
+=head1 METHODS
 
 =head2 reals_to_relatives, relatives_to_reals
 
