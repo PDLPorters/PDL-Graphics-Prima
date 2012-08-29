@@ -141,9 +141,11 @@ sub compute_collated_min_max_for {
 	my $lineWidths = $properties{lineWidths};
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
-	# get the rest of the piddles; we don't need their names and order is
-	# not important as this is for bad value checking:
-	my @prop_piddles = values %properties;
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
 	
 	# Get the data:
 	my $set = $self->dataset->get_data;
@@ -321,8 +323,12 @@ sub compute_collated_min_max_for {
 	my $lineWidths = $properties{lineWidths};
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
-	# get the rest of the piddles; we don't need their names:
-	my @prop_piddles = values %properties;
+	# get the rest of the piddles, all of which are associated with plural
+	# endings:
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
 	
 	# Get the data:
 	my ($xs, $ys) = $self->get_data;
@@ -519,6 +525,13 @@ sub compute_collated_min_max_for {
 	my ($to_check, $extra) = my ($xs, $ys) = $self->dataset->get_data;
 	($to_check, $extra) = ($ys, $xs) if $axis_name eq 'y';
 	
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
+	push @prop_piddles, $extra;
+	
 	# The min/max depend on whether the baseline we're using has the same
 	# name as the axis we're using, or not. If the baseline has the same
 	# name as the axis of interest, then the spikes are drawn in the
@@ -526,9 +539,6 @@ sub compute_collated_min_max_for {
 	# in the other axis, then the pixel extent is the line width.
 	my $baseline_name = $axis_name . '_baseline';
 	if (exists $self->{$baseline_name}) {
-		# get the property piddles; we don't need their names:
-		my @prop_piddles = (values %properties, $extra);
-		
 		# Collate the min and the max:
 		my ($min, $max) = PDL::collate_min_max_wrt_many($to_check, 1,
 			$to_check, 1, $pixel_extent, @prop_piddles);
@@ -549,8 +559,6 @@ sub compute_collated_min_max_for {
 		my $lineWidths = $properties{lineWidths};
 		$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 		delete $properties{lineWidths};
-		# get the rest of the piddles; we don't need their names:
-		my @prop_piddles = (values %properties, $extra);
 		
 		# Collate and return the min and the max:
 		return PDL::collate_min_max_wrt_many($to_check, $lineWidths,
@@ -667,7 +675,12 @@ sub compute_collated_min_max_for {
 	# Get the list of properties for which we need to look for bad values:
 	my %properties
 		= $self->generate_properties(@PDL::Drawing::Prima::fill_ellipses_props);
-	my @extras = values %properties;
+	
+	# get the rest of the piddles, which are associated with plural keys
+	my @extras;
+	while(my ($k, $v) = each %properties) {
+		push @extras, $v if $k =~ /s$/;
+	}
 	
 	# Get the data and radii:
 	my ($xs, $ys) = $self->dataset->get_data;
@@ -852,7 +865,12 @@ sub compute_collated_min_max_for {
 	# Get the list of properties for which we need to look for bad values:
 	my %properties
 		= $self->generate_properties(@PDL::Drawing::Prima::symbols_props);
-	my @extras = values %properties;
+	
+	# get the rest of the piddles, which are associated with plural keys
+	my @extras;
+	while(my ($k, $v) = each %properties) {
+		push @extras, $v if $k =~ /s$/;
+	}
 	
 	my $size = $self->{size};
 	my $to_check;
@@ -1191,6 +1209,12 @@ sub compute_collated_min_max_for {
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
 	
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
+	
 	my ($xs, $ys) = $self->dataset->get_data;
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
@@ -1202,14 +1226,14 @@ sub compute_collated_min_max_for {
 		
 		return PDL::collate_min_max_wrt_many($to_check, $bottom_padding
 			, $to_check, $top_padding, $pixel_extent
-			, $xs->append(zeroes(1)), values %properties);
+			, $xs->append(zeroes(1)), @prop_piddles);
 	}
 	# For the x min/max, get the bin edges and collate by line width:
 	else {
 		my $edges = $self->get_bin_edges;
 		return PDL::collate_min_max_wrt_many($edges(0:-2), $lineWidths
 			, $edges(1:-1), $lineWidths, $pixel_extent
-			, $ys, values %properties);
+			, $ys, @prop_piddles);
 	}
 }
 
@@ -1334,6 +1358,12 @@ sub compute_collated_min_max_for {
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
 	
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
+	
 	# This gets pretty complex. For example, consider the x-min. The
 	# collation must combine the x data and their widths (the widths of the
 	# error bars as well as the caps) along with x-minus-errors and the
@@ -1349,7 +1379,7 @@ sub compute_collated_min_max_for {
 		if (exists($self->{left_bars})) {
 			my ($min, $max) = PDL::collate_min_max_wrt_many(
 				  $xs - $self->{left_bars}, $lineWidths, $xs, 0
-				, $pixel_extent, values %properties
+				, $pixel_extent, @prop_piddles
 				, $self->{x_err_width}, $lineWidths, $ys);
 			push @mins, $min;
 			push @maxes, $max;
@@ -1358,7 +1388,7 @@ sub compute_collated_min_max_for {
 		if (exists $self->{left_bars}) {
 			my ($min, $max) = PDL::collate_min_max_wrt_many(
 				  $xs, 0, $xs + $self->{right_bars}, $lineWidths
-				, $pixel_extent, values %properties
+				, $pixel_extent, @prop_piddles
 				, $self->{x_err_width}, $lineWidths, $ys);
 			push @mins, $min;
 			push @maxes, $max;
@@ -1375,7 +1405,7 @@ sub compute_collated_min_max_for {
 			if (exists $self->{upper_bars}) {
 				my ($min, $max) = PDL::collate_min_max_wrt_many(
 					  $xs, $width, $xs, $width
-					, $pixel_extent, values %properties
+					, $pixel_extent, @prop_piddles
 					, $self->{y_err_width}, $lineWidths, $ys
 					, $self->{upper_bars});
 				push @mins, $min;
@@ -1384,7 +1414,7 @@ sub compute_collated_min_max_for {
 			if (exists $self->{lower_bars}) {
 				my ($min, $max) = PDL::collate_min_max_wrt_many(
 					  $xs, $width, $xs, $width
-					, $pixel_extent, values %properties
+					, $pixel_extent, @prop_piddles
 					, $self->{y_err_width}, $lineWidths, $ys
 					, $self->{lower_bars});
 				push @mins, $min;
@@ -1397,7 +1427,7 @@ sub compute_collated_min_max_for {
 		if (exists($self->{lower_bars})) {
 			my ($min, $max) = PDL::collate_min_max_wrt_many(
 				  $ys - $self->{lower_bars}, $lineWidths, $ys, 0
-				, $pixel_extent, values %properties
+				, $pixel_extent, @prop_piddles
 				, $self->{y_err_width}, $lineWidths, $xs);
 			push @mins, $min;
 			push @maxes, $max;
@@ -1406,7 +1436,7 @@ sub compute_collated_min_max_for {
 		if (exists $self->{upper_bars}) {
 			my ($min, $max) = PDL::collate_min_max_wrt_many(
 				  $ys, 0, $ys + $self->{upper_bars}, $lineWidths
-				, $pixel_extent, values %properties
+				, $pixel_extent, @prop_piddles
 				, $self->{y_err_width}, $lineWidths, $xs);
 			push @mins, $min;
 			push @maxes, $max;
@@ -1423,7 +1453,7 @@ sub compute_collated_min_max_for {
 			if (exists $self->{left_bars}) {
 				my ($min, $max) = PDL::collate_min_max_wrt_many(
 					  $ys, $width, $ys, $width
-					, $pixel_extent, values %properties
+					, $pixel_extent, @prop_piddles
 					, $self->{x_err_width}, $lineWidths, $xs
 					, $self->{left_bars});
 				push @mins, $min;
@@ -1432,7 +1462,7 @@ sub compute_collated_min_max_for {
 			if (exists $self->{right_bars}) {
 				my ($min, $max) = PDL::collate_min_max_wrt_many(
 					  $ys, $width, $ys, $width
-					, $pixel_extent, values %properties
+					, $pixel_extent, @prop_piddles
 					, $self->{x_err_width}, $lineWidths, $xs
 					, $self->{right_bars});
 				push @mins, $min;
@@ -1568,6 +1598,12 @@ sub compute_collated_min_max_for {
 	my %properties
 		= $self->generate_properties(@PDL::Drawing::Prima::bars_props);
 
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
+	
 	my $to_check = $self->dataset->edges($axis_name);
 	my ($left_check, $right_check, $left_extra, $right_extra);
 	if ($axis_name eq 'x') {
@@ -1586,7 +1622,7 @@ sub compute_collated_min_max_for {
 	# Fudging a little bith with $extra, this could probably be improved
 	# working here
 	return PDL::collate_min_max_wrt_many($left_check, 0, $right_check, 0
-		, $pixel_extent, values %properties, $left_extra, $right_extra);
+		, $pixel_extent, @prop_piddles, $left_extra, $right_extra);
 }
 
 # Drawing is fairly straight-forward. The consuming class must provide a
@@ -1889,8 +1925,12 @@ sub compute_collated_min_max_for {
 	my $lineWidths = $properties{lineWidths};
 	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
 	delete $properties{lineWidths};
-	# get the rest of the piddles; we don't need their names:
-	my @prop_piddles = values %properties;
+	
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
 	
 	# Get the data:
 	my ($xs, $ys) = $self->dataset->get_data;
