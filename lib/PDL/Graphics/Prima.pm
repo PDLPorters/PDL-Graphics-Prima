@@ -253,9 +253,13 @@ sub compute_min_max_for {
 			= $self->pair_down_collation('y', $trimmed_minima, $trimmed_maxima);
 		
 		# Update the axis min/max and redo the pair-down:
-		$self->{'y'}->_min($min);
-		$self->{'y'}->_max($max);
-		$self->{'y'}->recalculate_edge_requirements($self);
+		(undef, my $min_auto) = $self->y->min;
+		(undef, my $max_auto) = $self->y->max;
+		$self->y->_min($min);
+		$self->y->_max($max);
+		$self->y->recalculate_edge_requirements($self);
+		$self->y->_min(lm::Auto) if $min_auto;
+		$self->y->_max(lm::Auto) if $max_auto;
 	}
 	
 	# Perform the collation:
