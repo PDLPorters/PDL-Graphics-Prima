@@ -1789,6 +1789,144 @@ sub get_colored_data {
 
 
 ###############################################################################
+#                         Annotation-based Plot Types                         #
+###############################################################################
+
+package PDL::Graphics::Prima::PlotType::Anotation;
+our @ISA = qw(PDL::Graphics::Prima::PlotType);
+
+#####################################################
+# PDL::Graphics::Prima::PlotType::Anotation::Region #
+#####################################################
+
+package PDL::Graphics::Prima::PlotType::Anotation::Region;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
+
+use Carp;
+use PDL;
+
+# short-name constructor:
+sub pnote::Region {
+	return PDL::Graphics::Prima::PlotType::Anotation::Region->new(@_);
+}
+
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	# Set sane defaults for the different specs
+	%$self = (
+		left => '0%', bottom => '0%', right => '100%', top => '100%',
+		%$self
+	);
+	
+	# Replace the specs with parsed versions
+	for my $edge_name (qw(left bottom right top)) {
+		$self->set_edge($edge_name, $self->{$edge_name});
+	}
+}
+
+my %allowed_entries = map {$_ => 1} qw(em pct px raw);
+my $float_point_regex = qr/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/;
+sub set_edge {
+	my ($self, $edge_name, $spec) = @_;
+	
+	# If they passed a pre-parsed hashref, use that
+	if (ref($spec) eq 'HASH') {
+		# Make sure the entries are valid
+		for my $key (keys %$spec) {
+			croak("Region edge-hash has invalid key $key")
+				unless $allowed_entries{$key};
+		}
+	}
+	else {
+		# Strip spaces and convert to all lower-case
+		$spec =~ s/\s+//g;
+		$spec = lc $spec;
+		
+		my %hash;
+		
+		# Pull out the different parts, one at a time
+		if ($spec =~ s/($float_point_regex)em//) {
+			$hash{em} = $1;
+		}
+		if ($spec =~ s/($float_point_regex)\%//) {
+			$hash{pct} = $1 / 100;
+		}
+		if ($spec =~ s/($float_point_regex)px//) {
+			$hash{px} = $1;
+		}
+		if ($spec =~ /^($float_point_regex)$/) {
+			$hash{raw} = $1;
+		}
+		elsif (length($spec) > 0) {
+			croak("Unknown fragment in region edge spec: $spec");
+		}
+		$spec = \%hash;
+	}
+	
+	$self->{$edge_name} = $spec;
+}
+
+sub em_width {
+	my ($self, $axis) = @_;
+	my ($em_width) = $axis->em_dims;
+	return $em_width;
+}
+
+# Collation needs to eventually account for raw values, but for now it simply
+# doesn't register; working here
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	return zeroes($pixel_extent+1)->setvaltobad(0),
+		zeroes($pixel_extent+1)->setvaltobad(0);
+}
+
+sub get_edge_position {
+	my ($self, $edge_name, $ratio) = @_;
+	my $axis = $self->widget->x;
+	$axis = $self->widget->y if $edge_name eq 'top' or $edge_name eq 'bottom';
+	
+	# Start with the raw data, or undef
+	my $rel_position;
+	$rel_position = $axis->reals_to_relatives($self->{$edge_name}->{raw})
+		if defined $self->{$edge_name}->{raw};
+	# Next add the percent:
+	$rel_position += $self->{$edge_name}->{pct}
+		if defined $self->{$edge_name}->{pct};
+	# If we don't have a relative position, croak
+	croak("Region edge spec must have a raw or percentage spec")
+		if not defined $rel_position;
+	
+	# Convert the relative position to pixels
+	my $position = $axis->relatives_to_pixels($rel_position, $ratio);
+	
+	# Add any pixel offsets
+	$position += $self->{$edge_name}->{px} if defined $self->{$edge_name}->{px};
+	$position += $self->em_width * $self->{$edge_name}->{em}
+		if defined $self->{$edge_name}->{em};
+
+	return $position;
+}
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	# Assemble the various properties from the plot-type object and the dataset
+	my @prop_list = @PDL::Drawing::Prima::bars_props;
+	my %properties = $self->generate_properties(@prop_list);
+
+	# Get the left, bottom, right, and top pixel positions
+	my @pixel_positions;
+	for (qw(left bottom right top)) {
+		push @pixel_positions, $self->get_edge_position($_, $ratio);
+	}
+	
+	$canvas->pdl_bars(@pixel_positions, %properties);
+}
+
+###############################################################################
 #                         Creating your own Plot Type                         #
 ###############################################################################
 # Also includes the base type

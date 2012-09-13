@@ -75,6 +75,7 @@ These include accessing the associated widget and drawing the data.
 =cut
 
 package PDL::Graphics::Prima::DataSet;
+use Carp;
 
 =item widget
 
@@ -304,8 +305,6 @@ sub change_data {
 package PDL::Graphics::Prima::DataSet::Set;
 use base 'PDL::Graphics::Prima::DataSet';
 use Carp;
-use strict;
-use warnings;
 
 =head2 Sets
 
@@ -430,8 +429,6 @@ sub _change_data {
 package PDL::Graphics::Prima::DataSet::Pair;
 use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
-use strict;
-use warnings;
 
 =head2 Pair
 
@@ -553,15 +550,13 @@ sub _change_data {
 # working here - create an OrderedSet, which only requires a single set of
 # data and uses counting numbers for the "x" values
 
-###############################################################################
-#                                    Grids                                    #
-###############################################################################
+################################################################################
+#                                     Grid                                     #
+################################################################################
 
 package PDL::Graphics::Prima::DataSet::Grid;
 use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
-use strict;
-use warnings;
 use PDL;
 
 =head2 Grids
@@ -931,8 +926,6 @@ sub guess_scaling_for {
 package PDL::Graphics::Prima::DataSet::Image;
 use base 'PDL::Graphics::Prima::DataSet::Grid';
 use Carp 'croak';
-use strict;
-use warnings;
 
 =head2 Image
 
@@ -1070,8 +1063,6 @@ package PDL::Graphics::Prima::DataSet::Func;
 our @ISA = qw(PDL::Graphics::Prima::DataSet::Pair);
 
 use Carp 'croak';
-use strict;
-use warnings;
 
 =over
 
@@ -1240,6 +1231,68 @@ sub compute_collated_min_max_for {
 	my $collated_max = PDL::cat(@max_collection)->mv(-1,0)->maximum;
 	
 	return ($collated_min, $collated_max);
+}
+
+=back
+
+=cut
+
+=head2 Anotation
+
+PDL::Graphics::Prima provides a generic anotation dataset that is used for
+adding various anotations to your plots. It expects a list of key/value pairs
+where the keys are the names you give to your anotations and the values are
+annotation plotType objects.
+
+=cut
+
+###############################################################################
+#                                  Anotation                                  #
+###############################################################################
+
+package PDL::Graphics::Prima::DataSet::Anotation;
+our @ISA = qw(PDL::Graphics::Prima::DataSet);
+
+use Carp 'croak';
+
+=over
+
+=item ds::Note - short-name constructor for anotations
+
+=for sig
+
+    ds::Note(name => plotType, name => plotType, ...)
+
+The short-name constructor to create anotations. For example, 
+
+=for example
+
+ ds::Note(
+     pnote::Region(
+         # args here
+     ),
+     ...
+ );
+
+=cut
+
+sub ds::Note {
+	return PDL::Graphics::Prima::DataSet::Anotation->new(plotTypes => [@_]);
+}
+
+sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Anotation'}
+
+
+
+sub init {
+	my $self = shift;
+	
+	# Check that the plotTypes are valid:
+	$self->check_plot_types(@{$self->{plotTypes}});
+}
+
+sub change_data {
+	carp("Anotations do not have data that can be changed; ignoring");
 }
 
 =back
