@@ -184,9 +184,9 @@ sub draw {
 	# Retrieve the data from the dataset and sort:
 	my $xs = $self->dataset->get_data->qsort;
 	# Compute the associated heights:
-	my $ys = $xs->xlinvals;
+	my $ys = $xs->xvals;
 	$ys -= $xs->ngoodover->dummy(0) if not $self->{increasing};
-	$ys /= $xs->maximum->dummy(0) if $self->{normalized};
+	$ys /= $ys->maximum->dummy(0) if $self->{normalized};
 	
 	# Convert these xs and ys to pixels:
 	$xs = $self->widget->x->reals_to_pixels($xs, $ratio);
