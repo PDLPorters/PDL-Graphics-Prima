@@ -1168,27 +1168,25 @@ sub get_bin_edges {
 	# Compute linear bin edges if none are supplied:
 	my $xs = $self->dataset->get_xs;
 	my @dims = $xs->dims;
+	@dims > 0 or @dims = (1);
 	$dims[0]++;
 	# The widths are based on the left and right values of x, unless
 	# there is only one x-entry, in which case we have a degeneracy
 	# problem
-	my $widths;
-	if ($xs->dim(0) > 1) {
-		$widths = $xs(1,) - $xs(0,);
+	my $edges;
+	if ($dims[0] > 2) {
+		my $widths = $xs(1,) - $xs(0,);
+		$edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
 	}
-	elsif ($xs->dim(0) > 0) {
+	elsif ($dims[0] == 2) {
 		# Set the default width to half the x-value
-		$widths = $xs / 2;
+		my $widths = $xs / 2;
 		# If the x-value is zero, set the width to 1
 		$widths->where($widths == 0) .= 1;
+		$edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
 	}
-	else {
-		# How do we handle the case of empty piddles? Croak for now.
-		croak('Histogram does not know now to handle empty piddles; yours has dimensions ['
-			. join(', ', $xs->dims) . ']');
-	}
-	my $edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
-	# working here - croak on bad bounds?
+	
+	# note: empty piddles are silently ignored
 	
 	# Store these bin edges if the underlying dataset is static:
 	$self->{binEdges} = $edges unless ref($self->dataset) =~ /Func/;
@@ -1233,6 +1231,10 @@ sub compute_collated_min_max_for {
 	}
 	
 	my ($xs, $ys) = $self->dataset->get_data;
+	
+	# Return "nothing" if the datasets are empty
+	return zeroes($pixel_extent + 1)->setvaltobad(0) if $xs->nelem == 0;
+	
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
 		my $to_check = $ys->append(zeroes(1) + $self->{baseline});
@@ -1248,6 +1250,14 @@ sub compute_collated_min_max_for {
 	# For the x min/max, get the bin edges and collate by line width:
 	else {
 		my $edges = $self->get_bin_edges;
+		
+		# Handle degenerate edge case
+		if ($edges->dim(0) == 2) {
+			return PDL::collate_min_max_wrt_many($edges(0), $lineWidths
+				, $edges(1), $lineWidths, $pixel_extent
+				, $ys, @prop_piddles);
+		}
+		
 		return PDL::collate_min_max_wrt_many($edges(0:-2), $lineWidths
 			, $edges(1:-1), $lineWidths, $pixel_extent
 			, $ys, @prop_piddles);
@@ -1263,8 +1273,11 @@ sub draw {
 	# Assemble the various properties from the plot-type object and the dataset
 	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
 	
-	# Get the edges and convert everything to pixels:
+	# Get the edges and skip out if we have an empty case
 	my $edges = $self->get_bin_edges($dataset, $widget);
+	return unless defined $edges;
+	
+	# convert everything to pixels
 	my $pixel_edges = $widget->x->reals_to_pixels($edges, $ratio);
 	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline}, $ratio);
 	my $ys = $widget->y->reals_to_pixels($dataset->get_ys, $ratio);
