@@ -1169,7 +1169,24 @@ sub get_bin_edges {
 	my $xs = $self->dataset->get_xs;
 	my @dims = $xs->dims;
 	$dims[0]++;
-	my $widths = $xs(1,) - $xs(0,);
+	# The widths are based on the left and right values of x, unless
+	# there is only one x-entry, in which case we have a degeneracy
+	# problem
+	my $widths;
+	if ($xs->dim(0) > 1) {
+		$widths = $xs(1,) - $xs(0,);
+	}
+	elsif ($xs->dim(0) > 0) {
+		# Set the default width to half the x-value
+		$widths = $xs / 2;
+		# If the x-value is zero, set the width to 1
+		$widths->where($widths == 0) .= 1;
+	}
+	else {
+		# How do we handle the case of empty piddles? Croak for now.
+		croak('Histogram does not know now to handle empty piddles; yours has dimensions ['
+			. join(', ', $xs->dims) . ']');
+	}
 	my $edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
 	# working here - croak on bad bounds?
 	
