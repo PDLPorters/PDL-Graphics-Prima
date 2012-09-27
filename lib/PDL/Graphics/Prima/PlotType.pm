@@ -2003,10 +2003,17 @@ sub compute_collated_min_max_for {
 sub draw {
 	my ($self, $canvas, $ratio) = @_;
 	
+	# Back up the clip rectangle
+	my @clip_rect = $canvas->clipRect;
+	$canvas->clipRect(0, 0, $canvas->size);
+	
 	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
 	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
 	
 	$canvas->text_out($self->{text}, $x, $y);
+	
+	# Restore the clip rectangle
+	$canvas->clipRect(@clip_rect);
 }
 
 ###############################################################################
