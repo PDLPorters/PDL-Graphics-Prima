@@ -1958,6 +1958,57 @@ sub draw {
 	$canvas->pdl_bars(@pixel_positions, %properties);
 }
 
+###################################################
+# PDL::Graphics::Prima::PlotType::Anotation::Text #
+###################################################
+
+package PDL::Graphics::Prima::PlotType::Anotation::Text;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
+
+use Carp;
+use PDL;
+
+sub pnote::Text {
+	croak('pnote::Text must be given a string of text and optional x/y key/value pairs')
+		if @_ % 2 == 0;
+	return PDL::Graphics::Prima::PlotType::Anotation::Text->new(text => @_);
+}
+
+sub initialize {
+	my $self = shift;
+	
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	# Set sane defaults for the different specs
+	%$self = (
+		x => '50%', y => '50%',
+		%$self
+	);
+	
+	# Replace the specs with parsed versions
+	for my $edge_name (qw(x y)) {
+		$self->{$edge_name} = $self->parse_position($self->{$edge_name});
+	}
+}
+
+# Collation needs to eventually account for raw values, but for now it simply
+# doesn't register; working here
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	return zeroes($pixel_extent+1)->setvaltobad(0),
+		zeroes($pixel_extent+1)->setvaltobad(0);
+}
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	
+	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
+	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
+	
+	$canvas->text_out($self->{text}, $x, $y);
+}
+
 ###############################################################################
 #                         Creating your own Plot Type                         #
 ###############################################################################
