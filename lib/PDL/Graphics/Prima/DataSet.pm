@@ -1261,7 +1261,7 @@ use Carp 'croak';
 
 =for sig
 
-    ds::Note(name => plotType, name => plotType, ...)
+    ds::Note(plotType, plotType, ...)
 
 The short-name constructor to create anotations. For example, 
 
