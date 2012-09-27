@@ -1825,43 +1825,10 @@ sub get_colored_data {
 package PDL::Graphics::Prima::PlotType::Anotation;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
-#####################################################
-# PDL::Graphics::Prima::PlotType::Anotation::Region #
-#####################################################
-
-package PDL::Graphics::Prima::PlotType::Anotation::Region;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
-
-use Carp;
-use PDL;
-
-# short-name constructor:
-sub pnote::Region {
-	return PDL::Graphics::Prima::PlotType::Anotation::Region->new(@_);
-}
-
-sub initialize {
-	my $self = shift;
-
-	# Call the superclass initialization:
-	$self->SUPER::initialize(@_);
-	
-	# Set sane defaults for the different specs
-	%$self = (
-		left => '0%', bottom => '0%', right => '100%', top => '100%',
-		%$self
-	);
-	
-	# Replace the specs with parsed versions
-	for my $edge_name (qw(left bottom right top)) {
-		$self->set_edge($edge_name, $self->{$edge_name});
-	}
-}
-
 my %allowed_entries = map {$_ => 1} qw(em pct px raw);
 my $float_point_regex = qr/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/;
-sub set_edge {
-	my ($self, $edge_name, $spec) = @_;
+sub parse_position {
+	my ($self, $spec) = @_;
 	
 	# If they passed a pre-parsed hashref, use that
 	if (ref($spec) eq 'HASH') {
@@ -1897,13 +1864,73 @@ sub set_edge {
 		$spec = \%hash;
 	}
 	
-	$self->{$edge_name} = $spec;
+	return $spec;
 }
 
 sub em_width {
 	my ($self, $axis) = @_;
 	my ($em_width) = $axis->em_dims;
 	return $em_width;
+}
+
+sub compute_position {
+	my ($self, $position_hash, $axis, $ratio) = @_;
+	
+	# Start with the raw data, or undef
+	my $rel_position;
+	$rel_position = $axis->reals_to_relatives($position_hash->{raw})
+		if defined $position_hash->{raw};
+	# Next add the percent:
+	$rel_position += $position_hash->{pct}
+		if defined $position_hash->{pct};
+	# If we don't have a relative position, croak
+	croak("Position spec must have a raw or percentage spec")
+		if not defined $rel_position;
+	
+	# Convert the relative position to pixels
+	my $position = $axis->relatives_to_pixels($rel_position, $ratio);
+	
+	# Add any pixel offsets
+	$position += $position_hash->{px} if defined $position_hash->{px};
+	$position += $self->em_width * $position_hash->{em}
+		if defined $position_hash->{em};
+
+	return $position;
+}
+
+
+
+#####################################################
+# PDL::Graphics::Prima::PlotType::Anotation::Region #
+#####################################################
+
+package PDL::Graphics::Prima::PlotType::Anotation::Region;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
+
+use Carp;
+use PDL;
+
+# short-name constructor:
+sub pnote::Region {
+	return PDL::Graphics::Prima::PlotType::Anotation::Region->new(@_);
+}
+
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	# Set sane defaults for the different specs
+	%$self = (
+		left => '0%', bottom => '0%', right => '100%', top => '100%',
+		%$self
+	);
+	
+	# Replace the specs with parsed versions
+	for my $edge_name (qw(left bottom right top)) {
+		$self->{$edge_name} = $self->parse_position($self->{$edge_name});
+	}
 }
 
 # Collation needs to eventually account for raw values, but for now it simply
@@ -1914,33 +1941,6 @@ sub compute_collated_min_max_for {
 		zeroes($pixel_extent+1)->setvaltobad(0);
 }
 
-sub get_edge_position {
-	my ($self, $edge_name, $ratio) = @_;
-	my $axis = $self->widget->x;
-	$axis = $self->widget->y if $edge_name eq 'top' or $edge_name eq 'bottom';
-	
-	# Start with the raw data, or undef
-	my $rel_position;
-	$rel_position = $axis->reals_to_relatives($self->{$edge_name}->{raw})
-		if defined $self->{$edge_name}->{raw};
-	# Next add the percent:
-	$rel_position += $self->{$edge_name}->{pct}
-		if defined $self->{$edge_name}->{pct};
-	# If we don't have a relative position, croak
-	croak("Region edge spec must have a raw or percentage spec")
-		if not defined $rel_position;
-	
-	# Convert the relative position to pixels
-	my $position = $axis->relatives_to_pixels($rel_position, $ratio);
-	
-	# Add any pixel offsets
-	$position += $self->{$edge_name}->{px} if defined $self->{$edge_name}->{px};
-	$position += $self->em_width * $self->{$edge_name}->{em}
-		if defined $self->{$edge_name}->{em};
-
-	return $position;
-}
-
 sub draw {
 	my ($self, $canvas, $ratio) = @_;
 	# Assemble the various properties from the plot-type object and the dataset
@@ -1948,10 +1948,12 @@ sub draw {
 	my %properties = $self->generate_properties(@prop_list);
 
 	# Get the left, bottom, right, and top pixel positions
-	my @pixel_positions;
-	for (qw(left bottom right top)) {
-		push @pixel_positions, $self->get_edge_position($_, $ratio);
-	}
+	my @pixel_positions = (
+		$self->compute_position($self->{left}, $self->widget->x, $ratio),
+		$self->compute_position($self->{bottom}, $self->widget->y, $ratio),
+		$self->compute_position($self->{right}, $self->widget->x, $ratio),
+		$self->compute_position($self->{top}, $self->widget->y, $ratio),
+	);
 	
 	$canvas->pdl_bars(@pixel_positions, %properties);
 }
