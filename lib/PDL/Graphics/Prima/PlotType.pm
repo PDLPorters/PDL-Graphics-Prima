@@ -1892,7 +1892,7 @@ sub compute_position {
 	
 	# Add any pixel offsets
 	$position += $position_hash->{px} if defined $position_hash->{px};
-	$position += $self->em_width * $position_hash->{em}
+	$position += $self->em_width($axis) * $position_hash->{em}
 		if defined $position_hash->{em};
 
 	return $position;
