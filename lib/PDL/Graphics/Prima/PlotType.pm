@@ -1822,8 +1822,98 @@ sub get_colored_data {
 #                         Annotation-based Plot Types                         #
 ###############################################################################
 
-package PDL::Graphics::Prima::PlotType::Anotation;
+=head2 Annotation Plot Types
+
+Annotation plot types have a number of distinct features compared with other
+plot types. They do not have any standard data or function arguments. They
+tend to provide features that are decorative or annotative. Many of them
+support relative positioning as well. However, none of these are requirements
+for annotation plot types and they are the general catch-all plot type class
+for plot types that do not have a sensibly related dataset.
+
+Since Annotation plot types do not presume any form of the data's structure,
+if you are considering creating a new plot type and cannot figure out which
+basic plot type to use, the Annotation base class may be the right fit.
+
+As a base class, C<PDL::Graphics::Prima::PlotType::Annotation> provides the
+following methods that may be useful for your derived classes:
+
+=over
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Annotation;
 our @ISA = qw(PDL::Graphics::Prima::PlotType);
+use Carp;
+
+=item parse_position
+
+This method standardizes and typo-checks position specifications. The
+specification can be either a string or an anonymous hash; the return value
+is an anonymous hash. If you pass in a bad spec, the method croaks. You call
+it like any other method:
+
+ $hash = $note_obj->parse_position($spec);
+
+A position
+specification is a powerful and flexible means for specifying a location on
+a plot widget as a combination of data values, pixel offsets, multiples of
+the current width of the letter C<M>, and a percentage of the current plot
+portion of the widget. I think best in terms of examples, so here are a
+couple that hopefully illustrate how this works.
+
+If passed as a y-specification, i.e. top or bottom specification, this will
+pick a location that is one M-width below the upper axis. If passed as an
+x-specification, this will pick a location that is one M-width to the left
+of the right axis.
+
+ # input
+ $spec_string = '100% - 1em';
+ # output
+ $spec_hash = {
+     pct => 100, em => 1
+ };
+
+Here's another one. As a y-specification, this will give a location that is
+five pixels below the y-value of 12. As an x-specification, this will give a
+location that is fixe pixels to the left of the x-value of 12.
+
+ # input 
+ $spec_string = '12 - 5px';
+ # output
+ $spec_hash = {
+     raw => 12, px => -5,
+ };
+
+Allowed postfixes in the spec string are nothing for raw data values, C<%>
+for plot window percentages, C<em> for M-widths, and C<px> for pixel widths.
+The corresponding names in the output hash are C<raw>, C<pct>, C<em>, and
+C<px>, respectively. You can use normal floating-point number notation for
+the values. When you use a specification string, the values associated with
+each key in the returned hash will be Perl scalars.
+
+As I already mentioned, this method accepts either a string or a hash and
+most of what I have documented has focused on the string parsing. If
+passed a hash, it simply verifies that the keys in the hash are only the
+above four values. It does not verify the values asssociated with the hash.
+This lack of data verification is why I discribe it above as a method to
+"typo-check" a position specification. If you create a specification hash
+that includes C<pc> instead of C<px>, this will catch it for you.
+
+Why not verify? Your method that ultimately uses the results of the parsed
+position may be flexible enough to use complex data types, such as piddles
+or other objects, and I do not want to overly restrict the utility of this
+method. This can be used to great effect with L</pnote::Region>, for example,
+in which you can specify many region highlights with a single set of piddles.
+The drawing commands automatically thread over those piddle values. For this
+reason, C<parse_position> assumes that if you specified your position by
+hand with a hash rather than with a specification string, you know what
+you are doing.
+
+To translate the resulting hash into a pixel position on the plot widget,
+use C<compute_position>.
+
+=cut
 
 my %allowed_entries = map {$_ => 1} qw(em pct px raw);
 my $float_point_regex = qr/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/;
@@ -1867,11 +1957,40 @@ sub parse_position {
 	return $spec;
 }
 
+=item em_width
+
+This method takes the current axis and obtains the width of the letter C<M>
+in pixels. You call it like so:
+
+ $em_width = $note_obj->em_width($y_axis);
+
+Note: you can obtain the x- or y-axis object calling the C<x> and C<y>
+methods, respectively, of the plot widget.
+
+=cut
+
 sub em_width {
 	my ($self, $axis) = @_;
 	my ($em_width) = $axis->em_dims;
 	return $em_width;
 }
+
+=item compute_position
+
+This method expects a position hash, an axis, and a drawing ratio (which is
+always supplied as the last argument to C<draw>; if you're not sure what to
+do, use a value of 1) and computes a pixel offset for the position. The
+position hash must have a percentage or a raw data value or the method
+croaks. The returned value is a pixel position that corresponds to the
+desired location on the plot widget and which can be fed directly into
+Prima's drawing operations. If any of the values in the position hash are
+piddles, the result will be a piddle of positions that can be sent to the
+drawing operations provided by L<PDL::Drawing::Prima>.
+
+This method expects a position hash of the form built (or verified) by
+C<parse_position>.
+
+=cut
 
 sub compute_position {
 	my ($self, $position_hash, $axis, $ratio) = @_;
@@ -1898,21 +2017,52 @@ sub compute_position {
 	return $position;
 }
 
+=back
+
+There are a number of annotation plot-types:
+
+=cut
 
 
 #####################################################
-# PDL::Graphics::Prima::PlotType::Anotation::Region #
+# PDL::Graphics::Prima::PlotType::Annotation::Region #
 #####################################################
 
-package PDL::Graphics::Prima::PlotType::Anotation::Region;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
+=item pnote::Region
+
+=for ref
+
+ pnote::Region( [left   => position-spec],
+                [right  => position-spec],
+                [bottom => position-spec],
+                [top    => position-spec],
+                options )
+
+Draws a shaded region, or if any of your position specs
+include piddles it draws a set of shaded regions in one PDL-threaded drawing
+operation.
+
+This is useful if you want to highlight certain portions of your
+figure with a rectangular highlight (or is it a backlight?). Each Region
+annotation has a position specification for the left, bottom, right, and top
+edges. The defaults for the left and bottom are the specification string 
+C<'0%'> and the defaults for the right and top are the specification string
+C<'100%'>.
+
+For more on position specifications, see the discussion of C<parse_position>
+under L</Annotation Plot Types>.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Annotation::Region;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Annotation);
 
 use Carp;
 use PDL;
 
 # short-name constructor:
 sub pnote::Region {
-	return PDL::Graphics::Prima::PlotType::Anotation::Region->new(@_);
+	return PDL::Graphics::Prima::PlotType::Annotation::Region->new(@_);
 }
 
 sub initialize {
@@ -1959,11 +2109,37 @@ sub draw {
 }
 
 ###################################################
-# PDL::Graphics::Prima::PlotType::Anotation::Text #
+# PDL::Graphics::Prima::PlotType::Annotation::Text #
 ###################################################
 
-package PDL::Graphics::Prima::PlotType::Anotation::Text;
-our @ISA = qw(PDL::Graphics::Prima::PlotType::Anotation);
+=item pnote::Text
+
+=for ref
+
+ pnote::Text( text-string,
+              [x        => position-spec],
+              [y        => position-spec],
+              [clipRect => clip-spec],
+              options )
+
+Adds a text annotation to your plot. The x- and y-position specifications
+default to the string C<'50%'>, i.e. right in the middle of the plot. This
+may not be terribly useful, but hey, it's a default, right? The default
+C<clipRect> specification is the string C<'normal'>, which means that the
+drawing will be clipped like any other plot type to the "plot window", the
+region within the axes. You can also specify the string C<'canvas'>, which
+expands the clip region to the entire canvas, or pass a four-element array
+suitable for a call to the Prima C<clipRect> method. This added flexibility
+lets you to add notations anywhere on the figure, not just in the plotting
+region.
+
+For more on position specifications, see the discussion of C<parse_position>
+under L</Annotation Plot Types>.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Annotation::Text;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Annotation);
 
 use Carp;
 use PDL;
@@ -1971,7 +2147,7 @@ use PDL;
 sub pnote::Text {
 	croak('pnote::Text must be given a string of text and optional x/y key/value pairs')
 		if @_ % 2 == 0;
-	return PDL::Graphics::Prima::PlotType::Anotation::Text->new(text => @_);
+	return PDL::Graphics::Prima::PlotType::Annotation::Text->new(text => @_);
 }
 
 sub initialize {
@@ -1982,7 +2158,7 @@ sub initialize {
 	
 	# Set sane defaults for the different specs
 	%$self = (
-		x => '50%', y => '50%',
+		x => '50%', y => '50%', clipRect => 'normal',
 		%$self
 	);
 	
@@ -2005,7 +2181,18 @@ sub draw {
 	
 	# Back up the clip rectangle
 	my @clip_rect = $canvas->clipRect;
-	$canvas->clipRect(0, 0, $canvas->size);
+	
+	# Parse the clip rectangle
+	my $clipRect = $self->{clipRect};
+	if (ref($clipRect) and ref($clipRect) eq 'ARRAY' and @$clipRect == 4) {
+		$canvas->clipRect(@$clipRect);
+	}
+	elsif (lc $clipRect eq 'canvas') {
+		$canvas->clipRect(0, 0, $canvas->size);
+	}
+	elsif (lc $clipRect ne 'normal') {
+		croak('Text Annotation clipRect must be "normal", "canvas", or a four-element array');
+	}
 	
 	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
 	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
