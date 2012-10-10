@@ -2109,6 +2109,146 @@ sub draw {
 }
 
 ###################################################
+# PDL::Graphics::Prima::PlotType::Annotation::Box #
+###################################################
+
+=item pnote::Box
+
+=for ref
+
+ pnote::Box( [left   => position-spec],
+             [right  => position-spec],
+             [bottom => position-spec],
+             [top    => position-spec],
+             options )
+
+Draws an outlied box, or if any of your position specs
+include piddles it draws a set of outlined boxes in one PDL-threaded drawing
+operation.
+
+This is the outline equivalent of pnote::Region; see those docs for details.
+
+For more on position specifications, see the discussion of C<parse_position>
+under L</Annotation Plot Types>.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Annotation::Box;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Annotation::Region);
+
+use Carp;
+use PDL;
+
+# short-name constructor:
+sub pnote::Box {
+	return PDL::Graphics::Prima::PlotType::Annotation::Box->new(@_);
+}
+
+# Collation needs to eventually account for raw values, but for now it simply
+# doesn't register; working here
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	return zeroes($pixel_extent+1)->setvaltobad(0),
+		zeroes($pixel_extent+1)->setvaltobad(0);
+}
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	# Assemble the various properties from the plot-type object and the dataset
+	my @prop_list = @PDL::Drawing::Prima::rectangles_props;
+	my %properties = $self->generate_properties(@prop_list);
+
+	# Get the left, bottom, right, and top pixel positions
+	my @pixel_positions = (
+		$self->compute_position($self->{left}, $self->widget->x, $ratio),
+		$self->compute_position($self->{bottom}, $self->widget->y, $ratio),
+		$self->compute_position($self->{right}, $self->widget->x, $ratio),
+		$self->compute_position($self->{top}, $self->widget->y, $ratio),
+	);
+	
+	$canvas->pdl_rectangles(@pixel_positions, %properties);
+}
+
+#####################################################
+# PDL::Graphics::Prima::PlotType::Annotation::Line #
+#####################################################
+
+=item pnote::Line
+
+=for ref
+
+ pnote::Line( [x1 => position-spec],
+              [y1 => position-spec],
+              [x2 => position-spec],
+              [y2 => position-spec],
+              options )
+
+Draws a line from (x1, y1) to (x2, y2). If any of the position specs involve
+piddles, it will draw a set of lines in one PDL-threaded drawing operation.
+
+The default value for x1 and y1 is C<'0%'> and the default value for x2 and y2
+is C<'100%'>.
+
+For more on position specifications, see the discussion of C<parse_position>
+under L</Annotation Plot Types>.
+
+=cut
+
+package PDL::Graphics::Prima::PlotType::Annotation::Line;
+our @ISA = qw(PDL::Graphics::Prima::PlotType::Annotation);
+
+use Carp;
+use PDL;
+
+# short-name constructor:
+sub pnote::Line {
+	return PDL::Graphics::Prima::PlotType::Annotation::Line->new(@_);
+}
+
+sub initialize {
+	my $self = shift;
+
+	# Call the superclass initialization:
+	$self->SUPER::initialize(@_);
+	
+	# Set sane defaults for the different specs
+	%$self = (
+		x1 => '0%', y1 => '0%', x2 => '100%', y2 => '100%',
+		%$self
+	);
+	
+	# Replace the specs with parsed versions
+	for my $coord (qw(x1 y1 x2 y2)) {
+		$self->{$coord} = $self->parse_position($self->{$coord});
+	}
+}
+
+# Collation needs to eventually account for raw values, but for now it simply
+# doesn't register; working here
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	return zeroes($pixel_extent+1)->setvaltobad(0),
+		zeroes($pixel_extent+1)->setvaltobad(0);
+}
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	# Assemble the various properties from the plot-type object and the dataset
+	my @prop_list = @PDL::Drawing::Prima::lines_props;
+	my %properties = $self->generate_properties(@prop_list);
+
+	# Get the left, bottom, right, and top pixel positions
+	my @pixel_positions = (
+		$self->compute_position($self->{x1}, $self->widget->x, $ratio),
+		$self->compute_position($self->{y1}, $self->widget->y, $ratio),
+		$self->compute_position($self->{x2}, $self->widget->x, $ratio),
+		$self->compute_position($self->{y2}, $self->widget->y, $ratio),
+	);
+	
+	$canvas->pdl_lines(@pixel_positions, %properties);
+}
+
+###################################################
 # PDL::Graphics::Prima::PlotType::Annotation::Text #
 ###################################################
 
