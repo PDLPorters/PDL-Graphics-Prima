@@ -1237,33 +1237,33 @@ sub compute_collated_min_max_for {
 
 =cut
 
-=head2 Anotation
+=head2 Annotation
 
-PDL::Graphics::Prima provides a generic anotation dataset that is used for
-adding various anotations to your plots. It expects a list of key/value pairs
-where the keys are the names you give to your anotations and the values are
+PDL::Graphics::Prima provides a generic annotation dataset that is used for
+adding various annotations to your plots. It expects a list of key/value pairs
+where the keys are the names you give to your annotations and the values are
 annotation plotType objects.
 
 =cut
 
 ###############################################################################
-#                                  Anotation                                  #
+#                                  Annotation                                  #
 ###############################################################################
 
-package PDL::Graphics::Prima::DataSet::Anotation;
+package PDL::Graphics::Prima::DataSet::Annotation;
 our @ISA = qw(PDL::Graphics::Prima::DataSet);
 
 use Carp 'croak';
 
 =over
 
-=item ds::Note - short-name constructor for anotations
+=item ds::Note - short-name constructor for annotations
 
 =for sig
 
     ds::Note(plotType, plotType, ...)
 
-The short-name constructor to create anotations. For example, 
+The short-name constructor to create annotations. For example, 
 
 =for example
 
@@ -1277,10 +1277,10 @@ The short-name constructor to create anotations. For example,
 =cut
 
 sub ds::Note {
-	return PDL::Graphics::Prima::DataSet::Anotation->new(plotTypes => [@_]);
+	return PDL::Graphics::Prima::DataSet::Annotation->new(plotTypes => [@_]);
 }
 
-sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Anotation'}
+sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Annotation'}
 
 
 
@@ -1292,7 +1292,7 @@ sub init {
 }
 
 sub change_data {
-	carp("Anotations do not have data that can be changed; ignoring");
+	carp("Annotations do not have data that can be changed; ignoring");
 }
 
 =back
