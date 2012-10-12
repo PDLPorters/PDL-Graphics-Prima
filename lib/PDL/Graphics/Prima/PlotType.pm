@@ -1916,7 +1916,7 @@ use C<compute_position>.
 =cut
 
 my %allowed_entries = map {$_ => 1} qw(em pct px raw);
-my $float_point_regex = qr/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/;
+my $float_point_regex = qr/[-+]?([0-9]*\.?[0-9]+|[0-9]+\.[0-9]*)([eE][-+]?[0-9]+)?/;
 sub parse_position {
 	my ($self, $spec) = @_;
 	
