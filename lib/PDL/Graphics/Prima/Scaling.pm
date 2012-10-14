@@ -13,6 +13,11 @@ package PDL::Graphics::Prima::Scaling::Linear;
 use PDL;
 use Carp;
 
+# order of magnitude returns the power of 10 that is below the given value.
+# Examples:
+# 12    -> 10
+# 0.04  -> 0.01
+# 3.2e3 -> 1e3
 sub order_of_magnitude {
 	my $number = shift;
 	confess("Internal error: non-positive numbers are not allowed in order_of_magnitude (I received $number)")
@@ -63,108 +68,70 @@ sub _adjusted_position {
 	return $to_return;
 }
 
-our $offset_penalty = 2;
 
 sub compute_ticks {
 	my (undef, $min, $max) = @_;
-	# This algorithm was designed with the following major tick layout
-	# examples in mind:
+	# This revised algorithm is much simpler and faster, and designed to
+	# reduce tick "jitter" when panning or scrolling.
 	#	min  	max		ticks at
-	#	2		4		2, 2.5, 3, 3.5, 4
-	#	2.2		4.3		2.25, 2.75, 3.25, 3.75, 4.25 (maybe)
-	#					2.4, 2.8, 3.2, 3.6, 4.0 (maybe)
-	#	0		20		0, 5, 10, 15, 20
-	#	30.5	37.5	31, 33, 35, 37
-	#	0		112		0, 25, 50, 75, 100
+	#   3       4      3, 3.25, 3.5, 3.75, 4
+	#   3.1     4.1    3.25, 3.5, 3.75, 4
+	#   2       3.7    2, 2.25, 2.5, 2.75, 3, 3.25, 3.5
+	#   2       3.8    2, 2.5, 3, 3.5
+	#   2       4      2, 2.5, 3, 3.5, 4
+	#   2.2     4.2    2.5, 3, 3.5, 4
+	#   2       5      2, 2.5, 3, 3.5, 4, 4.5, 5
+	#   2       5.5    2, 3, 4, 5
+	#   2       8      2, 3, 4, 5, 6, 7, 8
+	#   2       9      2, 4, 6, 8
+	#   0       20     0, 5, 10, 15, 20
+	#   30.5    37.5   32, 34, 36
+	#   0       112    0, 25, 50, 75, 100
 	
 	# Determine the order of magnitude of the min/max range:
 	my $full_range = $max - $min;
 	my $order_of_magnitude = order_of_magnitude($full_range);
-	# Score each potential interval and take the lowest one:
-	my $best_score = 100;
-	my $best_Ticks;
-	my $best_interval;
-	my $best_scaled_interval;
-	my $best_offset;
+	my $relative_range = $full_range / $order_of_magnitude;
 	
-	my %intervals # interval	# handicap
-		= qw(		0.25		0
-					0.3			0.5
-					0.4			0.25
-					0.5			0
-					0.6			0.5
-					0.8			0.25
-					1			0
-					2			0.25
-					2.5			0
-					3			0.5
-					4			0.25
-		);
+	# This is a table for determining the tick size as a *function* of the
+	# size of the range wrt the order of magnitude
+						# relative range less than...	# use tick size of...
+	my $rel_interval	= $relative_range < 1.75		? 0.25
+						: $relative_range < 3			? 0.5
+						: $relative_range < 7			? 1
+						:								  2
+						;
 	
-	while (my ($scaled_interval, $handicap) = each %intervals) {
-		my $interval = $order_of_magnitude * $scaled_interval;
-		for my $offset (0, $interval/2) {
-			# The ticks will start at either a multiple of the interval,
-			# or a multiple of the interval plus the offset. So,
-			# recompute the range in light of the tick size:
-			my $min_Tick = _adjusted_position($min, $interval, $offset, 1);
-			my $max_Tick = _adjusted_position($max, $interval, $offset, -1);
-			
-			# Count the number of ticks between min_Tick and max_Tick
-			my $N_Ticks = ($max_Tick - $min_Tick) / $interval + 1;
-			
-			# Obviously, max tick and min tick must not overlap:
-			next if $N_Ticks < 2;
-			
-			# compute the score:
-			$handicap += $offset_penalty if $offset != 0;
-			my $score = (abs($N_Ticks - 5) + $handicap)**2;
-			
-			# If it's the best score, use it:
-			if ($score < $best_score) {
-				$best_score = $score;
-				# Add 0.1 to N_Ticks to avoid rounding dilemas:
-				$best_Ticks = zeroes($N_Ticks + 0.1)->xlinvals($min_Tick, $max_Tick);
-				$best_interval = $interval;
-				$best_scaled_interval = $scaled_interval;
-				$best_offset = $offset;
-			}
-		}
-	}
+	# Compute the major tick interval and the layout
+	my $Tick_interval = $order_of_magnitude * $rel_interval;
+	# The ticks will start at either a multiple of the interval,
+	# or a multiple of the interval plus the offset. So,
+	# recompute the range in light of the tick size:
+	my $min_Tick = _adjusted_position($min, $Tick_interval, 0, 1);
+	my $max_Tick = _adjusted_position($max, $Tick_interval, 0, -1);
+	# Count the number of ticks between min_Tick and max_Tick
+	my $N_Ticks = ($max_Tick - $min_Tick) / $Tick_interval + 1;
+	# Add 0.1 to escape rounding trouble.
+	my $Ticks = zeroes($N_Ticks + 0.1)->xlinvals($min_Tick, $max_Tick);
 	
 	# Construct the minor tick marks:
-	my $tick_interval;
-	if ($best_scaled_interval eq '0.3'
-			or $best_scaled_interval eq '3'
-			or $best_scaled_interval eq '0.6'
-	) {
-		$tick_interval = $best_interval / 6;
-	}
-	elsif (($best_scaled_interval eq '0.25'
-			or $best_scaled_interval eq '0.5'
-			or $best_scaled_interval eq '2.5'
-			) and $best_offset == 0
-	) {
-		$tick_interval = $best_interval / 5;
-	}
-	else {
-		$tick_interval = $best_interval / 4;
-	}
-	my $min_tick = _adjusted_position($min, $tick_interval, $best_offset, 1);
-	my $max_tick = _adjusted_position($max, $tick_interval, $best_offset, -1);
-	my $N_ticks = ($max_tick - $min_tick) / $tick_interval + 1.1;
+	my $tick_interval = $Tick_interval / 5;
+	$tick_interval = $Tick_interval / 4 if $rel_interval >= 1;
+	my $min_tick = _adjusted_position($min, $tick_interval, 0, 1);
+	my $max_tick = _adjusted_position($max, $tick_interval, 0, -1);
+	my $N_ticks = ($max_tick - $min_tick) / $tick_interval + 1;
 	# Add 0.1 to escape rounding trouble.
-	my $ticks = zeroes($N_ticks)->xlinvals($min_tick, $max_tick);
+	my $ticks = zeroes($N_ticks + 0.1)->xlinvals($min_tick, $max_tick);
 
 	# finally, set up zero values that make sense:
 	# working here - convoluted so the debugger wouldn't get angry at me:
 #	$best_Ticks->where(abs($best_Ticks) * 1e10 < ($max - $min)) .= 0;
 #	$ticks->where(abs($ticks) * 1e10 < ($max - $min)) .= 0;
-	my $foo = $best_Ticks->where(abs($best_Ticks) * 1e10 < ($max - $min));
+	my $foo = $Ticks->where(abs($Ticks) * 1e10 < ($max - $min));
 	$foo .= 0;
 	$foo = $ticks->where(abs($ticks) * 1e10 < ($max - $min));
 	$foo .= 0;
-	return ($best_Ticks, $ticks);
+	return ($Ticks, $ticks);
 }
 
 # Rescales the data so that the min has a value of zero and the max has a value
