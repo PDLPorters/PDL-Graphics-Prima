@@ -1233,7 +1233,10 @@ sub compute_collated_min_max_for {
 	my ($xs, $ys) = $self->dataset->get_data;
 	
 	# Return "nothing" if the datasets are empty
-	return zeroes($pixel_extent + 1)->setvaltobad(0) if $xs->nelem == 0;
+	if ($xs->nelem == 0) {
+		my $to_return = zeroes($pixel_extent + 1)->setvaltobad(0);
+		return ($to_return, $to_return->copy);
+	}
 	
 	# For the y min/max, get the y-data, the padding, and the baseline:
 	if ($axis_name eq 'y') {
