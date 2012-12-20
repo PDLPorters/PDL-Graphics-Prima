@@ -1465,7 +1465,7 @@ sub import {
 	$package->export_to_level(1, $package, @args);
 
 	# Set up Prima for sequential plotting if that's what they want/get
-	if($sequential or defined $::application or $^O =~ /MS/ or $^O eq 'cygwin') {
+	if($sequential or defined $::application or $^O =~ /MS/) {
 		# If this is windows, we'll use a single application that gets managed
 		# by the various plot commands:
 		require 'Prima.pm';
