@@ -3,13 +3,11 @@ use strict;
 use warnings;
 use Carp 'croak';
 
-# Import the symbols like ppair::Lines and lm::Auto into the global symbol
-# table so the user can use them
-use PDL::Graphics::Prima::Palette;
-use PDL::Graphics::Prima::Limits;
-use PDL::Graphics::Prima::Scaling;
-use PDL::Graphics::Prima::PlotType;
-use PDL::Graphics::Prima::DataSet;
+use PDL::Graphics::Prima;
+
+# working here - consider adding the "hold" modifier instead of the 
+# -sequential modifier. This would run the Prima event loop at the end of
+# the script so that all the plots get displayed.
 
 =head1 NAME
 
@@ -1057,12 +1055,11 @@ properties for the plotTypes:
 
 Here I use a black background and white foreground, and plot the circles B<over>
 the line instead of under it. I achieve this by changing the order of the
-plotTypes---Lines then Blobs. Also notice that I use the C<-sequential> flag,
-which I have to do in order to guarantee having Prima's color shortcuts.
+plotTypes---Lines then Blobs.
 
  use strict;
  use warnings;
- use PDL::Graphics::Prima::Simple -sequential;
+ use PDL::Graphics::Prima::Simple;
  use PDL;
  
  my $x = sequence(100)/10;
@@ -1094,7 +1091,7 @@ of the Blobs plotType because it's a bit more flexible:
 
  use strict;
  use warnings;
- use PDL::Graphics::Prima::Simple -sequential;
+ use PDL::Graphics::Prima::Simple;
  use PDL;
  
  my $x = sequence(100)/10;
@@ -1132,7 +1129,7 @@ only using one Blobs plotType instead of two.
 
  use strict;
  use warnings;
- use PDL::Graphics::Prima::Simple -sequential;
+ use PDL::Graphics::Prima::Simple;
  use PDL;
  
  my $x = sequence(100)/10;
@@ -1306,67 +1303,16 @@ sub plot {
 		unless @_ % 2 == 0;
 	my %args = @_;
 
-	if (defined $::application) {
-		# The Prima application is already running, which means we're going to
-		# do blocking behavior. For a myriad of reasons, PDL::Graphics::Prima
-		# may not have been loaded yet, so be sure to load it:
-		if (not defined $PDL::Graphics::Prima::VERSION) {
-			require PDL::Graphics::Prima;
-			PDL::Graphics::Prima->import();
-		}
-#		if (not defined $Prima::Application::uses) {
-#			# Make sure the have the Application stuff loaded:
-#			Prima->import( qw(Application));
-#		}
-		
-		# Since the application is already running, then simply create a new
-		# window:
-		my $window = Prima::Window->create(
-			text  => $args{title} || 'PDL::Graphics::Prima',
-			size  => $args{size} || [our @default_sizes],
-		);
-
-		$window->insert('Plot',
-			pack => { fill => 'both', expand => 1},
-			%args
-		);
-		
-		# Create a plot window and block until the user closes it
-		$window->execute;
-		$window->destroy;
-	}
-	else {
-
-		my $pid = fork();
-		die "cannot fork" unless defined $pid;
-		
-		if ($pid == 0) {
-			$SIG{TERM} = sub {
-				exit;
-			};
-			
-			# child process, create the plot
-			require 'Prima.pm';
-			Prima->import('Application');
-			require 'PDL/Graphics/Prima.pm';
-			PDL::Graphics::Prima->import();
-			
-			my $wDisplay = Prima::MainWindow->create(
-				text  => $args{title} || 'PDL::Graphics::Prima',
-				size  => $args{size} || [our @default_sizes],
-			);
-			
-			$wDisplay->insert('Plot',
-				pack => { fill => 'both', expand => 1},
-				%args
-			);
-
-			# Display the plot and exit when done:
-			run Prima;
-			
-			exit;
-		}
-	}
+	
+	# Create a new window and pack the plot into said window
+	my $window = Prima::Window->create(
+		text  => $args{title} || 'PDL::Graphics::Prima',
+		size  => $args{size} || [our @default_sizes],
+	);
+	return $window->insert('Plot',
+		pack => { fill => 'both', expand => 1},
+		%args
+	);
 }
 
 =head1 IMPORTED METHODS
@@ -1401,6 +1347,8 @@ element anonymous array:
  
  # default to 300 wide by 450 tall, import 'plot' function:
  use PDL::Graphics::Prima::Simple [300, 450], 'plot';
+
+working here - this is changing!!!!
 
 Finally, the default behavior on a Unix-like system that supports proper
 forking (as discussed L<below|/"BLOCKING, NONBLOCKING, AND PRIMA CONSTANTS">)
@@ -1440,7 +1388,6 @@ our @default_sizes = (400, 400);
 # Override the import method to handle a few user-specifiable arguments:
 sub import {
 	my $package = shift;
-	my $sequential;
 	my @args;
 	# Run through all the arguments and pull out anything special:
 	foreach my $arg (@_) {
@@ -1454,8 +1401,8 @@ sub import {
 			# Apparently we're good to go so save the sizes:
 			@default_sizes = @$arg;
 		}
-		elsif ($arg eq '-sequential') {
-			$sequential++;
+		elsif ($arg eq '-hold') {
+			# Add code here for holding after each plot
 		}
 		else {
 			push @args, $arg;
@@ -1463,14 +1410,6 @@ sub import {
 	}
 	
 	$package->export_to_level(1, $package, @args);
-
-	# Set up Prima for sequential plotting if that's what they want/get
-	if($sequential or defined $::application or $^O =~ /MS/) {
-		# If this is windows, we'll use a single application that gets managed
-		# by the various plot commands:
-		require 'Prima.pm';
-		Prima->import(qw(Application));
-	}
 }
 
 1;

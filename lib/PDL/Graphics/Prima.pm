@@ -938,6 +938,59 @@ sub copy_to_clipboard {
 	$clipboard->close;
 }
 
+
+
+#==================== PERLDL SHELL HACKERY ====================#
+
+# Now for some enjoyable hackery. This lets users of the perldl shell use
+# PDL::Graphics::Prima and manipulate the resulting plots from their shell.
+# Most of this rigamerole can be removed once the minimum Perl version is
+# 5.16 at which point we will have Term::ReadLine's new event_loop
+# functionality (or once a capable Term::ReadLine is dispatched to CPAN).
+
+if (defined $PERLDL::TERM) {
+	
+	# Weird, we must call the import method for this to work, even though
+	# I don't need any functions imported.
+	require Prima::Application;
+	Prima::Application->import;
+	
+	# This io watcher will (eventually) watch whatever the readline is
+	# monitoring. That will be established later in the call to register_Tk
+	my $prima_io_watcher = Prima::File->new(
+		onRead => sub {
+			print "Just got a read directive on the handle";
+			goto &Term::ReadLine::Tk::handle;
+		},
+	);
+	
+	# Tk's DoOneEvent function is called explicitly, but for us it must
+	# point to Prima's event loop
+	*Tk::DoOneEvent = \&Prima::Application::yield;
+	
+	# Set up the registration method, which associates the io watcher with
+	# the readline's incoming file glob. All this "registered" nonsense is
+	# in place so we don't register more than once (as this function is
+	# called multiple times).
+	my $registered = 0;
+	no warnings 'redefine';
+	*Term::ReadLine::Tk::register_Tk = sub {
+		use warnings;
+		# Make sure this only happens once
+		return if $registered;
+		$registered++;
+		# Set the prima watcher to watch whatever the readline wants
+		my $self = shift;
+		$prima_io_watcher->file($self->IN);
+	};
+	use warnings;
+	
+	# Finally, tell the TERM that "tk" is running
+	$PERLDL::TERM->Features->{PrimaRunning} = 1;
+	$PERLDL::TERM->tkRunning(1);
+}
+
+
 1;
 
 =head1 RESPONSIBILITIES
