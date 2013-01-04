@@ -149,6 +149,11 @@ sub compute_collated_min_max_for {
 		# As such, I need to reduce them. I do this by moving the dimension
 		# with $pixel_extent entries to the back and then calling minimum
 		# until I have only one dimension remaining.
+		warn "Internal error: plot type $plotType returned an undefined min"
+			if not defined $min;
+		warn "Internal error: plot type $plotType returned an undefined max"
+			if not defined $max;
+		next if not defined $min or not defined $max;
 		$min = $min->squeeze->mv(0,-1);
 		$min = $min->minimum while($min->ndims > 1);
 		$max = $max->squeeze->mv(0,-1);
