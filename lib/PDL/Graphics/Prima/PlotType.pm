@@ -197,15 +197,189 @@ sub draw {
 }
 
 
-#############################################
-# PDL::Graphics::Prima::PlotType::Set::Hist #
-#############################################
+###################################################
+# PDL::Graphics::Prima::PlotType::Role::Histogram #
+###################################################
+
+# A role that implements many things needed for histogram drawing
+package PDL::Graphics::Prima::PlotType::Role::Histogram;
+use Carp;
+
+
+sub initialize {
+	my $self = shift;
+	
+	# Default to an upper padding of of 10 pixels:
+	$self->{topPadding} = 10 unless defined $self->{topPadding};
+	croak("topPadding must be a nonnegative integer")
+		unless $self->{topPadding} =~ /^\d+$/ and $self->{topPadding} >= 0;
+	
+	# Make sure we have a default baseline:
+	$self->{baseline} = 0 unless defined $self->{baseline};
+	$self->{baseline} += 0;
+}
+
+##################################################
+# PDL::Graphics::Prima::PlotType::Set::Histogram #
+##################################################
 
 =item pset::Hist
 
 working here
 
+This is still a work in progress and these are just my notes.
+
+ baseline   => SCALAR (0)
+ topPadding => SCALAR (10)
+ 
+ binning    => 'lin[ear]', 'log[arithmic]', \&funcref
+ nbins      => SCALAR (20)
+ min        => SCALAR (undef, i.e. data-min)
+ max        => SCALAR (undef, i.e. data-max)
+ truncate   => BOOLEAN ('', i.e. false)
+
 =cut
+
+package PDL::Graphics::Prima::PlotType::Set::Histogram;
+use Carp;
+
+# Install the short name constructor:
+sub pset::Histogram {
+	PDL::Graphics::Prima::PlotType::Set::Histogram->new(@_);
+}
+
+# The histogram initializer ensures that the top padding is set to a reasonable
+# value (defaults to 5 pixels):
+sub initialize {
+	my $self = shift;
+	$self->SUPER::initialize(@_);
+	PDL::Graphics::Prima::PlotType::Role::Histogram::initialize($self);
+}
+
+
+# Returns user-supplied or computed bin-edge data.
+sub get_bin_edges {
+	# Return the bin-edges if we have an internal copy of them:
+	return $_[0]->{binEdges} if exists $_[0]->{binEdges};
+	
+	my ($self) = @_;
+	
+	# Compute linear bin edges if none are supplied:
+	my $xs = $self->dataset->get_xs;
+	my @dims = $xs->dims;
+	@dims > 0 or @dims = (1);
+	$dims[0]++;
+	# The widths are based on the left and right values of x, unless
+	# there is only one x-entry, in which case we have a degeneracy
+	# problem
+	my $edges;
+	if ($dims[0] > 2) {
+		my $widths = $xs(1,) - $xs(0,);
+		$edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
+	}
+	elsif ($dims[0] == 2) {
+		# Set the default width to half the x-value
+		my $widths = $xs / 2;
+		# If the x-value is zero, set the width to 1
+		$widths->where($widths == 0) .= 1;
+		$edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
+	}
+	
+	# note: empty piddles are silently ignored
+	
+	# Store these bin edges if the underlying dataset is static:
+	$self->{binEdges} = $edges unless ref($self->dataset) =~ /Func/;
+	
+	return $edges;
+}
+
+
+
+
+
+# working here - implement get_x_y_data, get_bin_edges
+
+
+
+
+
+# The collation code:
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Get the list of properties for which we need to look for bad values:
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
+	
+	# Extract the line widths, against which we'll collate:
+	my $lineWidths = $properties{lineWidths};
+	$lineWidths = $self->widget->lineWidth unless defined $lineWidths;
+	delete $properties{lineWidths};
+	
+	# get the rest of the piddles, which are associated with plural keys
+	my @prop_piddles;
+	while(my ($k, $v) = each %properties) {
+		push @prop_piddles, $v if $k =~ /s$/;
+	}
+	
+	my ($xs, $ys) = $self->get_x_y_data;
+	
+	# Return "nothing" if the datasets are empty
+	return zeroes($pixel_extent + 1)->setvaltobad(0) if $xs->nelem == 0;
+	
+	# For the y min/max, get the y-data, the padding, and the baseline:
+	if ($axis_name eq 'y') {
+		my $to_check = $ys->append(zeroes(1) + $self->{baseline});
+		my $top_padding = $lineWidths;
+		$top_padding += $self->{topPadding} if any $to_check > $self->{baseline};
+		my $bottom_padding = $lineWidths;
+		$bottom_padding += $self->{topPadding} if any $to_check < $self->{baseline};
+		
+		return PDL::collate_min_max_wrt_many($to_check, $bottom_padding
+			, $to_check, $top_padding, $pixel_extent
+			, $xs->append(zeroes(1)), @prop_piddles);
+	}
+	# For the x min/max, get the bin edges and collate by line width:
+	else {
+		my $edges = $self->get_bin_edges;
+		
+		# Handle degenerate edge case
+		if ($edges->dim(0) == 2) {
+			return PDL::collate_min_max_wrt_many($edges(0), $lineWidths
+				, $edges(1), $lineWidths, $pixel_extent
+				, $ys, @prop_piddles);
+		}
+		
+		return PDL::collate_min_max_wrt_many($edges(0:-2), $lineWidths
+			, $edges(1:-1), $lineWidths, $pixel_extent
+			, $ys, @prop_piddles);
+	}
+}
+
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	my $dataset = $self->dataset;
+	my $widget = $self->widget;
+	
+	# Assemble the various properties from the plot-type object and the dataset
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
+	
+	# Get the edges and skip out if we have an empty case
+	my $edges = $self->get_bin_edges($dataset, $widget);
+	return unless defined $edges;
+	
+	# convert everything to pixels
+	my $pixel_edges = $widget->x->reals_to_pixels($edges, $ratio);
+	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline}, $ratio);
+	my $ys = $widget->y->reals_to_pixels($dataset->get_ys, $ratio);
+	
+	$canvas->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
+			, $pixel_edges(1:-1), $ys, %properties);
+}
+
+
+
+
 
 =back
 
@@ -1146,15 +1320,7 @@ sub ppair::Histogram {
 sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
-	
-	# Default to an upper padding of of 10 pixels:
-	$self->{topPadding} = 10 unless defined $self->{topPadding};
-	croak("topPadding must be a nonnegative integer")
-		unless $self->{topPadding} =~ /^\d+$/ and $self->{topPadding} >= 0;
-	
-	# Make sure we have a default baseline:
-	$self->{baseline} = 0 unless defined $self->{baseline};
-	$self->{baseline} += 0;
+	PDL::Graphics::Prima::PlotType::Role::Histogram::initialize($self);
 }
 
 
@@ -2251,9 +2417,9 @@ sub draw {
 	$canvas->pdl_lines(@pixel_positions, %properties);
 }
 
-###################################################
+####################################################
 # PDL::Graphics::Prima::PlotType::Annotation::Text #
-###################################################
+####################################################
 
 =item pnote::Text
 
@@ -2370,17 +2536,17 @@ I am going to use the ficticious FooBars plotType, which I suppose would plot
 some fancy error bars.) Such a derived class would probably start out with these
 lines of code:
 
- package PDL::Graphics::Prima::PlotType::FooBars;
- use base 'PDL::Graphics::Prima::PlotType';
+ package PDL::Graphics::Prima::PlotType::Pair::FooBars;
+ use base 'PDL::Graphics::Prima::PlotType::Pair';
 
 You must then write a custom C<draw> function, and you can optionally overload
 the following functions: C<xmin>, C<xmax>, C<ymin>, C<ymax>, C<initialize>.
 
-You should also install a constructor under C<pt::FooBars> that looks like
+You should also install a constructor under C<ppair::FooBars> that looks like
 this:
 
- sub pt::FooBars {
-     PDL::Graphics::Prima::PlotType::FooBars->new(@_);
+ sub ppair::FooBars {
+     PDL::Graphics::Prima::PlotType::Pair::FooBars->new(@_);
  }
 
 That uses the inherited C<PDL::Graphics::Prima::PlotType::new> function, which
@@ -2388,7 +2554,7 @@ will eventually call your class's C<initialize> function. If your initializer
 expects custom arguments, you should overload the C<initialize> function like
 so:
 
- # still in the PDL::Graphics::Prima::PlotType::FooBars package
+ # still in the PDL::Graphics::Prima::PlotType::Pair::FooBars package
  sub initialize {
      my $self = shift;
      
@@ -2398,7 +2564,7 @@ so:
      
      # Here's some custom args processing. If the user did
      # not specify a curviness, default to 4:
-     $self->{curviness} //= 4;
+     $self->{curviness} ||= 4;
      
      # Could also check that the supplied values make sense:
      croak('Curviness must be a positive integer')
@@ -2406,7 +2572,7 @@ so:
            and $self->{curviness} > 0;
  }
 
-You could shove all of that construction functionality into C<pt::FooBars>, but
+You could shove all of that construction functionality into C<ppair::FooBars>, but
 then other classes would not be able to derive functionality from your 
 undoubtedly elegant class without resorting to rather inelegant code.
 
