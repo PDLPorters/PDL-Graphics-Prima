@@ -1297,7 +1297,8 @@ L<PDL::Graphics::Prima::InteractiveTut>.
 =cut
 
 # A function that allows for quick one-off plots:
-sub plot {
+*plot = \&default_plot;
+sub default_plot {
 	# Make sure they sent key/value pairs:
 	croak("Arguments to plot must be in key => value pairs")
 		unless @_ % 2 == 0;
@@ -1403,6 +1404,52 @@ sub import {
 		}
 		elsif ($arg eq '-hold') {
 			# Add code here for holding after each plot
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		# working here - document the code-ref behavior
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		elsif (ref ($arg) and ref($arg) eq 'CODE') {
+			# a CODE ref; assign plot() to it
+			*plot = $arg;
 		}
 		else {
 			push @args, $arg;
