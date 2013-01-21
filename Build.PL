@@ -17,7 +17,7 @@ my $build = Module::Build->new(
 		PDL						=> '2.4.0',
 		Prima					=> 1.32,
 		# Needed for event_loop
-		'Term::ReadLine'       => '1.09',
+#		'Term::ReadLine'       => '1.09',
 	},
 	meta_merge => {
 		resources => {

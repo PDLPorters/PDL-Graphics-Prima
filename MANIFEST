@@ -10,6 +10,7 @@ lib/PDL/Graphics/Prima/Palette.pm
 lib/PDL/Graphics/Prima/PlotType.pm
 lib/PDL/Graphics/Prima/Scaling.pm
 lib/PDL/Graphics/Prima/Simple.pm
+lib/PDL/Graphics/Prima/ReadLine.pm
 examples/Symbols.pl
 examples/Trendlines.pl
 examples/Triangles.pl
