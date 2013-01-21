@@ -319,6 +319,11 @@ Specifies a collection of different color palettes
 
 Defines the different ways to visualize your data
 
+=item L<PDL::Graphics::Prima::ReadLine>
+
+Encapsulates all interaction with the L<Term::ReadLine> family of
+modules.
+
 =item L<PDL::Graphics::Prima::Scaling>
 
 Specifies different kinds of scaling, including linear and logarithmic

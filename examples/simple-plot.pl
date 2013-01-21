@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use PDL;
-use PDL::Graphics::Prima::Simple -sequential;
+use PDL::Graphics::Prima::Simple;
 
 my $xs = sequence(100)/10;
 my $ys = sin($xs) + 3 * sequence(3)->transpose;

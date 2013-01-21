@@ -22,4 +22,3 @@ $wDisplay->insert('Plot',
 );
 
 run Prima;
-

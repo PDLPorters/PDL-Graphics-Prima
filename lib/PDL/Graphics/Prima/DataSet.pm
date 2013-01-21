@@ -1511,6 +1511,11 @@ stuff. It's not organized, so you probably shouldn't read it.
 
 Defines the lm:: namespace
 
+=item L<PDL::Graphics::Prima::ReadLine>
+
+Encapsulates all interaction with the L<Term::ReadLine> family of
+modules.
+
 =item L<PDL::Graphics::Prima::Palette>
 
 Specifies a collection of different color palettes

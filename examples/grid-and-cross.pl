@@ -19,7 +19,7 @@ use PDL;
 use PDL::Image2D;
 use PDL::Fit::Gaussian;
 use Prima;
-use PDL::Graphics::Prima::Simple -sequential;
+use PDL::Graphics::Prima::Simple;
 
 my $file = $M51_fn;
 analyze($file);

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use PDL;
-use PDL::Graphics::Prima::Simple -sequential;
+use PDL::Graphics::Prima::Simple;
 
 my $x = sequence(100)/10 + 0.1;
 my $y = sin($x);
