@@ -4,6 +4,15 @@ use warnings;
 package PDL::Graphics::Prima;
 our $VERSION = 0.12_01;
 
+# Add automatic support for PDL terminal interactivity
+sub import {
+	my $class = shift;
+	if (defined $PERLDL::TERM and $Term::ReadLine::VERSION > 1.08) {
+		require PDL::Graphics::Prima::ReadLine;
+		PDL::Graphics::Prima::ReadLine->import($PERLDL::TERM);
+	}
+}
+
 package Prima::Plot;
 use PDL::Lite;
 use Prima;
@@ -938,16 +947,6 @@ sub copy_to_clipboard {
 	$clipboard->close;
 }
 
-
-# Add automatic support for PDL terminal interactivity
-sub import {
-	my $class = shift;
-	
-	if (defined $PERLDL::TERM and $Term::ReadLine::VERSION > 1.08) {
-		require PDL::Graphics::Prima::ReadLine;
-		PDL::Graphics::Prima::ReadLine->import($PERLDL::TERM);
-	}
-}
 
 1;
 

@@ -1,6 +1,7 @@
 package PDL::Graphics::Prima::ReadLine;
 use strict;
 use warnings;
+use Carp;
 
 my $is_setup = 0;
 
@@ -9,9 +10,11 @@ sub import {
 	
 	return if $is_setup;
 	
-	# Make sure we have a readline object:
+	# Make sure we have a readline object. Since Term::ReadLine doesn't actually
+	# have the readline classes inherit from Term::ReadLine, I need to actually
+	# regex against the string retured by ref(). Ugh.
 	croak("PDL::Graphics::Prima::ReadLine expects a readline object")
-		if not eval{ $readline_obj->isa('Term::ReadLine') };
+		if not ref($readline_obj) or ref($readline_obj) !~ /^Term::ReadLine/;
 	
 	# Make sure we have a sufficiently high version of ReadLine.
 	croak("PDL::Graphics::Prima::ReadLine requires Term::ReadLine v 1.09 or higher")
@@ -46,7 +49,6 @@ sub import {
 			$prima_io_watcher->file($fh);
 		},
 	);
-	
 	$is_setup = 1;
 }
 
