@@ -1323,7 +1323,11 @@ written) L<PDL::Graphics::Prima::InteractiveTut>.
 # allows for scalar return context by overriding this plot command, and other
 # libraries that want to support the simple interface should do the same.)
 # In list context, it returns both the window and the plot object.
-sub plot {
+
+# A function that allows for quick one-off plots:
+*plot = \&default_plot;
+
+sub default_plot {
 	# Make sure they sent key/value pairs:
 	croak("Arguments to plot must be in key => value pairs")
 		unless @_ % 2 == 0;
@@ -1393,7 +1397,14 @@ element anonymous array:
  # default to 300 wide by 450 tall, import 'plot' function:
  use PDL::Graphics::Prima::Simple [300, 450], 'plot';
 
-Note: I am considering adding a '--hold' option, which would cause all
+As an experimental feature, you can provide a subroutine reference in
+the import method. This subroutine reference will get invoked by the
+plotting commands instead of the default plotting mechanism. This is of
+marginal utility, and might be better achieved with a simple glob assignment
+of C<*PDL::Graphics::Prima::Simple::plot> to your desired function. The glob
+assignment has the advantage that it can be C<local>ized.
+
+Note: I am considering adding a '-hold' option, which would cause all
 void-context plot commands in scripts to not block, and cause the Prima
 event loop to be run at the end of the script. However, I haven't settled
 on either the behavior or the name. Input is welcome!
@@ -1428,6 +1439,10 @@ sub import {
 		#elsif ($arg eq '-hold') {
 		#	# Add code here for holding after each plot
 		#}
+		elsif (ref ($arg) and ref($arg) eq 'CODE') {
+			# a CODE ref; assign plot() to it
+			*plot = $arg;
+		}
 		else {
 			push @args, $arg;
 		}

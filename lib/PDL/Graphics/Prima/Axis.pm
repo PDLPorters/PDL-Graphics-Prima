@@ -494,7 +494,11 @@ sub repaint_parent {
 }
 *on_changebounds = \&repaint_parent;
 *on_changescaling = \&repaint_parent;
-*on_changelabel = \&update_edges;
+sub on_changelabel {
+	my $self = shift;
+	$self->update_edges;
+	$self->repaint_parent;
+}
 
 =head2 ChangeBounds
 
