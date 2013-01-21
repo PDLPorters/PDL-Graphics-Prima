@@ -164,55 +164,6 @@ sub init {
 	}
 }
 
-# low-level setter; does not notify
-sub _label {
-	my ($self, $label) = @_;
-	
-	# Consider recomputing these each time, or setting an accessor for font
-	# settings:
-	my ($em_width, $em_height) = $self->em_dims;
-	
-	# Is the label blank or undefined?
-	if (not defined $label or $label eq '') {
-		# Remove the label in that case:
-		$self->{label} = '';
-		
-		# Set the edge requirements based on axis type:
-		if ($self->name eq 'x') {
-			# Set bottom edge requirement:
-			$self->{edge_requirements}->[1] = 1.5 * $em_height;
-		}
-		else {
-			# Set left edge requirement:
-			$self->{edge_requirements}->[0] = 4 * $em_width;
-		}
-	}
-	else {
-		# Set the label:
-		$self->{label} = $label;
-		
-		# Set the edge requirements absed on axis type:
-		if ($self->name eq 'x') {
-			# Set bottom edge requirement:
-			$self->{edge_requirements}->[1] = 3 * $em_height;
-		}
-		else {
-			# Set left edge requirement to accomodate the tick labels and
-			# the axis label:
-			$self->{edge_requirements}->[0]
-				= 4 * $em_width + 1.5 * $em_height;
-		}
-	}
-}
-
-sub label {
-	return $_[0]->{label} if @_ == 1;
-	my ($self, $label) = @_;
-	return if $label eq $self->{label};
-	$self->_label($label);
-	$self->notify('ChangeLabel');
-}
-
 # Return the space needed to draw axis labels and tick labels.
 sub get_edge_requirements {
 	return @{$_[0]->{edge_requirements}};
@@ -454,9 +405,9 @@ scaling does not. At the moment, if you try to switch to Logarithmic scaling
 without ensuring that the current min and max are positive, this will die
 telling you that negative values are not allowed.
 
-=cut
+For more details about scaling, see L<PDL::Graphics::Prima::Scaling>.
 
-# working here - document
+=cut
 
 sub scaling {
 	return $_[0]->{scaling} unless $#_;
@@ -464,6 +415,64 @@ sub scaling {
 	# such as negative limits with logarithmic scaling?
 	$_[0]->{scaling} = $_[1];
 	$_[0]->notify('ChangeScaling');
+}
+
+=head2 label
+
+Gets or sets the axis' label. You can remove the label by passing an empty
+string or by explicitly passing an undefined value. Adding a lable will cause
+the viewing rectangle to shrink so that your widget can accomodate the label
+dimensions.
+
+=cut
+
+# low-level setter; does not notify
+sub _label {
+	my ($self, $label) = @_;
+	
+	# Consider recomputing these each time, or setting an accessor for font
+	# settings:
+	my ($em_width, $em_height) = $self->em_dims;
+	
+	# Is the label blank or undefined?
+	if (not defined $label or $label eq '') {
+		# Remove the label in that case:
+		$self->{label} = '';
+		
+		# Set the edge requirements based on axis type:
+		if ($self->name eq 'x') {
+			# Set bottom edge requirement:
+			$self->{edge_requirements}->[1] = 1.5 * $em_height;
+		}
+		else {
+			# Set left edge requirement:
+			$self->{edge_requirements}->[0] = 4 * $em_width;
+		}
+	}
+	else {
+		# Set the label:
+		$self->{label} = $label;
+		
+		# Set the edge requirements absed on axis type:
+		if ($self->name eq 'x') {
+			# Set bottom edge requirement:
+			$self->{edge_requirements}->[1] = 3 * $em_height;
+		}
+		else {
+			# Set left edge requirement to accomodate the tick labels and
+			# the axis label:
+			$self->{edge_requirements}->[0]
+				= 4 * $em_width + 1.5 * $em_height;
+		}
+	}
+}
+
+sub label {
+	return $_[0]->{label} if @_ == 1;
+	my ($self, $label) = @_;
+	return if $label eq $self->{label};
+	$self->_label($label);
+	$self->notify('ChangeLabel');
 }
 
 =head1 NOTIFICATIONS
