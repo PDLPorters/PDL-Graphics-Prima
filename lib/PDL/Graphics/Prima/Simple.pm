@@ -1441,6 +1441,7 @@ sub import {
 		#}
 		elsif (ref ($arg) and ref($arg) eq 'CODE') {
 			# a CODE ref; assign plot() to it
+			no warnings 'redefine';
 			*plot = $arg;
 		}
 		else {
