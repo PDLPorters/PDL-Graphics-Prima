@@ -17,8 +17,8 @@ sub import {
 		if not ref($readline_obj) or ref($readline_obj) !~ /^Term::ReadLine/;
 	
 	# Make sure we have a sufficiently high version of ReadLine.
-	croak("PDL::Graphics::Prima::ReadLine requires Term::ReadLine v 1.09 or higher")
-		if $Term::ReadLine::VERSION < 1.09;
+	'Term::ReadLine'->can('event_loop') or
+		croak("PDL::Graphics::Prima::ReadLine requires Term::ReadLine v 1.09 or higher");
 	
 	# Weird, we must call the import method for this to work, even though
 	# I don't need any functions imported.
