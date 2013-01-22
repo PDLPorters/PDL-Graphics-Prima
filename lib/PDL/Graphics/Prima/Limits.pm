@@ -14,6 +14,8 @@ use constant Hold => -$inf;
 
 1;
 
+__END__
+
 =head1 NAME
 
 PDL::Graphics::Prima::Limits - defining a couple of useful constants
