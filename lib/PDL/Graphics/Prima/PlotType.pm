@@ -1252,14 +1252,18 @@ sub ppair::Crosses {
  ppair::Histogram( [binEdges => PDL], [baseline => SCALAR],
                 [topPadding => SCALAR], options )
 
-Draws a histogram with bin-centers at the data's x-values and heights at the
-data's y-values. Both positive and negative y-values are allowed.
+Draws a histogram. The bin-centers that are approximated from the x-values
+and the bin heights are set as the data's y-values. Both positive and
+negative y-values are allowed.
 
-Histogram assumes linear bin spacing and simply takes the space between the
-first and second x-values to be the bin width. If you are plotting a
-histogram with different spacing, such as quadratic or logarithmic, you will
-need to compute the spacing on your own and specify the spacing using the
-binEdges key:
+Histogram computes the inter-point bin edges as the mid-point between each
+(sequential) pair of x-values. For the first and last bins, the outer edge
+is the same distance from the center as the corresponding inner edge. If all
+of your bins have the same width, this will give you exactly what you mean.
+If your bins do not have identical widths, the center of the bin is
+guaranteed to fall somewhere within the bin boundaries, but it won't be in
+the "center". For greater control of where the bin boundaries are placed,
+you should specify the binEdges key:
 
  ppair::Histogram(binEdges => $bin_edges)
 
@@ -1341,8 +1345,11 @@ sub get_bin_edges {
 	# problem
 	my $edges;
 	if ($dims[0] > 2) {
-		my $widths = $xs(1,) - $xs(0,);
-		$edges = xvals(@dims) * $widths + $xs(0,) - $widths/2;
+		my $widths = $xs(1:-1,) - $xs(0:-2,);
+		$edges = zeroes(@dims);
+		$edges(1:-2,) .= $xs(0:-2,) + $widths/2;
+		$edges(0,) .= $xs(0,) - $widths(0,) / 2;
+		$edges(-1,) .= $xs(-1,) + $widths(-1,) / 2;
 	}
 	elsif ($dims[0] == 2) {
 		# Set the default width to half the x-value
