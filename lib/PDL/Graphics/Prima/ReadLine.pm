@@ -5,23 +5,28 @@ use Carp;
 
 my $is_setup = 0;
 
-sub import {
+sub is_happy_with {
+	my ($class, $readline_obj) = @_;
+	return eval{ $readline_obj->can('event_loop') };
+}
+
+sub setup {
 	my ($class, $readline_obj) = @_;
 	
 	return if $is_setup;
 	
-	# Make sure we have a readline object. Since Term::ReadLine doesn't actually
-	# have the readline classes inherit from Term::ReadLine, I need to actually
-	# regex against the string retured by ref(). Ugh.
-	croak("PDL::Graphics::Prima::ReadLine expects a readline object")
-		if not ref($readline_obj) or ref($readline_obj) !~ /^Term::ReadLine/;
-	
-	# Make sure we have a sufficiently high version of ReadLine.
-	'Term::ReadLine'->can('event_loop') or
-		croak("PDL::Graphics::Prima::ReadLine requires Term::ReadLine v 1.09 or higher");
+	# Make sure we have a readline object that knows how to work with the
+	# event loop:
+	if (not $class->is_happy_with($readline_obj)) {
+		croak("PDL::Graphics::Prima::ReadLine expects a readline object")
+			unless eval { $readline_obj->isa('Term::ReadLine::Stub') };
+		croak("PDL::Graphics::Prima::ReadLine expects a readline object that knows how to event_loop.\n"
+				. "This is provided in Term::ReadLine v1.09 or newer");
+	}
 	
 	# Weird, we must call the import method for this to work, even though
-	# I don't need any functions imported.
+	# I don't need any functions imported (because we call yield by its fully
+	# qualified name).
 	require Prima::Application;
 	Prima::Application->import;
 	

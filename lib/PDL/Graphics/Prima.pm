@@ -5,12 +5,11 @@ package PDL::Graphics::Prima;
 our $VERSION = 0.12_01;
 
 # Add automatic support for PDL terminal interactivity
+use PDL::Graphics::Prima::ReadLine;
 sub import {
 	my $class = shift;
-	if (defined $PERLDL::TERM and $Term::ReadLine::VERSION > 1.08) {
-		require PDL::Graphics::Prima::ReadLine;
-		PDL::Graphics::Prima::ReadLine->import($PERLDL::TERM);
-	}
+	PDL::Graphics::Prima::ReadLine->setup($PERLDL::TERM)
+		if PDL::Graphics::Prima::ReadLine->is_happy_with($PERLDL::TERM);
 }
 
 package Prima::Plot;

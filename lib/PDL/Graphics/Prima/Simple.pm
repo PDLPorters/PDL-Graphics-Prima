@@ -4,7 +4,6 @@ use warnings;
 use Carp 'croak';
 
 use PDL::Graphics::Prima;
-require PDL::Graphics::Prima::ReadLine;
 
 =head1 NAME
 
