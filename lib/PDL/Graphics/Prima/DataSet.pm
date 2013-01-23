@@ -1370,7 +1370,7 @@ sub STORE {
 		unless eval {$dataset->isa('PDL::Graphics::Prima::DataSet')};
 	
 	# strip any leading dash and store it
-	$key =~ s/^-//;
+	$name =~ s/^-//;
 	$self->{$name} = $dataset;
 	
 	# Inform the dataset of its parent widget:
