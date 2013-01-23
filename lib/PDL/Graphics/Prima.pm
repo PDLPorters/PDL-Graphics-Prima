@@ -89,7 +89,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  # --( More complex plots )--
  
  # Use the more general 'plot' function for
- # multiple datasets and more plotting features:
+ # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
      -lines         => ds::Pair($x, $y
@@ -481,12 +481,28 @@ sub titleSpace {
 
 =head2 dataSets
 
-This either sets or returns the data sets. The data sets are held in a tied
-anonymous hash that you directly manipulate. In order to add a new dataset,
-you don't have to make a second call to dataSets; you can
-simply modify the anonymous hash in place using standard Perl hash
-manipulation functions. Since the hash is actually tied, datasets that you
-add will be validated as you add them.
+This either sets or returns the
+L<collection|PDL::Graphics::Prima::DataSet/DataSet::Collection> of
+L<DataSet|PDL::Graphics::Prima::DataSet>s. The
+L<DataSet|PDL::Graphics::Prima::DataSet>s are held in a tied
+anonymous hash that you directly manipulate. In order to add a new
+L<DataSet|PDL::Graphics::Prima::DataSet>, you can simply modify the anonymous
+hash in place using standard Perl hash manipulation functions and techniques.
+For example:
+
+ # Add a new DataSet
+ $plot->dataSets->{new_data} = ds::Pair(
+     $x, $y, plotType => ppair::Squares
+ );
+ 
+ # Remove a DataSet
+ delete $plot->dataSets->{model};
+ 
+ # Clear the DataSets
+ %{$plot->dataSets} = ();
+
+Since the hash is actually tied, L<DataSet|PDL::Graphics::Prima::DataSet>s that
+you add will be validated as you add them.
 
 =cut
 

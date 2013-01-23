@@ -1342,6 +1342,7 @@ sub TIEHASH {
 sub DELETE {
 	my ($this, $key) = @_;
 	return if $key eq 'widget';
+	$key =~ s/^-//;  # strip any leading dash
 	delete $this->{$key};
 	$this->{widget}->notify('ChangeData');
 }
@@ -1353,6 +1354,12 @@ sub CLEAR {
 	$this->{widget}->notify('ChangeData');
 }
 
+sub FETCH {
+	my ($this, $key) = @_;
+	$key =~ s/^-//;  # strip any leading dash
+	return $this->{$key};
+}
+
 sub STORE {
 	my ($self, $name, $dataset) = @_;
 	# Silently do nothing if they try to change the widget:
@@ -1362,7 +1369,8 @@ sub STORE {
 	croak('You can only add dataSet objects to the collection of dataSets')
 		unless eval {$dataset->isa('PDL::Graphics::Prima::DataSet')};
 	
-	# Store it:
+	# strip any leading dash and store it
+	$key =~ s/^-//;
 	$self->{$name} = $dataset;
 	
 	# Inform the dataset of its parent widget:

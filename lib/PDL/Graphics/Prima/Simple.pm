@@ -66,7 +66,7 @@ PDL::Graphics::Prima
  # --( More complex plots )--
  
  # Use the more general 'plot' function for
- # multiple datasets and more plotting features:
+ # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
      -lines         => ds::Pair($x, $y
@@ -327,14 +327,57 @@ denoted by the constant C<lm::Auto> as in
 This and a similar constant, C<lm::Hold> are defined in
 L<PDL::Graphics::Prima::Limits>.
 
+=head2 Adding DataSets
+
+What if you wanted to plot additional data along with the current data? You
+do this by creating a new L<DataSet|PDL::Graphics::Prima::DataSet>. Let's start
+by adding a L<DataSet|PDL::Graphics::Prima::DataSet> with the cosine of a
+slightly different x-range:
+
+ use PDL;
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Build the plot
+ my $x = sequence(100)/10;
+ my ($window, $plot) = line_plot($x, $x->sin);
+ 
+ 
+ 
+ # Display the plot
+ $window->execute;
+
+
 =head2 Adding axis labels and titles at construction
 
 Although interacting with the plot object after creation is fun, it is also
 nice to be able to specify all of these settings when the plot is initially
 created. I have already explained how limited the super-simple interface is, and
-why I chose to restrict it to be so limited. However, you can specify all of
-these properties and more with the C<plot> command.
+why I chose to restrict it to be so limited. In light of that, I now show you 
+how to specify all of these properties and more with a single C<plot> command.
+The documentation below for L<line_plot|/line_plot>, states that the function
+call with args C<($x, $y)> is equivalent to this line:
 
+ plot(-data => ds::Pair($x, $y, plotType => ppair::Lines));
+
+Let's expand that into a full example and include the title, x-label, and
+y-label:
+
+ use PDL;
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Build the plot
+ my $x = sequence(100)/10;
+ plot(
+     # Create the DataSet with the Lines pairwise plotType
+     -data => ds::Pair($x, $x->sin,
+         plotType => ppair::Lines
+     ),
+     
+     # Set the title and labels
+     title => 'The Harmonic Oscillator',
+     x => { label => 'time (s)' },
+     y => { label => 'displacement (cm)' },
+ );
 
 
 
@@ -375,8 +418,8 @@ write Prima applications, with the Plot widget as just one component for
 user interaction. If you need any substantial amount of user interaction or
 real-time behavior, I suggest you work with the full Prima toolkit.
 
-Although you can plot multiple datasets in the same plot window, a
-limitation of this Simple interface is that you cannot create multiple
+Although you can plot multiple L<DataSet|PDL::Graphics::Prima::DataSet> in the
+same plot window, a limitation of this Simple interface is that you cannot create multiple
 independent plots in the same window. This is achieved using the full GUI
 toolkit by creating two plot widgets packed into a larger container widget.
 A tutorial for this sort of thing is in the works but hasn't made it into
@@ -925,8 +968,8 @@ sub imag_plot {
 
 The C<plot> function is the real workhorse of this module. Not only does it
 provide the functionality behind all of the above simple functions, but it
-also lets you plot multiple datasets, specify axis labels and a plot title,
-direct the axis scaling (linear or logarithmic), and set many other properties
+also lets you plot multiple L<DataSet|PDL::Graphics::Prima::DataSet>s, specify
+axis labels and a plot title, direct the axis scaling (linear or logarithmic), and set many other properties
 of the plot.
 
 Arguments that you pass to this function are almost identical to the arguments
@@ -935,8 +978,8 @@ for playing with the widget's constructor. Also, once you understand how to use
 this function, using the actual widget in an interactive GUI script is simply a
 matter of understanding how to structure a GUI program.
 
-The C<plot> function takes options and dataset specifications as key/value
-pairs. The basic usage of C<plot> looks like this:
+The C<plot> function takes options and L<DataSet|PDL::Graphics::Prima::DataSet>
+specifications as key/value pairs. The basic usage of C<plot> looks like this:
 
  plot(
      -dataset1 => ds::Pair($x1, $y1, ...options...),
@@ -955,22 +998,28 @@ pairs. The basic usage of C<plot> looks like this:
  );
 
 Notice that some of the keys begin with a dash while others do not. Any key
-that begins with a dash is a dataset. You can use any name that you wish for
-your datasets, the only requirement is that the name begins with a dash. The
-keys that do not begin with a dash are Plot options. The Plot widget has a
+that begins with a dash should be followed by a
+L<DataSet|PDL::Graphics::Prima::DataSet> object (created using the C<ds::xxx>
+constructors). You can use any name that you wish for your
+L<DataSet|PDL::Graphics::Prima::DataSet>s, the only requirement is that the name
+begins with a dash. (The dash is optional when it comes time to retrieve the
+L<DataSet|PDL::Graphics::Prima::DataSet> later.) The keys that do not begin with
+a dash are Plot options. The Plot widget has a
 handful of Plot-specific properties, but you can also specify any property of a
 L<Prima::Widget> object.
 
 In the world of C<PDL::Graphics::Prima>, the fundamental object is the Plot.
-Each plot can hold one or more L<PDL::Graphics::Prima::DataSet>s, and each
-DataSet is visualized using one or more L<PDL::Graphics::Prima::PlotType>s.
-This makes the plotType the simplest element to discuss, so I'll start there.
+Each plot can hold one or more L<DataSet|PDL::Graphics::Prima::DataSet>s, and
+each L<DataSet|PDL::Graphics::Prima::DataSet> is visualized using one or more
+L<PDL::Graphics::Prima::PlotType>s. This makes the plotType the simplest element
+to discuss, so I'll start there.
 
 =head2 Plot Types
 
-Each dataSet can have one or more plotTypes. If you only want to specify a
+Each L<DataSet|PDL::Graphics::Prima::DataSet> can have one or more plotTypes. If
+you only want to specify a
 single plotType, you can do so by specifying it after the plotType key for your
-dataset:
+L<DataSet|PDL::Graphics::Prima::DataSet>:
 
  -data => ds::Pair(
      ...
@@ -1006,17 +1055,24 @@ example.) To specify a 5-pixel line width for a Lines plotType, you would say
 
  ppair::Lines(lineWidth => 5)
 
-When a dataset gets drawn, it draws the different plotTypes in the order
+When a L<DataSet|PDL::Graphics::Prima::DataSet> gets drawn, it draws the
+different plotTypes in the order
 specified. For example, suppose you specify C<cl::Black> filled triangles and
 C<cl::LightRed> lines. If the triangles are specified first, they will have red
 lines drawn through them, and if the triangles are second, the triangles will
 be drawn over the red lines.
 
-Each dataSet has a default plot type. For Sets, it is C<pset::CDF>. For
-Pairs, it is C<ppair::Diamonds>. For Grids, it is C<pgrid::Color>. If you
+Each L<DataSet|PDL::Graphics::Prima::DataSet> has a default plot type. For 
+L<Sets|PDL::Graphics::Prima::DataSet/Sets>, it is
+L<C<pset::CDF>|PDL::Graphics::Prima::PlotType/pset::CDF>. For
+L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>, it is
+L<C<ppair::Diamonds>|PDL::Graphics::Prima::PlotType/ppair::Diamonds>. For
+L<Grids|PDL::Graphics::Prima::DataSet/>, it is
+L<C<pgrid::Matrix>|PDL::Graphics::Prima::PlotType/pgrid::Matrix>. If you
 want to use a different plotType, you need to specify it as illustrated
-by the super-simple examples above. The plotTypes are discussed
-thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
+by the translations given in the super-simple examples above. The plotTypes are
+discussed thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized
+below:
 
  Set plotTypes
  =============
@@ -1050,37 +1106,47 @@ thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized below:
  
  Grid plotTypes
  ==============
- pgrid::ColorGrid  - colored rectangles, i.e. images
+ pgrid::Matrix     - colored rectangles, i.e. images
 
 More plot types are planned, but the ones listed above are the currently
 implemented ones.
 
 The plotTypes are the simplest unit in L<PDL::Graphics::Prima>. The next
-largest unit is the dataSet, which not only holds data of various kinds, but
+largest unit is the L<DataSet|PDL::Graphics::Prima::DataSet>, which not only
+holds data of various kinds, but
 also holds the plotTypes that are to be applied to the given data.
 
-=head2 Data Sets
+=head2 DataSets
 
 You can plot one or more sets of data on a given Plot. You do this by specifying
-the dataset's name with a dash, followed by a dataSet constructor. The dataSet
-constructor specifies the properties of your dataset, including the data
+the L<DataSet|PDL::Graphics::Prima::DataSet>'s name with a dash, followed by a
+L<DataSet|PDL::Graphics::Prima::DataSet> constructor. The
+L<DataSet|PDL::Graphics::Prima::DataSet> constructor specifies the properties of
+your L<DataSet|PDL::Graphics::Prima::DataSet>, including the data
 itself along with the plotType or plotTypes.
 
-As I have already aluded, there are three kinds of dataSets: Sets, Pairs,
-and Grids. The Function Pairs dataset is a drop-in replacement for a Pair
-dataSet that plots a function instead of explicitly specified data.
+As I have already aluded, there are three kinds of
+L<DataSet|PDL::Graphics::Prima::DataSet>s:
+L<Sets|PDL::Graphics::Prima::DataSet/Sets>,
+L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>,
+L<Grids|PDL::Graphics::Prima::DataSet/Grids>. The
+L<Function Pairs DataSet|PDL::Graphics::Prima::DataSet/Func> is a drop-in
+replacement for a L<Pairs DataSet|PDL::Graphics::Prima::DataSet/Pairs>
+that dynamically generates x/y data based on the current x-axis bounds.
 
-The Set dataSet takes a single piddle of unordered data and visually
-represents it with agregated plots like probability distributions (planned) or
-cumulative distributions. The constructor takes a single piddle argument that
-represents that data to plot, and then key/value pairs that let you tweak how
-the data is visualized:
+L<Sets|PDL::Graphics::Prima::DataSet/Sets> take a single piddle of unordered
+data and visually represents it with agregated plots like probability
+distributions (planned) or cumulative distributions. The
+L<constructor|PDL::Graphics::Prima::DataSet/ds::Set> takes a
+single piddle argument that represents that data to plot, and then key/value
+pairs that let you tweak how the data is visualized:
 
  -distribution => ds::Set($camel_weights, ...options...)
 
-The Pair dataSet targets x/y paired data and lets you visualize trends and
-correlations between two collections of data. The constructor takes two
-arguments (the x-data and the y-data) and then key/value pairs that indicate
+L<The Pairs DataSet|PDL::Graphics::Prima::DataSet/Pairs> targets x/y paired data
+and lets you visualize trends and correlations between two collections of data.
+The L<constructor|PDL::Graphics::Prima::DataSet/ds::Pair> takes two arguments
+(the x-data and the y-data) and then key/value pairs that indicate
 your plotTypes and specify precisely how you want the data visualized:
 
  -scatter => ds::Pair($camel_weights, $camel_heights, ...options...)
@@ -1089,27 +1155,30 @@ Typical x/y plots are plotted in such a way that the x-data is sorted in
 increasing order, but this is not required. This means that it is just as
 easy to draw a sine function as it is to draw a spiral or a scatter plot.
 
-The Func dataSet lets you specify a function to plot, rather than forcing
-you to evaluate a specific function at fixed values of x. It inherits from
-the Pair dataSet (in an OO sense) and differs in that its constructor
-expects a single function reference rather than two piddles of data:
+L<Func DataSets|PDL::Graphics::Prima::DataSet/Func> let you specify a function
+to plot, rather than forcing you to evaluate a specific function at fixed values
+of x. They inherit from L<Pairs|PDL::Graphics::Prima::DataSet/Pairs> (in an OO
+sense) and differ in that the constructor expects a single function reference
+rather than two piddles of data:
 
  -model => ds::Func(\&my_model, ...options...)
 
-Because Func inherits from Pairs, any Pairs plotType will also work with
-a Func dataSet.
+Because L<Func|PDL::Graphics::Prima::DataSet/Func> inherits from
+L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>, any
+L<Pairs PlotType|PDL::Graphics::Prima::PlotType/Pairs> will also work with
+a L<Func DataSet|PDL::Graphics::Prima::DataSet/Func>.
 
-The Grid dataSet is what you would use to visualize matrices or images. It
+The Grid DataSet is what you would use to visualize matrices or images. It
 takes a single piddle which represents a matrix of data,
 followed by key/value pairs the specify how you want the data plotted. In
 particular, there are many ways to specify the grid centers or boundaries.
 
  -terrain => ds::Grid($landscape, ...options...)
 
-The data that you specify for the Set, Pair, and Grid dataSets do not need
+The data that you specify for the Set, Pair, and Grid DataSets do not need
 to be piddles: anything that can be converted to a piddle, including scalar
 numbers and anonymous arrays of values, can be specified. That means that the
-following are valid dataset specifications:
+following are valid DataSet specifications:
 
  -data => ds::Pair(sequence(10), sequence(10)->sin)
  -data => ds::Pair([1, 2, 3], [1, 4, 9])
@@ -1119,14 +1188,14 @@ Once you have specified the data or function that you want to plot, you can
 specify other options with key/value pairs. I discussed the
 plotType key already, but you can also specify any property in L<Prima::Drawable>.
 When you specify properties from L<Prima::Drawable>, these become the default
-parameters for all the plotTypes that belong to this dataset. For example, you
+parameters for all the plotTypes that belong to this DataSet. For example, you
 can specify a default color as C<cl::LightRed>, and then the lines, blobs, and
 error bars will be drawn in red unless they override the colors themselves.
-Function-based datasets also recognize the C<N_points> key, which indicates the
+Function-based DataSets also recognize the C<N_points> key, which indicates the
 number of points to use in evaluating the function.
 
 To get an idea of how this works, suppose I have some data that I want to
-compare with a model. In this case, I would have two datasets, the data (plotted
+compare with a model. In this case, I would have two DataSets, the data (plotted
 using error bars) and the model (plotted using a line). I would plot all of this
 with code like so:
 
@@ -1155,7 +1224,7 @@ The part C<< -data => ds::Pair(...) >> specifies the details for how you want to
 the experimental data and the part C<< -model >> specifies the details for how you
 want to plot the model.
 
-The datasets are plotted in ASCIIbetical order, which means that in the example
+The DataSets are plotted in ASCIIbetical order, which means that in the example
 above, the model will be drawn over the error bars and squares. If you want the data
 plotted over the model curve, you should choose different names so that they sort
 the way you want. For example, using C<-curve> instead of C<-model> might work.
@@ -1165,7 +1234,7 @@ C<-a_model>, respectively.
 =head2 Plot Options
 
 Finally we come to setting plot-wide properties. As already discussed, you can
-disperse datasets among your other Plot properties. Plot-wide properties include
+disperse DataSets among your other Plot properties. Plot-wide properties include
 the title and the amount of room you want for the title (called titleSpace),
 the axis specifications, and any default L<Prima::Drawable> properties that you
 want applied to your plot.
@@ -1193,14 +1262,14 @@ Finally, this is essentially a widget constructor, and as such you can specify
 any L<Prima::Widget> properties that you like. These include all the properties in
 L<Prima::Drawable>. For example, the default background color is white, because
 I like a white background on my plots. If you disagree, you can change the widget's
-background and foreground colors by specifying them. The dataSets and their
+background and foreground colors by specifying them. The DataSets and their
 plotTypes will inherit these properties (most importantly, the foreground color)
 and use them unless you override those properties seperately.
 
 =head2 Examples
 
 This first example is a simple line plot with triangles at each point. There's only
-one dataset, and it has only two plotTypes:
+one DataSet, and it has only two plotTypes:
 
  use strict;
  use warnings;
@@ -1223,7 +1292,7 @@ one dataset, and it has only two plotTypes:
 
 Now for something more fun. This figure uses bright colors and random circle radii.
 Notice that the lineWidth of 3 obscures many of the circles since their radii are
-between 1 and 5. This has only one dataset and two plotTypes like the
+between 1 and 5. This has only one DataSet and two plotTypes like the
 previous example. In contrast to the previous example, it specifies a number of
 properties for the plotTypes:
 
@@ -1401,7 +1470,7 @@ ErrorBars plotType and the use of function-based data sets.
      ),
  );
 
-That example used a function-based dataset, but we could just as easily have
+That example used a function-based DataSet, but we could just as easily have
 used C<ppair::TrendLines> to compute the fit for us. The only difference between
 the last example and the one below is that the trendline for this next example
 does not extend out to infinity in the x-direction but terminates at the
