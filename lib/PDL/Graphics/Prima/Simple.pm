@@ -1596,8 +1596,7 @@ sub default_plot {
 		# Void context. Term::ReadLine will properly display the window if
 		# it's setup
 		return if PDL::Graphics::Prima::ReadLine->is_setup;
-		# Otherwise, we have to pull in the Prima application logic if it's
-		# not already setup.
+		# Otherwise, we display the window in blocking fashion.
 		$window->execute;
 		return;
 	}
