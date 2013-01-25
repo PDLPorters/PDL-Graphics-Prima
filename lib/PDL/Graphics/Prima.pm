@@ -202,6 +202,8 @@ sub init {
 		}
 	);
 	
+	$self->{log} = 'test';
+	
 	# Create an empty dataset array and tie it to the DataSetHash class:
 	my %datasets;
 	tie %datasets, 'PDL::Graphics::Prima::DataSet::Collection', $self;
@@ -478,6 +480,33 @@ sub titleSpace {
 	$_[0]->notify('ChangeTitle');
 }
 
+=head2 x, y
+
+Obtains the object that controls the settings for the x- or
+y-L<axis|PDL::Graphics::Prima::Axis>. For example:
+
+ # Set the x-min to -10 and the y-max to auto-scaling
+ $plot->x->min(-10);
+ $plot->y->max(lm::Auto);
+
+Actually, these accessors are not hard-coded into the plot library. Rather,
+these are the default L<name|Prima::Object>s of the axes. Any object of
+type C<Prima::Component> (which is any object in the Prima object heierarchy)
+that has a name can be accessed from the parent by using the component's
+name as a method on the parent. That is, you can change the name of the
+axis and use the new name:
+
+ # Rename the x-axis; be sure it starts with "x", though
+ $plot->x->name('xfoo');
+ # Change the x-axis' minimum value
+ $plot->xfoo->min(-10);
+ # This croaks:
+ $plot->x->max(20);
+
+This is a L<feature of Prima|Prima::Object/bring>. Eventually, when multiple
+x- and y-axes are allowed, this will allow us to transparently access them by
+name just like we access the single x- and y-axes by name at the moment.
+
 =head2 dataSets
 
 This either sets or returns the
@@ -526,22 +555,143 @@ sub dataSets {
 	#$self->notify('ChangeData');
 }
 
-# For a change in title, recompute the autoscaling and replot.
-sub on_changetitle {
+=head2 get_image
+
+Returns a L<Prima::Image> of the plot with same dimensions as the plot widget.
+
+=cut
+
+sub get_image {
 	my $self = shift;
-	$self->x->update_edges;
-	$self->y->update_edges;
-	$self->notify('Replot');
+	
+	# Build a prima image canvas and draw to it:
+	my $image = Prima::Image->create(
+		height => $self->height,
+		width => $self->width,
+		backColor => $self->backColor,
+	) or die "Can't create an image!\n";
+	$image->begin_paint or die "Can't draw on image";
+	$self->on_paint($image);
+	$image->end_paint;
+	return $image;
 }
 
-# for now, this is a replica of the above:
-*on_changedata = \&on_changetitle;
+use Prima::PS::Drawable;
+use Prima::FileDialog;
 
-# Sets up a timer in self that eventually calls the paint notification:
-sub on_replot {
-	my ($self) = @_;
-	return if $self->{timer}->get_active;
-	$self->{timer}->start;
+=head2 save_to_postscript
+
+Saves the plot with current axis limits to a postscript figure. This method
+takes an optional filename argument. If no filename is specified, it pops-up
+a dialog box to ask the user where and under what name they want to save the
+postscript figure.
+
+=cut
+
+sub save_to_postscript {
+	# Get the filename as an argument, or from the save-as dialog.
+	my ($self, $filename) = @_;
+	
+	unless ($filename) {
+		my $save_dialog = Prima::SaveDialog-> new(
+			defaultExt => 'ps',
+			filter => [
+				['Postscript files' => '*.ps'],
+				['All files' => '*'],
+			],
+		);
+		# Return if they cancel out:
+		return unless $save_dialog->execute;
+		# Otherwise get the filename:
+		$filename = $save_dialog->fileName;
+	}
+	unlink $filename if -f $filename;
+	
+	# Create the postscript canvas and plot to it:
+	my $ps = Prima::PS::Drawable-> create( onSpool => sub {
+			open my $fh, ">>", $filename;
+			print $fh $_[1];
+			close $fh;
+		},
+		pageSize => [$self->size],
+		pageMargins => [0, 0, 0, 0],
+	);
+	$ps->resolution($self->resolution);
+	$ps->font(size => 16);
+	
+	$ps->begin_doc
+		or do {
+			my $message = "Error generating Postscript output: $@";
+			if (defined $::application) {
+				Prima::MsgBox::message($message, mb::Ok);
+				carp $message;
+			}
+			else {
+				croak($message);
+			}
+		};
+	
+	$self->on_paint($ps);
+	$ps->end_doc;
+}
+
+=head2 save_to_file
+
+Saves the plot with current axis limits to a raster image file. This method
+takes an optional filename argument, deducing the format (and applicable
+codec) from the filename. If no filename is specified, it creates a dialog
+box asking the user where and under what name they want to save the file.
+
+=cut
+
+# A routine to save the current plot to a rasterized file:
+sub save_to_file {
+	# Get the filename as an argument or from a save-as dialog.
+	my ($self, $filename) = @_;
+	
+	# Get the image
+	my $image = $self->get_image;
+	
+	# If they didn't specify a filename, run a dialog to get it:
+	unless ($filename) {
+		my $dlg = Prima::ImageSaveDialog-> create;
+	
+		$dlg->save($image);
+		return;
+	}
+	
+	# If they specified a filename, simply save it:
+	$image-> save($filename)
+		or do {
+			my $message = "Error generating figure output: $@";
+			if (defined $::application) {
+				Prima::MsgBox::message($message, mb::Ok);
+				carp $message;
+			}
+			else {
+				croak($message);
+			}
+		};
+}
+
+=head2 copy_to_clipboard
+
+Copies the plot with current axis limits as a bitmap image to the clipboard.
+The resulting clipboard entry is suitable for pasting into applications that
+know how to handle bitmap images such as LibreOffice or gpaint on Linux,
+Microsoft Office or Windows Paint on Windows.
+
+=cut
+
+sub copy_to_clipboard {
+	my $self = shift;
+	my $image = $self->get_image;
+	
+	my $clipboard = $::application->Clipboard;
+	$clipboard->open;
+	$clipboard->clear;
+	$clipboard->image($image);
+	$clipboard->close;
 }
 
 =head1 Events
@@ -552,9 +702,28 @@ You can send notifications and hook callbacks for the following events:
 
 Called when the title or titleSpace gets changed
 
+=cut
+
+# For a change in title, recompute the autoscaling and replot.
+sub on_changetitle {
+	my $self = shift;
+	$self->x->update_edges;
+	$self->y->update_edges;
+	$self->notify('Replot');
+}
+
 =head2 Replot
 
 Called when the widget needs to replot
+
+=cut
+
+# Sets up a timer in self that eventually calls the paint notification:
+sub on_replot {
+	my ($self) = @_;
+	return if $self->{timer}->get_active;
+	$self->{timer}->start;
+}
 
 =head2 ChangeData
 
@@ -562,6 +731,9 @@ Called when the dataSet container changes (not the datasets themselves, but
 the whole container). 
 
 =cut
+
+# for now, this is a replica of the above:
+*on_changedata = \&on_changetitle;
 
 #################
 # Notifications #
@@ -855,113 +1027,6 @@ sub on_mouseup {
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
 }
-
-sub get_image {
-	my $self = shift;
-	
-	# Build a prima image canvas and draw to it:
-	my $image = Prima::Image->create(
-		height => $self->height,
-		width => $self->width,
-		backColor => $self->backColor,
-	) or die "Can't create an image!\n";
-	$image->begin_paint or die "Can't draw on image";
-	$self->on_paint($image);
-	$image->end_paint;
-	return $image;
-}
-
-use Prima::PS::Drawable;
-use Prima::FileDialog;
-
-sub save_to_postscript {
-	# Get the filename as an argument, or from the save-as dialog.
-	my ($self, $filename) = @_;
-	
-	unless ($filename) {
-		my $save_dialog = Prima::SaveDialog-> new(
-			defaultExt => 'ps',
-			filter => [
-				['Postscript files' => '*.ps'],
-				['All files' => '*'],
-			],
-		);
-		# Return if they cancel out:
-		return unless $save_dialog->execute;
-		# Otherwise get the filename:
-		$filename = $save_dialog->fileName;
-	}
-	unlink $filename if -f $filename;
-	
-	# Create the postscript canvas and plot to it:
-	my $ps = Prima::PS::Drawable-> create( onSpool => sub {
-			open my $fh, ">>", $filename;
-			print $fh $_[1];
-			close $fh;
-		},
-		pageSize => [$self->size],
-		pageMargins => [0, 0, 0, 0],
-	);
-	$ps->resolution($self->resolution);
-	$ps->font(size => 16);
-	
-	$ps->begin_doc
-		or do {
-			my $message = "Error generating Postscript output: $@";
-			if (defined $::application) {
-				Prima::MsgBox::message($message, mb::Ok);
-				carp $message;
-			}
-			else {
-				croak($message);
-			}
-		};
-	
-	$self->on_paint($ps);
-	$ps->end_doc;
-}
-
-# A routine to save the current plot to a rasterized file:
-sub save_to_file {
-	# Get the filename as an argument or from a save-as dialog.
-	my ($self, $filename) = @_;
-	
-	# Get the image
-	my $image = $self->get_image;
-	
-	# If they didn't specify a filename, run a dialog to get it:
-	unless ($filename) {
-		my $dlg = Prima::ImageSaveDialog-> create;
-	
-		$dlg->save($image);
-		return;
-	}
-	
-	# If they specified a filename, simply save it:
-	$image-> save($filename)
-		or do {
-			my $message = "Error generating figure output: $@";
-			if (defined $::application) {
-				Prima::MsgBox::message($message, mb::Ok);
-				carp $message;
-			}
-			else {
-				croak($message);
-			}
-		};
-}
-
-sub copy_to_clipboard {
-	my $self = shift;
-	my $image = $self->get_image;
-	
-	my $clipboard = $::application->Clipboard;
-	$clipboard->open;
-	$clipboard->clear;
-	$clipboard->image($image);
-	$clipboard->close;
-}
-
 
 1;
 

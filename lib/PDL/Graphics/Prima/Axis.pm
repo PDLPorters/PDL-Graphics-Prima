@@ -132,7 +132,7 @@ sub init {
 	# y axis. Set the non-changing parts here and then set the changing
 	# parts by calling _label. The four elements are the left edge, the
 	# bottom edge, the right edge, and the top edge:
-	if ($self->name eq 'x') {
+	if ($self->name =~ /^x/) {
 		$self->{edge_requirements} = [$em_height, 0, $em_height, 0];
 	}
 	else {
@@ -183,7 +183,7 @@ sub recalculate_edge_requirements {
 	my ($axis, $canvas) = @_;
 	
 	# x edge requirements never change (at the moment)
-	return if $axis->name eq 'x';
+	return if $axis->name =~ /^x/;
 	
 	my ($Ticks) = $axis->get_Ticks_and_ticks;
 	my (undef, $em_height) = $axis->em_dims;
@@ -218,7 +218,7 @@ sub update_edges {
 	
 	# Get and store the new edges:
 	my @edges = $self->owner->get_edge_requirements;
-	if ($self->name eq 'x') {
+	if ($self->name =~ /^x/) {
 		$self->{lowerEdge} = $edges[0];
 		$self->{edgeWidth} = $self->owner->width - $edges[2] - $edges[0];
 	}
@@ -239,7 +239,7 @@ sub update_edges {
 	# Get and store the new edges, again, as autoscaling might have changed
 	# things:
 	@edges = $self->owner->get_edge_requirements;
-	if ($self->name eq 'x') {
+	if ($self->name =~ /^x/) {
 		$self->{lowerEdge} = $edges[0];
 		$self->{edgeWidth} = $self->owner->width - $edges[2] - $edges[0];
 	}
@@ -440,7 +440,7 @@ sub _label {
 		$self->{label} = '';
 		
 		# Set the edge requirements based on axis type:
-		if ($self->name eq 'x') {
+		if ($self->name =~ /^x/) {
 			# Set bottom edge requirement:
 			$self->{edge_requirements}->[1] = 1.5 * $em_height;
 		}
@@ -454,7 +454,7 @@ sub _label {
 		$self->{label} = $label;
 		
 		# Set the edge requirements absed on axis type:
-		if ($self->name eq 'x') {
+		if ($self->name =~ /^x/) {
 			# Set bottom edge requirement:
 			$self->{edge_requirements}->[1] = 3 * $em_height;
 		}
@@ -625,7 +625,7 @@ sub get_Ticks_and_ticks {
 	my ($em_width, $em_height) = $axis->em_dims;
 	my ($padded_min, $padded_max);
 	
-	if ($axis->name eq 'x') {
+	if ($axis->name =~ /^x/) {
 		$padded_min = $axis->pixels_to_reals(
 			$axis->reals_to_pixels(scalar ($axis->min), $ratio) - $em_width,
 			$ratio);
@@ -680,7 +680,7 @@ sub draw {
 	my $top_bottom = pdl($clip_bottom, $clip_top)->transpose;
 	my $left_right = pdl($clip_left, $clip_right)->transpose;
 	
-	if ($axis->name eq 'x') {
+	if ($axis->name =~ /^x/) {
 		# Ensure the tick marks are exactly clipped:
 		$canvas->clipRect($clip_left, 0, $clip_right, $canvas->height);
 
