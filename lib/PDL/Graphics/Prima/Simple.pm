@@ -83,19 +83,25 @@ PDL::Graphics::Prima
 =head1 DESCRIPTION
 
 One of Perl's mottos is to "make easy things easy, and hard things possible."
-The bulk of the modules provided by the L<PDL::Graphics::Prima> distribution
+The bulk of the modules provided by the
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION> distribution
 focus on the latter half, making hard but very powerful things possible.
 This module tackles the other half: making easy things easy. This module
 provides a number of simple functions for quick data plotting so that you can
 easily get a first look at your data. You can think of this as providing a
 function-based interface to plotting, in contrast to the GUI/OO interface of the
-rest of L<PDL::Graphics::Prima>. Or you can look at this as providing a handy
-collection of plot (and window) constructors for the default use cases. Either
+rest of L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>. Or you can look at this as providing a handy
+collection of plot (and window) constructors for the standard use cases. Either
 perspective is basically correct.
 
 In addition to making easy plots easy, this module and its documentation are
-meant to serve as an introduction to L<PDL::Graphics::Prima>.
+meant to serve as an introduction to L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>.
 If you are new to the libarary, this is where you should start.
+
+This module is built on L<the Perl Data Language|PDL> and
+L<the Prima GUI toolkit|Prima>. You do not need to know much about
+L<Prima|Prima> to use this tutorial, but you should know
+L<the basics of PDL|PDL::QuickStart>.
 
 When you use this library, you get a handful of functions for quick data
 plotting, including
@@ -104,28 +110,35 @@ plotting, including
 
 =item line_plot ([$x,] $y)
 
-takes one or two piddles, one for y and optionally one for x, and makes a line
-plot with them; if you don't give an x piddle, it uses sequential integers
-starting from zero
+takes one or two L<piddle|PDL::Core/pdl>s, one for y and optionally one for
+x, and makes a L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> with
+them; if you don't give an x L<piddle|PDL::Core/pdl>, it uses
+L<sequential integers starting from zero|PDL::Basic/xvals>. 
 
 =item <symbol>_plot ([$x,] $y)
 
-takes one or two piddles, one for y and optionally one for x, and and plots the
-symbol at the given points; if you don't give an x piddle, it uses sequential
-integers starting from zero
+takes one or two L<piddle|PDL::Core/pdl>s, one for y and optionally one for
+x, and and plots the L<symbol|PDL::Graphics::Prima::PlotType/ppair::Symbols>
+at the given points; if you don't give an x L<piddle|PDL::Core/pdl>, it uses
+L<sequential integers starting from zero|PDL::Basic/xvals>. 
 
 =item func_plot ($x_min, $x_max, $func_ref, [$N_points])
 
-takes an I<initial> plot min/max and a function reference and makes a line plot
-of the function; it can optionally take the number of points to draw as well
+takes an I<initial> plot min/max and a L<function reference|perlsub> and
+makes a L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> of the
+L<function|perlsub>; it can optionally take the number of points to evaluate
+on each drawing operation; see L<PDL::Graphics::Prima::DataSet/ds::Func>
 
 =item hist_plot ([$x,] $y)
 
-takes one or two piddles, one for the histogram heights and an option piddle
-with the histogram centers, and plots a histogram; if no centers are supplied,
-it uses sequential values starting at zero
+takes one or two L<piddle|PDL::Core/pdl>s, one for the histogram heights and
+an optional L<piddle|PDL::Core/pdl> with the histogram centers, and plots a
+L<histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>; if no centers
+are supplied, it uses
+L<sequential integers starting from zero|PDL::Basic/xvals>. 
 
 =item matrix_plot ($xbounds, $ybounds, $matrix)
+
 =item imag_plot($xbounds, $ybounds, $matrix)
 
 takes three arguments, the first two of which specify the x-bounds and the
@@ -134,8 +147,8 @@ y-bounds, the third of which is the matrix to plot
 =item plot (...)
 
 a much more powerful routine that takes the same arguments you would pass to
-the constructor of a L<PDL::Graphics::Prima> widget, but which lacks much of
-the flexibility you get with the full GUI toolkit
+the constructor of a L<plot widget|PDL::Graphics::Prima/DESCRIPTION>, and packs the
+resulting plot widget in a L<stand-alone window|Prima::Window>.
 
 =back
 
@@ -144,7 +157,7 @@ And with that, let's look at how to I<use> these to view data!
 =head1 TUTORIAL
 
 To begin, let's assume you have some x/y data that you want to plot with lines
-connecting them. My canonical example is a sine wave. Here's a complete scripts
+connecting them. My canonical example is a sine wave. Here's a complete script
 to get us started:
 
  use PDL;
@@ -153,24 +166,25 @@ to get us started:
  line_plot($x, $x->sin);
  print "All done!\n";
 
-The C<use PDL> line pulls in all the machinery for the Perl Data Language and,
-more importantly, imports the C<sequence> function (among many others) into
-the current package. On the third line we use that function to generate a bunch
-of x-data with a spacing of 1/10. In the last line we plot the sine of that
-sequence of points.
+The C<use PDL> line L<pulls in all the machinery for the Perl Data Language|PDL>
+and, more importantly, imports the L<C<sequence>|PDL::Basic/sequence> function
+(among many others) into the current package. On the third line we use that
+function to generate a bunch of x-data with a spacing of 1/10. In the last
+line we plot the sine of that sequence of points.
 
 When you run the above example script, it will block at the C<line_plot>
-command and display a Prima window with your plot. (On the other hand, if you
-are in the pdl shell, the plot will be displayed but it will not block your
-shell if you have a recent version of L<Term::ReadLine>.) We will return to the
-blocking behavior, and how to call this in a non-blocking fashion, in a little
-bit.
+command and display a L<Prima window|Prima::Window> with your plot. (On the
+other hand, if you are in the L<pdl shell|perldl>, the plot will be displayed
+but it will not block your shell if you have a recent version of
+L<Term::ReadLine>.) We will return to the blocking behavior, and how to call
+this in a non-blocking fashion, in a little bit.
 
 =head2 Interactive Features
 
 For now, turn your attention to the plot. This is a highly interactive
-plot, as are all plots made with PDL::Graphics::Prima. In particular, your plot
-responds to the following user interactions:
+plot, as are all plots made with
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>. In particular,
+your plot responds to the following user interactions:
 
 =over
 
@@ -184,8 +198,7 @@ point the plot will be zoomed-in to the region that you selected.
 
 You can zoom-in and zoom-out using your scroll wheel. The zooming is designed to
 keep the data under the mouse at the same location as you zoom in and out.
-(Unfortunately, some recent changes have made this operation less than perfect,
-but I think it still does a pretty good job.)
+(This is not a 100% guarantee, but for most uses it works about right.)
 
 =item dragging/panning
 
@@ -194,16 +207,22 @@ dragging with your left mouse button, much like an interactive map.
 
 =item context menu
 
-Right-clicking on the plot will bring up a context menu with options including
-restoring auto-scaling, copying the current plot image to your clipboard* (to
-be pasted directly into, say, Microsoft's PowerPoint or LibreOffice's Impress),
-and saving the current plot image to a postscript or raster file. Postscript
-output is always supported, but the supported raster output file formats
-depend on the codecs that L<Prima> was able to install, so are system- and
-machine-dependent.
+Right-clicking on the plot will bring up a L<context menu|Prima::Menu> with
+options including restoring auto-scaling, L<copying the current plot image to
+your clipboard|PDL::Graphics::Prima/copy_to_clipboard>* (to paste directly
+into, say, Microsoft's PowerPoint or LibreOffice's Impress),
+and saving the current plot image to a
+L<postscript|PDL::Graphics::Prima/save_to_postscript> or
+L<raster|PDL::Graphics::Prima/save_to_file> file. Postscript
+output is L<always|Prima::PS::Drawable> L<supported|Prima::PS::Printer>, but
+the supported raster output file formats depend on the L<image libraries and
+codecs that Prima was able to build against|Prima::image-load>, so are system-
+and machine-dependent. For additional information on raster images, see
+L<Prima::Image>.
 
 * For reasons not clear to me, copying the plot to the clipboard does not
-work on my Mac and appear to be due to limitations with the X-window bindings.
+seem to work on Mac and appear to be due to limitations with the X-window
+bindings.
 
 =item resizable
 
@@ -212,15 +231,20 @@ can be resized and it will be updated and redrawn smoothly.
 
 =back
 
-Another thing you should note is that the axes fit the data tightly. In fact,
-the library is designed to automatically choose axis boundaries that fit your
+The library lets you
+L<specify the|PDL::Graphics::Prima::Axis/min, max>
+L<x- and y-bounds of the plot|PDL::Graphics::Prima::Axis/minmax>, but if you do
+not specify bounds, the axes bounds will be calculated to tightly fit the data.
+In fact, the library is designed to automatically choose axis boundaries that fit your
 data and symbols exactly. (And if you wanted a bit of padding included in that
 auto-fitting... well... it's on my todo list. :-)
 
 =head2 Soapbox
 
 Having played around with the plot widget, you probably want to know how to
-modify it programatically, by adding a title or axis labels, perhaps. "What sort
+modify it programatically, by adding a
+L<title|PDL::Graphics::Prima/title> or
+L<axis labels|PDL::Graphics::Prima::Axis/label>, perhaps. "What sort
 of options," you ask, "does C<line_plot> accept for me to specify these things?"
 Well, you can't specify those in your call to C<line_plot>. B<All of the
 C<xxx_plot> functions are super-simple and should be considered training wheels>.
@@ -231,11 +255,14 @@ that I've had my soapbox moment, I'll tell you how to do what you want.
 
 =head2 Adding axis labels and titles via methods
 
-First, you can use the C<line_plot> command to build a plot object and
-display window, and return them to you I<without blocking your script.> This
-will allow you to modify the properties of the line plot before it gets 
-displayed. For example, I can add a plot title and specifically choose when to
-view the plot like so:
+First, you can use the C<line_plot> command to build a
+L<plot object|PDL::Graphics::Prima> and
+L<display window|Prima::Window>, and return them to you I<without blocking
+your script.> This will allow you to modify the properties of the 
+L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> before it gets 
+displayed. For example, I can
+L<add a plot title|PDL::Graphics::Prima/title> and
+L<specifically choose when to view the plot|Prima::Window/execute> like so:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
@@ -250,12 +277,22 @@ view the plot like so:
  # Display the plot
  $window->execute;
 
-You next may ask how you modify the axis properties, such as setting the bounds
-or giving them labels. The axes are sub-objects of the plot, accessed with
-like-named accessors: C<< $plot->x >>. The properties of the axes that you can
-modify include the boundaries, scaling type, and axis label, and are discussed
-in greater detail L<under their own documentation|PDL::Graphics::Prima::Axis>.
-Let's see how to set the x- and y-axis labels:
+You next may ask how you modify the
+L<axis properties|PDL::Graphics::Prima::Axis/DESCRIPTION>, such as
+L<setting the bounds|PDL::Graphics::Prima::Axis/min, max>
+or L<giving them labels|PDL::Graphics::Prima::Axis/label>. The
+L<axes|PDL::Graphics::Prima::Axis/DESCRIPTION> are sub-objects of the
+L<plot|PDL::Graphics::Prima/DESCRIPTION>, accessed with
+L<like-named accessors|PDL::Graphics::Prima/x, y>: C<< $plot->x >>. The
+properties of the axes that you can modify include the
+L<boundaries|PDL::Graphics::Prima::Axis/min, max>,
+L<scaling type|PDL::Graphics::Prima::Axis/scaling>, and
+L<axis label|PDL::Graphics::Prima::Axis/label>, and are discussed
+in greater detail
+L<under their own documentation|PDL::Graphics::Prima::Axis/DESCRIPTION>.
+Let's see how to set the
+L<x- and y-axis|PDL::Graphics::Prima/x, y>
+L<labels|PDL::Graphics::Prima::Axis/label>:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
