@@ -84,7 +84,7 @@ PDL::Graphics::Prima
 
 One of Perl's mottos is to "make easy things easy, and hard things possible."
 The bulk of the modules provided by the
-L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION> distribution
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/> distribution
 focus on the latter half, making hard but very powerful things possible.
 This module tackles the other half: making easy things easy. This module
 provides a number of simple functions for quick data plotting so that you can
@@ -95,7 +95,7 @@ collection of plot (and window) constructors for the standard use cases. Either
 perspective is basically correct.
 
 In addition to making easy plots easy, this module and its documentation are
-meant to serve as an introduction to L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>.
+meant to serve as an introduction to L<PDL::Graphics::Prima|PDL::Graphics::Prima/>.
 If you are new to the libarary, this is where you should start.
 
 This module is built on L<the Perl Data Language|PDL> and
@@ -147,7 +147,7 @@ y-bounds, the third of which is the matrix to plot
 =item plot (...)
 
 a much more powerful routine that takes the same arguments you would pass to
-the constructor of a L<plot widget|PDL::Graphics::Prima/DESCRIPTION>, and packs the
+the constructor of a L<plot widget|PDL::Graphics::Prima/>, and packs the
 resulting plot widget in a L<stand-alone window|Prima::Window>.
 
 =back
@@ -183,7 +183,7 @@ this in a non-blocking fashion, in a little bit.
 
 For now, turn your attention to the plot. This is a highly interactive
 plot, as are all plots made with
-L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>. In particular,
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/>. In particular,
 your plot responds to the following user interactions:
 
 =over
@@ -278,18 +278,18 @@ L<specifically choose when to view the plot|Prima::Window/execute> like so:
  $window->execute;
 
 You next may ask how you modify the
-L<axis properties|PDL::Graphics::Prima::Axis/DESCRIPTION>, such as
+L<axis properties|PDL::Graphics::Prima::Axis/>, such as
 L<setting the bounds|PDL::Graphics::Prima::Axis/min, max>
 or L<giving them labels|PDL::Graphics::Prima::Axis/label>. The
-L<axes|PDL::Graphics::Prima::Axis/DESCRIPTION> are sub-objects of the
-L<plot|PDL::Graphics::Prima/DESCRIPTION>, accessed with
+L<axes|PDL::Graphics::Prima::Axis/> are sub-objects of the
+L<plot|PDL::Graphics::Prima/>, accessed with
 L<like-named accessors|PDL::Graphics::Prima/x, y>: C<< $plot->x >>. The
 properties of the axes that you can modify include the
 L<boundaries|PDL::Graphics::Prima::Axis/min, max>,
 L<scaling type|PDL::Graphics::Prima::Axis/scaling>, and
 L<axis label|PDL::Graphics::Prima::Axis/label>, and are discussed
 in greater detail
-L<under their own documentation|PDL::Graphics::Prima::Axis/DESCRIPTION>.
+L<under their own documentation|PDL::Graphics::Prima::Axis/>.
 Let's see how to set the
 L<x- and y-axis|PDL::Graphics::Prima/x, y>
 L<labels|PDL::Graphics::Prima::Axis/label>:
@@ -311,7 +311,7 @@ L<labels|PDL::Graphics::Prima::Axis/label>:
 
 =head2 Working with plot objects in the PDL shell
 
-NOTE: l<Term::ReadLine::Perl> is a pure-perl implementation of l<Term::ReadLine::Gnu>
+NOTE: L<Term::ReadLine::Perl> is a pure-perl implementation of L<Term::ReadLine::Gnu>
 and it is very nice. However, it does not play nicely with the Prima readline
 integration for reasons I do not yet fully understand. In particular, the
 displayed text and cursor position are always displayed one step "behind" what
@@ -338,8 +338,8 @@ new element. Spiffy, eh?
 =head2 Axis scaling
 
 If you want to set the axis scaling (continuing with the PDL shell example), you
-can use the L<PDL::Graphics::Prima::Axis/min>, L<PDL::Graphics::Prima::Axis/max>
-and L<PDL::Graphics::Prima::Axis/minmax> functions. For example, this sets the 
+can use the L<min|PDL::Graphics::Prima::Axis/min>, L<max|PDL::Graphics::Prima::Axis/max>
+and L<minmax|PDL::Graphics::Prima::Axis/minmax> functions. For example, this sets the 
 x-minimum to zero:
 
  pdl> $plot->x->min(0)
@@ -361,13 +361,13 @@ denoted by the constant C<lm::Auto> as in
  pdl> $plot->x->minmax(lm::Auto, lm::Auto);
 
 This and a similar constant, C<lm::Hold> are defined in
-L<PDL::Graphics::Prima::Limits>.
+L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>.
 
 =head2 Adding DataSets
 
 What if you wanted to plot additional data along with the current data? You
-do this by creating a new L<DataSet|PDL::Graphics::Prima::DataSet>. Let's start
-by adding a L<DataSet|PDL::Graphics::Prima::DataSet> with the cosine of a
+do this by creating a new L<DataSet|PDL::Graphics::Prima::DataSet/>. Let's start
+by adding a L<DataSet|PDL::Graphics::Prima::DataSet/> with the cosine of a
 slightly different x-range:
 
  use PDL;
@@ -377,7 +377,17 @@ slightly different x-range:
  my $x = sequence(100)/10;
  my ($window, $plot) = line_plot($x, $x->sin);
  
- 
+ $plot->dataSets{'cosine'} = ds::Pair(
+     
+     
+     
+     
+     # ... working here
+     
+     
+     
+     
+ );
  
  # Display the plot
  $window->execute;
@@ -454,18 +464,12 @@ write Prima applications, with the Plot widget as just one component for
 user interaction. If you need any substantial amount of user interaction or
 real-time behavior, I suggest you work with the full Prima toolkit.
 
-Although you can plot multiple L<DataSet|PDL::Graphics::Prima::DataSet> in the
+Although you can plot multiple L<DataSet|PDL::Graphics::Prima::DataSet/> in the
 same plot window, a limitation of this Simple interface is that you cannot create multiple
 independent plots in the same window. This is achieved using the full GUI
 toolkit by creating two plot widgets packed into a larger container widget.
 A tutorial for this sort of thing is in the works but hasn't made it into
 the distribution yet. Stay tuned!
-
-=head1 INTERACTIVE PLOTTING
-
-Before we get to the plotting commands themselves, I want to highlight that
-the L<PDL::Graphics::Prima> library is highly interactive. Whether you use the
-widget interface or this Simple interface, 
 
 =head1 SIMPLEST FUNCTIONS
 
@@ -1763,50 +1767,50 @@ David Mertens (dcmertens.perl@gmail.com)
 
 For an introduction to L<Prima> see L<Prima::tutorial>.
 
-This is a component of L<PDL::Graphics::Prima>, a library composed of many
-modules:
+This is a component of L<PDL::Graphics::Prima|PDL::Graphics::Prima/>, a
+library composed of many modules:
 
 =over
 
-=item L<PDL::Graphics::Prima>
+=item L<PDL::Graphics::Prima|PDL::Graphics::Prima/>
 
 Defines the Plot widget for use in Prima applications
 
-=item L<PDL::Graphics::Prima::Axis>
+=item L<PDL::Graphics::Prima::Axis|PDL::Graphics::Prima::Axis/>
 
 Specifies the behavior of axes (but not the scaling)
 
-=item L<PDL::Graphics::Prima::DataSet>
+=item L<PDL::Graphics::Prima::DataSet|PDL::Graphics::Prima::DataSet/>
 
 Specifies the behavior of DataSets
 
-=item L<PDL::Graphics::Prima::Internals>
+=item L<PDL::Graphics::Prima::Internals|PDL::Graphics::Prima::Internals/>
 
 A dumping ground for my partial documentation of some of the more complicated
 stuff. It's not organized, so you probably shouldn't read it.
 
-=item L<PDL::Graphics::Prima::Limits>
+=item L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>
 
 Defines the lm:: namespace
 
-=item L<PDL::Graphics::Prima::Palette>
+=item L<PDL::Graphics::Prima::Palette|PDL::Graphics::Prima::Palette/>
 
 Specifies a collection of different color palettes
 
-=item L<PDL::Graphics::Prima::PlotType>
+=item L<PDL::Graphics::Prima::PlotType|PDL::Graphics::Prima::PlotType/>
 
 Defines the different ways to visualize your data
 
-=item L<PDL::Graphics::Prima::ReadLine>
+=item L<PDL::Graphics::Prima::ReadLine|PDL::Graphics::Prima::ReadLine/>
 
 Encapsulates all interaction with the L<Term::ReadLine> family of
 modules.
 
-=item L<PDL::Graphics::Prima::Scaling>
+=item L<PDL::Graphics::Prima::Scaling|PDL::Graphics::Prima::Scaling/>
 
 Specifies different kinds of scaling, including linear and logarithmic
 
-=item L<PDL::Graphics::Prima::Simple>
+=item L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>
 
 Defines a number of useful functions for generating simple and not-so-simple
 plots
@@ -1818,10 +1822,10 @@ plots
 Portions of this module's code are copyright (c) 2011 The Board of Trustees at
 the University of Illinois.
 
-Portions of this module's code are copyright (c) 2011-2012 Northwestern
+Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-This module's documentation are copyright (c) 2011-2012 David Mertens.
+This module's documentation are copyright (c) 2011-2013 David Mertens.
 
 All rights reserved.
 
