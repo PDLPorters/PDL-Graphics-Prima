@@ -7,7 +7,8 @@ my $is_setup = 0;
 
 sub is_happy_with {
 	my ($class, $readline_obj) = @_;
-	return eval{ $readline_obj->can('event_loop') };
+	return eval{ $readline_obj->can('event_loop')
+		and not $readline_obj->tkRunning };
 }
 
 sub setup {
