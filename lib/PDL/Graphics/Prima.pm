@@ -8,8 +8,25 @@ our $VERSION = 0.12_01;
 use PDL::Graphics::Prima::ReadLine;
 sub import {
 	my $class = shift;
-	PDL::Graphics::Prima::ReadLine->setup($PERLDL::TERM)
-		if PDL::Graphics::Prima::ReadLine->is_happy_with($PERLDL::TERM);
+	
+	# Set up the interactivity, if possible with this terminal
+	if (PDL::Graphics::Prima::ReadLine->is_happy_with($PERLDL::TERM)) {
+		PDL::Graphics::Prima::ReadLine->setup($PERLDL::TERM);
+		*Prima::Window::twiddle = sub {};
+	}
+	# Set up twiddling if we're operating in a PDL shell
+	elsif (defined $PERLDL::TERM) {
+		*Prima::Window::twiddle = sub {
+			my $self = shift;
+			print "Twiddling plot; press q or Q when done\n";
+			$self->{is_twiddling} = 1;
+			$::application->yield while $self->{is_twiddling};
+		};
+	}
+	# Set up twiddling, but make it a no-op.
+	else {
+		*Prima::Window::twiddle = sub {};
+	}
 }
 
 package Prima::Plot;

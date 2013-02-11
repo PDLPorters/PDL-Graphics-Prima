@@ -1627,11 +1627,20 @@ sub default_plot {
 	my $window = Prima::Window->create(
 		text  => $args{title} || 'PDL::Graphics::Prima',
 		size  => $args{size} || [our @default_sizes],
+		# Add a stop-twiddling listener
+		onKeyDown => sub {
+			my ($self, $key) = @_;
+			$self->{is_twiddling} = 0 if chr($key) =~ /q/i;
+		},
 	);
 	my $plot = $window->insert('Plot',
 		pack => { fill => 'both', expand => 1},
 		%args
 	);
+	$plot->onKeyDown(sub {
+		my (undef, $key) = @_;
+		$window->{is_twiddling} = 0 if chr($key) =~ /q/i;
+	});
 	
 	if (not defined wantarray) {
 		# Void context. Term::ReadLine will properly display the window if
@@ -1649,7 +1658,9 @@ sub default_plot {
 		return $plot;
 	}
 	
-	# List context. Return both
+	# List context. Twiddle, then return both. Note that twiddling may be a
+	# no-op for some configurations. See ::ReadLine for details.
+	$window->twiddle;
 	return ($window, $plot);
 }
 
