@@ -1,14 +1,19 @@
 use strict;
 use warnings;
 
-# Defines the lm (limits) package:
-package lm;
+# Defines the lm (limits) package in a way that CPAN won't index it
+package
+lm;
+
 my $inf;
 BEGIN {
 	use PDL::Lite;
 	$inf = -PDL->pdl(0)->log->at(0);
 }
 
+# The fact that lm::Auto is infinite is exploited in pset::Histogram, so if
+# you change the representation here, be sure to change the representation
+# there, too.
 use constant Auto => $inf;
 use constant Hold => -$inf;
 
@@ -18,14 +23,14 @@ __END__
 
 =head1 NAME
 
-PDL::Graphics::Prima::Limits - defining a couple of useful constants
+PDL::Graphics::Prima::Limits - defining a few useful constants
 
 =head1 DESCRIPTION
 
 You probably won't ever need to use this module explicitly, but you will likely
 use the constants defined here to manipulate axis autoscaling. This module defines
-the constants C<lm::Auto> and C<lm::Hold>. If the explanation below does not
-make sense, these constants are also discussed in
+the constants C<lm::Auto>, C<lm::Hold>, and C<lm::Inf>. If the explanation below
+does not make sense, these constants are also discussed in
 L<PDL::Graphics::Prima::Axis>, L<PDL::Graphics::Prima::Simple>, and elsewhere.
 
 =over
@@ -69,6 +74,11 @@ which is equivalent to:
 Also note that the return value of C<< $plot->y->min >> returns different things
 depending on whether you are using scalar or list context. (Yes, that's an Axis
 thing, not a Limits thing, but it bears repeating here anyway.)
+
+=item lm::Inf
+
+This constant is supposed to represent the actual IEEE representation of an
+infinite value on your system. At the moment, this is useful for useful when specifying
 
 =back
 

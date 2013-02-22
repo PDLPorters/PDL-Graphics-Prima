@@ -225,14 +225,12 @@ sub initialize {
 
 =item pset::Hist
 
-working here
-
 This is still a work in progress and these are just my notes.
 
  baseline   => SCALAR (0)
  topPadding => SCALAR (10)
  
- binning    => 'lin[ear]', 'log[arithmic]', \&funcref
+ binning    => bt::lin, bt::log, \&funcref
  nbins      => SCALAR (20)
  min        => SCALAR (undef, i.e. data-min)
  max        => SCALAR (undef, i.e. data-max)
@@ -240,8 +238,84 @@ This is still a work in progress and these are just my notes.
 
 =cut
 
+package 
+bt;
+
+
+
+sub bin_by_data {
+	my ($data, $bounds, $min, $max, $truncate) = @_;
+	
+	my $data_to_bin = $data->where(($min <= $data) & ($data <= $max));
+	my $idx = vsearch($data_to_bin, $bounds);
+	my $counts = zeroes($bounds->nelem - 1);
+	indadd(1, $idx, $counts);
+	
+	# if truncating, add the points outside the min/max to the last bins
+	if ($truncate) {
+		$counts[0] += sum($data < $min);
+		$counts[-1] += sum($data > $max);
+	}
+	
+	return $counts;
+}
+
+sub linear_scaling {
+	my ($set_obj, $data, $min, $max, $truncate, $nbins) = @_;
+	
+	# Generate the bin boundaries that we'll use
+	my $bin_bounds = zeroes($nbins + 1)->xlinvals($min, $max);
+	
+	# Edge condition: min is the same as max
+	if ($min == $max) {
+		$bin_bounds = pdl(1.5*$min, 0.5*$min) if $min < 0;
+		$bin_bounds = pdl(0.5*$min, 1.5*$min) if $min > 0;
+	}
+	
+	# Bin the data according to the bin boundaries
+	my $hist = bin_by_data($data, $bin_bounds, $min, $max, $truncate);
+	
+	return $bin_bounds, $hist;
+}
+
+use Carp;
+sub logarithmic_scaling {
+	my ($set_obj, $data, $min, $max, $truncate, $nbins) = @_;
+	
+	# Strict: only allow positive data
+	croak('data (or its truncation) must only contain positive values '
+		. 'for logarithmic scaling') if $min < 0;
+	
+	# Generate logarithmic bin boundaries
+	my $bin_bounds = zeroes($nbins + 1)->xlogvals($min, $max);
+	# Edge condition: min is same as max (ha! Edge condition! Get it?!)
+	$bin_bounds = pdl(sqrt($min), $min**2) if $min == $max;
+	
+	my $hist = bin_by_data($data, $bin_bounds, $min, $max, $truncate);
+	return $bin_bounds, $hist;
+}
+
+sub logarithmic_scaling_no_die {
+	my ($set_obj, $data, $min, $max, $truncate, $nbins) = @_;
+	
+	# Loose: ignore negative data
+	croak('data, or its truncation, seems to only contain negative values')
+		if $max <= 0;
+	
+	# Handle negative min
+	$min = $data->where($data > 0)->min if $min <= 0;
+	
+	return logarithmic_scaling($set_obj, $data, $min, $max, $truncate, $nbins);
+}
+
+use constant lin => \&linear_scaling,
+			strictlog => \&logarithmic_scaling,
+			log => \&logarithmic_scaling_no_die;
+
 package PDL::Graphics::Prima::PlotType::Set::Histogram;
 use Carp;
+
+
 
 # Install the short name constructor:
 sub pset::Histogram {
@@ -249,13 +323,102 @@ sub pset::Histogram {
 }
 
 # The histogram initializer ensures that the top padding is set to a reasonable
-# value (defaults to 5 pixels):
+# value (defaults to 10 pixels):
 sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	PDL::Graphics::Prima::PlotType::Role::Histogram::initialize($self);
+	
+	# Set defaults
+	$self->set_binning(bt::lin) unless defined $self->{binning};
+	$self->{nbins} = 20 unless defined $self->{nbins};
+	$self->{min} = lm::Auto unless defined $self->{min};
+	$self->{max} = lm::Auto unless defined $self->{max};
+	$self->{truncate} = 0 unless defined $self->{truncate};
 }
 
+=item nbins
+
+Getter/setter for the number of bins the histogram should use.
+
+=cut
+
+sub nbins {
+	my $self = shift;
+	return $self->{nbins} unless @_;
+	my $new_nbins = shift;
+	croak('nbins must be a positive interger')
+		unless $n_bins =~ /^\s*\d+\s*$/ and $new_nbins > 0;
+	$self->{nbins} = $new_nbins;
+}
+
+=item min
+
+Getter/setter for the histogram's minimum value.
+
+=cut
+
+sub min {
+	my $self = shift;
+	return $self->{min} unless @_;
+	$self->{min} = $_[0];
+}
+
+=item max
+
+Getter/setter for the histogram's minimum value.
+
+=cut
+
+sub max {
+	my $self = shift;
+	return $self->{max} unless @_;
+	$self->{max} = $_[0];
+}
+
+=item binning
+
+Getter/setter for the binning routine.
+
+=cut
+
+sub binning {
+	my $self = shift;
+	return $self->{binning} unless @_;
+	$self->{binning} = $_[0];
+}
+
+=item truncate
+
+Getter/setter for whether the histogram should truncate data above/below
+the min/max. If data is not truncated, then all data below the specified min
+or above the specified max is counted in the last bin. If data is truncated,
+it is not represented in the final histogram. This should be a numeric true
+(1) or false (0) value. PDL threading over this value is planned...
+
+=cut
+
+sub truncate {
+	my $self = shift;
+	return $self->{truncate} unless @_;
+	$self->{truncate} = $_[0];
+}
+
+sub get_binned_data {
+	# Bins the data and returns the binned results
+	# working here
+	my $self = shift;
+	
+	# Get the data; compute the min and max
+	my $data = $hist_set_obj->dataset->get_data;
+	my ($datamin, $datamax) = $data->minmax;
+	my $min = $hist_set_obj->min;
+	$min = $datamin if $min == lm::Auto;
+	my $max = $hist_set_obj->max;
+	$max = $datamax if $max == lm::Auto;
+	
+	return $self->binning->($self, $data, $min, $max, $self->truncate, $self->nbins);
+}
 
 # Returns user-supplied or computed bin-edge data.
 sub get_bin_edges {
