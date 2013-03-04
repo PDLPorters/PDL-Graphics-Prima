@@ -1322,7 +1322,7 @@ sub ds::Note {
 	push (@notes, shift(@_))
 		while (blessed($_[0]) and $_[0]->isa('PDL::Graphics::Prima::PlotType::Annotation'));
 	croak("Non-note arguments must be key/value pairs") unless @_ % 2 == 0;
-	return PDL::Graphics::Prima::DataSet::Annotation->new(plotTypes => [@notes], @_);
+	return PDL::Graphics::Prima::DataSet::Annotation->new(plotTypes => \@notes, @_);
 }
 
 sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Annotation'}
