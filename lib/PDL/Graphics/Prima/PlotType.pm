@@ -2675,12 +2675,16 @@ sub compute_collated_min_max_for {
 
 =head2 generate_properties
 
-Needs to be explained. Basically, this accumulates all the properties from the
-plotType object together with those from the dataset into a single hash that
-you can submit to one of the (PDL-based) Prima drawing methods.
+This method accumulates all the properties from the plotType object together
+with those from the dataset into a single hash that you can submit to one of the
+L<PDL-based Prima drawing methods|PDL::Drawing::Prima/> or (if you are using a
+normal L<Prima::Drawable graphics primitive|Prima::Drawable/Graphic primitives methods>
+and expect that all of the properties will be singular) the set method discussed
+in L<Prima::Object|Prima::Object/>.
 
-This function is provided for your use in the draw() function. You should not
-usually have a need to override it.
+I use this function both in the implementations of the C<draw> and 
+C<collate_min_max_wrt_many> methods, and I have never encountered a reason to
+override it.
 
 =cut
 
