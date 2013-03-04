@@ -2513,9 +2513,19 @@ sub draw {
 	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
 	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
 	
+	# Set the properties for the text drawing operation and back up the old
+	# properties
+	my %properties = $self->generate_properties(qw(
+		color backColor font rop textOpaque textOutBaseline
+	));
+	my %backups = $canvas->get(keys %properties);
+	$canvas->set(%properties);
+	
+	# Draw the text
 	$canvas->text_out($self->{text}, $x, $y);
 	
-	# Restore the clip rectangle
+	# Restore the old properties and clip rectangle
+	$canvas->set(%backups);
 	$canvas->clipRect(@clip_rect);
 }
 
