@@ -1249,9 +1249,7 @@ sub compute_collated_min_max_for {
 =head2 Annotation
 
 PDL::Graphics::Prima provides a generic annotation dataset that is used for
-adding various annotations to your plots. It expects a list of key/value pairs
-where the keys are the names you give to your annotations and the values are
-annotation plotType objects.
+adding drawn or textual annotations to your plots.
 
 =cut
 
@@ -1270,9 +1268,11 @@ use Carp 'croak';
 
 =for sig
 
-    ds::Note(plotType, plotType, ...)
+    ds::Note(plotType, plotType, ..., drawing => option, drawing => option)
 
-The short-name constructor to create annotations. For example, 
+The short-name constructor to create annotations. This expects a list of
+annotation plot types fullowed by a list of general drawing options, such as
+line width or color. For example, 
 
 =for example
 
@@ -1280,18 +1280,48 @@ The short-name constructor to create annotations. For example,
      pnote::Region(
          # args here
      ),
+     pnote::Text('text',
+         # args here
+     ),
+     ... more note objects ...
+     # Dataset drawing options
+     color => cl::LightRed,
      ...
  );
+
+Unlike other dataset short-form constructors, you do not need to specify the
+plotTypes key explicitly, though if you did it would do what you mean. That is,
+the previous example would give identical results as this:
+
+ ds::Note(
+     plotTypes => [
+         pnote::Region(
+             # args here
+         ),
+         pnote::Text('text',
+             # args here
+         ),
+         ... more note objects ...
+     ],
+     # Dataset drawing options
+     color => cl::LightRed,
+     ...
+ );
+
+The former is simply offered as a convenience for this more long-winded form.
 
 =cut
 
 sub ds::Note {
-	return PDL::Graphics::Prima::DataSet::Annotation->new(plotTypes => [@_]);
+	# Pull all the note objects off the list
+	my @notes;
+	push (@notes, shift(@_))
+		while (blessed($_[0]) and $_[0]->isa('PDL::Graphics::Prima::PlotType::Annotation'));
+	croak("Non-note arguments must be key/value pairs") unless @_ % 2 == 0;
+	return PDL::Graphics::Prima::DataSet::Annotation->new(plotTypes => [@notes], @_);
 }
 
 sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Annotation'}
-
-
 
 sub init {
 	my $self = shift;
