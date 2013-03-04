@@ -1612,7 +1612,7 @@ written) L<PDL::Graphics::Prima::InteractiveTut>.
 
 # A function that allows for quick one-off plots:
 *plot = \&default_plot;
-
+our $is_twiddling = 0;
 sub default_plot {
 	# Make sure they sent key/value pairs:
 	croak("Arguments to plot must be in key => value pairs")
@@ -1627,11 +1627,20 @@ sub default_plot {
 	my $window = Prima::Window->create(
 		text  => $args{title} || 'PDL::Graphics::Prima',
 		size  => $args{size} || [our @default_sizes],
+		# Add a stop-twiddling listener
+		onKeyDown => sub {
+			my (undef, $key) = @_;
+			$is_twiddling = 0 if chr($key) =~ /q/i;
+		},
 	);
 	my $plot = $window->insert('Plot',
 		pack => { fill => 'both', expand => 1},
 		%args
 	);
+	$plot->onKeyDown(sub {
+		my (undef, $key) = @_;
+		$is_twiddling = 0 if chr($key) =~ /q/i;
+	});
 	
 	if (not defined wantarray) {
 		# Void context. Term::ReadLine will properly display the window if
@@ -1649,9 +1658,30 @@ sub default_plot {
 		return $plot;
 	}
 	
-	# List context. Return both
+	# List context. Twiddle, then return both. Note that twiddling may be a
+	# no-op for some configurations. See ::ReadLine for details.
+	$window->twiddle;
 	return ($window, $plot);
 }
+
+# Set up twiddling if we're in the Perldl shell and we *don't* have
+# event_loop support (for whatever reason)
+if (defined $PERLDL::TERM
+	and not PDL::Graphics::Prima::ReadLine->is_setup
+) {
+	print "Setting up twiddling\n";
+	*Prima::Window::twiddle = sub {
+		my $self = shift;
+		print "Twiddling plot; press q or Q when done\n";
+		$is_twiddling = 1;
+		$::application->yield while $is_twiddling;
+	};
+}
+# Otherwise, make the twiddle function a no-op
+else {
+	*Prima::Window::twiddle = sub {};
+}
+
 
 =head1 IMPORTED METHODS
 

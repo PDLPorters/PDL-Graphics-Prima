@@ -8,6 +8,8 @@ our $VERSION = 0.12_01;
 use PDL::Graphics::Prima::ReadLine;
 sub import {
 	my $class = shift;
+	
+	# Set up the interactivity, if possible with this terminal
 	PDL::Graphics::Prima::ReadLine->setup($PERLDL::TERM)
 		if PDL::Graphics::Prima::ReadLine->is_happy_with($PERLDL::TERM);
 }
