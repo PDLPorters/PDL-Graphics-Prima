@@ -139,7 +139,11 @@ sub compute_collated_min_max_for {
 	my ($self, $axis_name, $pixel_extent) = @_;
 	my $widget = $self->{dataSets}->{widget};
 	
-	my (@min_collection, @max_collection);
+	# Add an initial collection of bad values to handle the special calse of
+	# no data sets.
+	my @min_collection = (PDL->zeroes($pixel_extent+1)->setvaltobad(0));
+	my @max_collection = (PDL->zeroes($pixel_extent+1)->setvaltobad(0));
+
 	foreach my $plotType (@{$self->{plotTypes}}) {
 		
 		# Accumulate all the collated results

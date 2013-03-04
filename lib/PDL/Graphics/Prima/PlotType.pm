@@ -2052,7 +2052,7 @@ of the right axis.
 
 Here's another one. As a y-specification, this will give a location that is
 five pixels below the y-value of 12. As an x-specification, this will give a
-location that is fixe pixels to the left of the x-value of 12.
+location that is five pixels to the left of the x-value of 12.
 
  # input 
  $spec_string = '12 - 5px';
