@@ -2704,20 +2704,20 @@ sub generate_properties {
 	# Add all of the specified properties to a local collection that eventually
 	# gets passed to the low-level drawing routine:
 	if (ref($self)) {
-		foreach (@prop_list) {
-			if (exists $self->{$_}) {
-				$properties{$_} = $self->{$_};
+		for my $prop (@prop_list) {
+			if (exists $self->{$prop}) {
+				$properties{$prop} = $self->{$prop};
 			}
-			elsif (exists $dataset->{$_}) {
-				$properties{$_} = $dataset->{$_};
+			elsif (exists $dataset->{$prop}) {
+				$properties{$prop} = $dataset->{$prop};
 			}
 		}
 		
 	}
 	else {
-		foreach (@prop_list) {
-			if (exists $dataset->{$_}) {
-				$properties{$_} = $dataset->{$_};
+		for my $prop (@prop_list) {
+			if (exists $dataset->{$prop}) {
+				$properties{$prop} = $dataset->{$prop};
 			}
 		}
 	}
