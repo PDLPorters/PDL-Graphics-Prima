@@ -2740,9 +2740,13 @@ sub widget {
 	return $_[0]->dataset->widget;
 }
 
+# Weaken the reference to the dataset so that we don't have memory leaks
+use Scalar::Util;
 sub dataset {
-	$_[0]->{dataSet} = $_[1] if (@_ == 2);
-	return $_[0]->{dataSet};
+	return $_[0]->{dataSet} if @_ == 1;
+	my ($self, $dataSet) = @_;
+	$self->{dataSet} = $dataSet;
+	Scalar::Util::weaken($self->{dataSet});
 }
 
 # A function that gets the data, meant to be overloaded:

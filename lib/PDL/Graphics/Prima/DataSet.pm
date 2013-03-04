@@ -76,6 +76,7 @@ These include accessing the associated widget and drawing the data.
 
 package PDL::Graphics::Prima::DataSet;
 use Carp;
+use Scalar::Util;
 
 =item widget
 
@@ -87,9 +88,11 @@ sub widget {
 	# Simply return the widget if it's a getter:
 	return $_[0]->{widget} if @_ == 1;
 	
-	# It's a setter call, so set self's widget
+	# It's a setter call, so set self's widget. Note the use of weaken to avoid
+	# circular references and memory leaks.
 	my ($self, $widget) = @_;
 	$self->{widget} = $widget;
+	Scalar::Util::weaken($self->{widget});
 }
 
 =item draw
