@@ -1264,6 +1264,7 @@ package PDL::Graphics::Prima::DataSet::Annotation;
 our @ISA = qw(PDL::Graphics::Prima::DataSet);
 
 use Carp 'croak';
+use Scalar::Util qw(blessed);
 
 =over
 
