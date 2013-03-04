@@ -2696,7 +2696,7 @@ sub generate_properties {
 	my ($self, @prop_list) = @_;
 	
 	# Collect singular and plural properties
-	@prop_list = map {/((.*)s)/} @prop_list;
+	@prop_list = map {/((.*)s)$/ ? ($1, $2) : ($_) } @prop_list;
 	
 	my %properties;
 	my $dataset = $self->dataset;
