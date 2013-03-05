@@ -723,8 +723,8 @@ sub draw {
 
 		# Draw the label, if it exists
 		if ($axis->{label}) {
-			$canvas->draw_text($axis->{label}, $clip_left, 0, $clip_right
-				, 1.25 * $em_height
+			$canvas->draw_text($axis->{label}, $clip_left, 0.25 * $em_height
+				, $clip_right, 1.5 * $em_height
 				, dt::Center | dt::Top | dt::NewLineBreak | dt::NoWordWrap
 					| dt::UseExternalLeading);
 		}
