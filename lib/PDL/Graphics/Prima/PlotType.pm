@@ -2519,6 +2519,12 @@ sub draw {
 		color backColor font rop textOpaque textOutBaseline
 	));
 	my %backups = $canvas->get(keys %properties);
+	if (exists $properties{font}) {
+		$canvas->font->set(
+			%{$properties{font}}
+		);
+		delete $properties{font};
+	}
 	$canvas->set(%properties);
 	
 	# Draw the text
