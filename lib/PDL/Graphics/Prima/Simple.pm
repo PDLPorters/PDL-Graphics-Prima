@@ -38,12 +38,10 @@ PDL::Graphics::Prima
  
  # --( Super simple histogram )--
  
- # PDL hist method returns x/y data
- hist_plot($y->hist);
- my ($bin_centers, $heights) = $y->hist;
- hist_plot($bin_centers, $heights);
- # Even simpler, if of limited use:
- hist_plot($heights);
+ # Plot a distribution
+ hist_plot($distribution);
+ # Tweak the binning
+ hist_plot($distribution, bt::Linear(normalize => 0));
  
  
  # --( Super simple matrix plots )--
@@ -129,13 +127,13 @@ makes a L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> of the
 L<function|perlsub>; it can optionally take the number of points to evaluate
 on each drawing operation; see L<PDL::Graphics::Prima::DataSet/ds::Func>
 
-=item hist_plot ([$x,] $y)
+=item hist_plot ($distribution, [$bin_type])
 
-takes one or two L<piddle|PDL::Core/pdl>s, one for the histogram heights and
-an optional L<piddle|PDL::Core/pdl> with the histogram centers, and plots a
-L<histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>; if no centers
-are supplied, it uses
-L<sequential integers starting from zero|PDL::Basic/xvals>. 
+takes a L<piddle|PDL::Core/pdl> of data to be plotted and an optional
+L<bin type|PDL::Graphics::Prima::DataSet/Sets>and plots a
+L<histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>. If no bin
+type is supplied, L<linear binning|PDL::Graphics::Prima::DataSet/bt::Linear>
+is used.
 
 =item matrix_plot ($xbounds, $ybounds, $matrix)
 
@@ -825,32 +823,34 @@ sub func_plot {
 	goto &plot;
 }
 
-=item hist_plot ($x, $y)
+=item hist_plot ($distribution, [$bin_type])
 
-The C<hist_plot> function takes two arguments, the centers of the histogram
-bins and their heights. It plots the histogram as black-outlined rectangles
-against a white background. As with the other functions, C<$x> and C<$y>
-must be thread-compatible. C<hist_plot> is designed to play very nicely with
-PDL's L<hist|PDL::Basic/"hist"> function, so the following idiom works:
-
- my $data = grandom(400);
- hist_plot($data->hist);
-
-PDL's L<hist|PDL::Basic/"hist"> function does not (to my knowledge) generate bad
-values, but if you generate your values by some other means and any heights or
-positions are bad they will be skipped, leaving a gap in the histogram.
+The C<hist_plot> function takes a distribution of data that you want to
+visualize and an optional binning type. This is a fairly simple wrapper
+around the L<linear binning type|PDL::Graphics::Prima::DataSet/bt::Linear>
+for the L<Distribution DataSet|PDL::Graphics::Prima::DataSet/Distribution>
+using the
+L<histogram pairwise plot type|PDL::Graphics::Prima::PlotType/Histogram>.
+It plots the histogram as black-outlined rectangles against a white
+background.
 
 The equivalent L<plot|/"PLOT FUNCTION"> command is:
 
- plot(-data => ds::Pair($x, $y, plotType => ppair::Histogram));
- 
+ plot(-data => ds::Dist($distribution));
 
 =cut
 
 sub hist_plot {
-	croak("hist_plot expects two piddles, the bin-centers and the bin heights")
-		unless @_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')};
-	@_ = (-data => ds::Pair(@_, plotType => ppair::Histogram));
+	my ($piddle, $subref) = @_;
+	croak("hist_plot expects a piddle as the first argument")
+		unless eval{$piddle->isa('PDL')};
+	my @bin_args;
+	if (defined $subref) {
+		croak("hist_plot expects a optional bin type or subref")
+			if ref($subref) ne ref(sub{});
+		@bin_args = (binning => $subref);
+	}
+	@_ = (-data => ds::Dist($piddle, @bin_args));
 	goto &plot;
 }
 

@@ -1,12 +1,14 @@
 use strict;
 use warnings;
 
-# Defines the scaling classes.
-# working here - add a broken axis scaling class
-
-package sc;
+package
+sc;
 use constant Linear => 'PDL::Graphics::Prima::Scaling::Linear';
 use constant Log => 'PDL::Graphics::Prima::Scaling::Log';
+
+
+# Defines the scaling classes.
+# working here - add a broken axis scaling class
 
 package PDL::Graphics::Prima::Scaling::Linear;
 

@@ -5,4 +5,6 @@ use PDL::Graphics::Prima::Simple;
 
 my $data = grandom(100);
 
-hist_plot($data->hist);
+hist_plot($data);
+hist_plot($data, bt::Log);
+hist_plot($data, bt::Linear(min => 0, drop_extremes => 0));

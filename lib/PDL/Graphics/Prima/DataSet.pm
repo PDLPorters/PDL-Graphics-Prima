@@ -303,130 +303,6 @@ sub change_data {
 
 =cut
 
-################################################################################
-#                                     Sets                                     #
-################################################################################
-
-package PDL::Graphics::Prima::DataSet::Set;
-use base 'PDL::Graphics::Prima::DataSet';
-use Carp;
-
-=head2 Sets
-
-Sets are unordered collections of sample data. The typical use case of set data
-is that you have a population of things and you want to analyze their agregate
-properties. For example, you might be interested in the distribution of tree
-heights at your Christmas Tree Farm, or the distribution of your students' (or
-your classmates') test scores from the mid-term. Those collections of data are
-called Sets and PDL::Graphics::Prima provides a number of ways of visualizing
-sets, as discussed under L<PDL::Graphics::Prima::PlotType/Sets>. Here, I
-discuss how to create and manipulate Set dataSet objects.
-
-Note that shape of pluralized properties (i.e. C<colors>) should
-thread-match the shape of the data B<excluding> the data's first dimension.
-That is, if I want to plot the cumulative distributions for three different
-batches using three different line colors, my data would have shape (N, 3) and
-my colors piddle would have shape (3).
-
-=over
-
-=item ds::Set - short-name constructor
-
-=for sig
-
-    ds::Set($data, option => value, ...)
-
-The short-name constructor to create sets. The data can be either a piddle of
-values or an array reference of values (which will be converted to a piddle
-during initialization).
-
-=cut
-
-sub ds::Set {
-	croak('ds::Set expects data and then key => value pairs, but you supplied'
-		. ' an even number of arguments') if @_ % 2 == 0;
-	my $data = shift;
-	return PDL::Graphics::Prima::DataSet::Set->new(@_, data => $data);
-}
-
-=item expected_plot_class
-
-Sets expect plot type objects that are derived from 
-C<PDL::Graphics::Prima::PlotType::Set>.
-
-=cut
-
-sub expected_plot_class {'PDL::Graphics::Prima::PlotType::Set'}
-
-# Standard initialization, and ensures that the data is a piddle.
-sub init {
-	my $self = shift;
-	
-	# Supply a default plot type:
-	$self->{plotTypes} = [pset::CDF()] unless exists $self->{plotTypes};
-	
-	# Check that the plotTypes are valid:
-	$self->check_plot_types(@{$self->{plotTypes}});
-	
-	# Set the data (without notifications)
-	$self->_change_data($self->{data});
-}
-
-=item get_data
-
-Returns the piddle containing the data. This is used mostly by the plotTypes to
-retrieve the data in order to display it. You can also use it to retrieve the
-data piddle if it makes your code more legible.
-
-=for example
-
- my $heights = load_height_data();
- ...
- my $plot = $wDisplay->insert('Plot',
-     -heights => ds::Set($heights),
-     ...
- );
- 
- # Retrieve and print the data:
- print "heights are ", $plot->dataSets->{heights}, "\n";
-
-A subtle point: notice that you can change the data B<within> the piddle, and
-you can even change the piddle's shape, but you cannot use this to replace the
-piddle itself.
-
-=cut
-
-sub get_data {
-	return $_[0]->{data};
-}
-
-=item change_data
-
-Changes the data to the piddle passed in. For example,
-
- if ($heights->changed) {
-     my $new_heights = $heights->data;
-     $heights_plot->dataSets->{'heights'}->change_data($new_heights);
- }
-
-=cut
-
-# Notification free method
-sub _change_data {
-	my ($self, $data) = @_;
-	
-	# Ensure the data is a piddle:
-	eval {
-		$self->{data} = PDL::Core::topdl($data);
-		1;
-	} or croak('For Set datasets, the data must be piddles '
-		. 'or scalars that pdl() knows how to process');
-}
-
-=back
-
-=cut
-
 ###############################################################################
 #                                    Pair                                    #
 ###############################################################################
@@ -552,8 +428,498 @@ sub _change_data {
 
 =cut
 
-# working here - create an OrderedSet, which only requires a single set of
-# data and uses counting numbers for the "x" values
+################################################################################
+#                                     Sets                                     #
+################################################################################
+
+package PDL::Graphics::Prima::DataSet::Set;
+use base 'PDL::Graphics::Prima::DataSet::Pair';
+use Carp;
+
+
+#NOTE: I WOULD LIKE TO MAKE THE TRUNCATION BEHAVIOR MORE SPECIFIABLE WITH
+#FLAGS SUCH AS trunc::LeftDrop | trunc::RightExtraBin. I WOULD ALSO LIKE TO
+#INCLUDE norm::Integral, norm::ByWidth, norm::ByCount, OR MAYBE
+#norm::ToOne, norm::ToN, norm::ByWidth, norm::NotByWidth, SOMETHING LIKE THAT.
+
+=head2 Distribution
+
+Distributions are unordered collections of sample data. The typical use case
+of a distribution is that you have a population of things and you want to
+analyze their agregate properties. For example, you might be interested in
+the distribution of tree heights at your Christmas Tree Farm, or the
+distribution of your students' (or your classmates') test scores from the
+mid-term. Common ways for visualizing distributions are to plot their
+cumulative distribution functions or their histogram, but those are actually
+classic pairwise data visualization approaches. That means that what we really
+need are means for converting unordered sets of data into pairwise data.
+Distributions, therefore, let you specify the means by which your unordered
+data should be transformed into pairwise data, and the pairwise plot types to
+visualize the resulting transformed data. In an object oriented sense, the
+Distribution class is derived from the Pairwise class because a distribution
+B<is visualized> using pairwise plot types.
+
+Note that shape of pluralized properties (i.e. C<colors>) should
+thread-match the shape of the data B<excluding> the data's first dimension.
+That is, if I want to plot the cumulative distributions for three different
+batches using three different line colors, my data would have shape (N, 3) and
+my colors piddle would have shape (3).
+
+PDL::Graphics::Prima's notion of distributions is not yet finalized and is
+open to suggestion. If you find yourself using distribution plots regularly,
+you should give me feedback on what works and what doesn't. Thanks!
+
+=over
+
+=item ds::Dist - short-name constructor
+
+=for sig
+
+    ds::Dist($data, option => value, ...)
+
+The short-name constructor to create distribtions. The data can be either a
+piddle of values or an array reference of values (which will be converted to
+a piddle during initialization).
+
+=cut
+
+package 
+bt;
+
+use Carp;
+
+=pod
+
+In addition to the standard keys, there is also the C<binning> key. The
+C<binning> key expects either a standard binning approach using one of the
+pre-defined forms, or a subroutine reference that performs the binning
+in a customized fashion. The binning types are all functions that expect
+key/value pairs that include C<min> and C<max> for the lower and upper
+threshold of the binning, C<drop_extremes> to indicate if the data outside
+the min/max range should be included in the first and last bins, and
+C<normalize> to indicate if the binning should be normalized to 1, for some
+appropriate definition of normalization. Other keys may also be allowed.
+
+If you want to write a customized binning function, it should accept the
+two arguments, the C<data> to bin and the C<distribution> object. It should
+return a pair of piddles representing the x and y coordinates to plot. In
+addition, if the binning routine knows how to calculate properties for
+specific plot types, it can specify the plot type and any properties that it
+would provide for that plot type.
+
+For example, if you write a binning routine that knows how to calculate
+the bin boundaries for the Histogram plot type, your return statement could
+look like this:
+
+ return ($x, $y, Histogram => { binEdges => $bounds } );
+
+If your binning routine uses the number of points in a Symbols plot type to
+represent something, it could specify those:
+
+ return ($x, $y, Symbols => { N_points => $n_points } );
+
+If you have a means for calculating the error on your bins, you could
+include the error bar data:
+
+ return ($x, $y, ErrorBars => { y_err => $count_err } );
+
+These properties will be applied to the relevant plot types just before
+drawing and autoscaling operations, and any dataset operation that makes
+use of your supplied function should examine the additional parameters and
+act accordingly.
+
+The standard binning types include:
+
+=over
+
+=item bt::CDF
+
+Generates a cumulative distribution from the data. The default C<min> is the
+data's minimum, the default C<max> is the data's maximum, the binning will not
+C<drop_extremes> by default (i.e. C<< drop_extremes => 0 >>) and the binning
+normalizes the data (i.e. C<< normalize => 1 >>). You can also specify if you
+want an increasing or decreasing representation by specifying a boolean value
+for the C<increasing> key (the default is increasing, i.e. true).
+
+In the context of the CDF, normalization refers to the curve runnning from
+y = 0 to y = N - 1 (not normalized) or from y = 0 to y = 1 (normalized).
+Bear in mind that this interacts with your choice to drop the extremes or not.
+
+In producing the CDF, bad values are simply skipped.
+
+=cut
+
+sub get_min_max {
+	my ($data, $min, $max) = @_;
+	
+	# Calculate min and/or max from the data
+	if (not defined $min and not defined $max) {
+		($min, $max) = $data->minmaximum;
+	}
+	elsif (not defined $min) {
+		$min = $data->minimum;
+	}
+	elsif (not defined $max) {
+		$max = $data->maximum;
+	}
+	# Ensure supplied args are piddles
+	$min = PDL::Core::topdl($min);
+	$max = PDL::Core::topdl($max);
+	
+	# Return pdl-threadable results
+	return $min->dummy(0), $max->dummy(0);
+}
+
+sub CDF {
+	croak('bt::CDF expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (drop_extremes => 0, normalize => 1, increasing => 1, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		
+		my ($min, $max) = get_min_max($data, $opts{min}, $opts{max});
+		
+		# The normalization term (also used in increasing/decreasing) depends
+		# on whether we drop the extreme values or not. The handling for the
+		# extreme values amounts to picking which of the x-values are bad and
+		# where they fall in their list so that they line up nicely with the
+		# result of the xvals function used to define the ys.
+		my ($norm, $xs);
+		if ($opts{drop_extremes}) {
+			$xs = $data->setbadif(($data < $min) | ($data > $max))->qsort;
+			$norm = ($xs->ngoodover - 1)->dummy(0);
+		}
+		else {
+			$norm = ($data->ngoodover - 1)->dummy(0);
+			$xs = $data->qsort->setbadif(($xs < $min) | ($xs > $max));
+		}
+		my $ys = $data->xvals;
+		
+		# alter the ys if they are supposed to decrease
+		$ys = $norm - $ys if not $opts{increasing};
+		
+		# Normalize, carefully
+		if ($opts{normalize}) {
+			$norm->where($norm == 0) .= 1;
+			$ys /= $norm;
+		}
+		
+		return ($xs, $ys);
+	};
+}
+
+=item bt::Linear
+
+Generates a histogram from the data with linear spacing. The default C<min> is the
+data's minimum, the default C<max> is the data's maximum, the binning will
+C<drop_extremes> by default (i.e. C<< drop_extremes => 1 >>) and the binning
+normalizes the data (i.e. C<< normalize => 1 >>). You can also specify the
+number of bins with C<nbins>. The default is 20.
+
+In this case, normalization means that the "integral" of the histogram is
+1, which means that the sum of the heights I<times the widths> is 1.
+
+=cut
+
+# Takes the data, bounds, min, 
+sub bin_by_data {
+	my ($data, $bounds, $min, $max, $drop_extremes) = @_;
+	
+	my $is_within_bounds = ($min <= $data) & ($data <= $max);
+	my $idx = vsearch($data, $bounds);
+	
+	# Safety guard so indadd doesn't choke
+	$idx->where(!$is_within_bounds) .= 1;
+	# The actual minimum value will have idx 0, all others will be offest
+	# by 1, so adjust:
+	$idx->where($idx > 0)--;
+	
+	# Allocate the memory for the output piddle
+	my @dims = $bounds->dims;
+	$dims[0]--;
+	my $counts = zeroes(@dims);
+	
+	# Tabulate the contributions
+	indadd($is_within_bounds, $idx, $counts);
+	
+	# if we are not dropping the extremes, then we are dumping them into the
+	# first and last bins:
+	if (not $drop_extremes) {
+		$counts->slice('0')  += sum($data < $min);
+		$counts->slice('-1') += sum($data > $max);
+	}
+	
+	return $counts;
+}
+
+use PDL::NiceSlice;
+use PDL;
+sub Linear {
+	croak('bt::Linear expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		local *__ANNON__ = 'bt::Linear';
+		
+		# Get the appropriate min/max
+		my ($min, $max) = get_min_max($data, $opts{min}, $opts{max});
+		
+		# Edge conditions: min is the same as max
+		my $pos_min_eq_max = ($min == $max) & ($min > 0);
+		$min->where($pos_min_eq_max) /= 2;
+		$max->where($pos_min_eq_max) *= 1.5;
+		my $neg_min_eq_max = ($min == $max) & ($min < 0);
+		$min->where($neg_min_eq_max) *= 1.5;
+		$max->where($neg_min_eq_max) /= 2;
+		my $min_max_eq_zero = ($min == 0) & ($max == 0);
+		$min->where($min_max_eq_zero) .= -1;
+		$max->where($min_max_eq_zero) .= 1;
+		
+		# Build the bounds
+		my @dims = $data->dims;
+		$dims[0] = $opts{nbins} + 1;
+		my $bounds = zeroes(@dims)->xlinvals($min, $max);
+		
+		# Accumulate the counts
+		my $hist = bin_by_data($data => $bounds, $min, $max, $opts{drop_extremes});
+		
+		if ($opts{normalize}) {
+			# Normalize by count
+			$hist /= $hist->sumover;
+			# normalize by bin width (same for all bins)
+			$hist /= ($bounds(1) - $bounds(0));
+		}
+		
+		# Return the bin centers and the heights, along with the histogram
+		# bin boundaries.
+		return (($bounds(1:-1) + $bounds(0:-2))/2, $hist,
+				Histogram => { binEdges => $bounds }
+		);
+	};
+}
+no PDL::NiceSlice;
+
+=item bt::Log
+
+=item bt::StrictLog
+
+=back
+
+
+=cut
+
+sub Log {
+	croak('bt::Log expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		local *__ANNON__ = 'bt::Log';
+		
+		# Loose check condition: only croak if *everything* is negative
+		my ($min, $max) = get_min_max($data->setbadif($data <= 0), $opts{min}, $opts{max});
+		croak('data, or its truncation, seems to only contain negative values')
+			if any $max->isbad;
+		
+		return logarithmic_binning($data, $set_obj, $min, $max, \%opts);
+	};
+}
+
+sub StrictLog {
+	croak('bt::StrictLog expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		local *__ANNON__ = 'bt::StrictLog';
+		
+		# Strict check condition: croak if *any* data is negative
+		my ($min, $max) = get_min_max($data, $opts{min}, $opts{max});
+		croak('data, or its truncation, seems to only contain negative values')
+			if any ($min < 0) or any $min->isbad;
+		
+		return logarithmic_binning($data, $set_obj, $min, $max, \%opts);
+	};
+}
+
+use PDL::NiceSlice;
+sub logarithmic_binning {
+	# By the time this gets called, all cleaning of the min and max should
+	# have happened, and they should both contain only strictly positive
+	# values.
+	my ($data, $set_obj, $min, $max, $opts) = @_;
+	
+	# Edge conditions: min is the same as max (Note that they will be
+	# strictly larger than zero since all negative values were removed
+	# before being sent to get_min_max). In that case, the special case
+	# of 1 must be handled with care, but otherwise it's pretty easy.
+	# Note that the values are chosen so that the bin centers, calculated
+	# below, work out correctly.
+	my $min_eq_max_eq_1 = ($min == $max) & ($max == 1);
+	$min->where($min_eq_max_eq_1) .= 0.5;
+	$max->where($min_eq_max_eq_1) .= 2;
+	my $min_eq_max_lt_1 = ($min == $max) & ($max < 1);
+	$min->where($min_eq_max_lt_1) **= 1.5;
+	$max->where($min_eq_max_lt_1) **= 0.5;
+	my $min_eq_max_gt_1 = ($min == $max) & ($max > 1);
+	$min->where($min_eq_max_gt_1) **= 0.5;
+	$max->where($min_eq_max_gt_1) **= 1.5;
+	
+	# Build the bounds
+	my @dims = $data->dims;
+	$dims[0] = $opts->{nbins} + 1;
+	my $bounds = zeroes(@dims)->xlogvals($min, $max);
+	
+	# Accumulate the counts
+	my $hist = bin_by_data($data => $bounds, $min, $max, $opts->{drop_extremes});
+	
+	if ($opts->{normalize}) {
+		# Normalize by count
+		$hist /= $hist->sumover;
+		# normalize by bin width
+		$hist /= ($bounds(1:) - $bounds(:-2));
+	}
+	
+	# Return the bin centers and the heights, along with the histogram
+	# bin boundaries.
+	return (sqrt($bounds(1:-1) * $bounds(0:-2)), $hist,
+			Histogram => { binEdges => $bounds }
+	);
+}
+no PDL::NiceSlice;
+
+package PDL::Graphics::Prima::DataSet::Dist;
+our @ISA = qw(PDL::Graphics::Prima::DataSet::Pair);
+
+sub ds::Dist {
+	croak('ds::Dist expects data and then key => value pairs, but you supplied'
+		. ' an even number of arguments') if @_ % 2 == 0;
+	my $data = shift;
+	return PDL::Graphics::Prima::DataSet::Dist->new(@_, data => $data);
+}
+
+# Standard initialization, and ensures that the data is a piddle.
+sub init {
+	my $self = shift;
+	
+	# Supply a default plot type:
+	$self->{plotTypes} = [ppair::Histogram()] unless exists $self->{plotTypes};
+	
+	# Check that the plotTypes are valid:
+	$self->check_plot_types(@{$self->{plotTypes}});
+	
+	# Make sure we have a binning type
+	$self->{binning} = bt::Linear() unless exists $self->{binning};
+	
+	# Set the data (without notifications)
+	$self->_change_data($self->{data});
+}
+
+=item get_data, get_xs, get_ys
+
+Returns the binned data, just the x-values, or just the y-values. For all of
+these, the binning function is applied to the current dataset. However, for
+the x- or y-getters, the other piece of data is discarded.
+
+=cut
+
+sub get_data {
+	my $self = shift;
+	# Send the cached values if they exist
+	return ($self->{x}, $self->{y}) if exists $self->{x};
+	# Otherwise pull them from the binning function
+	my ($xs, $ys) = $self->{binning}->($self->{data}, $self);
+	return ($xs, $ys);
+}
+
+sub get_xs {
+	my $self = shift;
+	return $self->{x} if exists $self->{x};
+	my ($xs) = $self->get_data;
+	return $xs;
+}
+
+sub get_ys {
+	my $self = shift;
+	return $self->{y} if exists $self->{y};
+	my (undef, $ys) = $self->get_data;
+	return $ys;
+}
+
+use Scalar::Util qw(blessed);
+
+# prep_plotTypes
+# A function to be called on $self with a collection of
+#  plotType => {
+#    key => value,
+#    key => value,
+#    ....
+#  }
+# to be set.
+sub prep_plotTypes {
+	my ($self, %args) = @_;
+	
+	# Run through all the plot types and apply any setters from the binning
+	for my $pt (@{$self->{plotTypes}}) {
+		my $type = blessed($pt);
+		if (exists $args{$type}) {
+			# We have some tweaks for this plot type. For now, just hack it
+			# by reaching into the plot type's internal storage. This needs
+			# to be done better. :-(  working here
+			#$pt->set(%{$args{$type}});
+			while (my ($k, $v) = each %{$args{$type}}) {
+				$pt->{$k} = $v;
+			}
+		}
+	}
+}
+
+sub draw {
+	my ($self, $canvas, $ratio) = @_;
+	
+	# Calculate and cache the x/y values; apply the plot type modifications
+	my ($x, $y, %mods) = $self->{binning}->($self->{data}, $self);
+	$self->{x} = $x;
+	$self->{y} = $y;
+	$self->prep_plotTypes(%mods);
+	
+	# Draw it!
+	$self->SUPER::draw($canvas, $ratio);
+	
+	# Remove the cacehd x/y values
+	delete $self->{x};
+	delete $self->{y};
+}
+
+sub compute_collated_min_max_for {
+	my ($self, $axis_name, $pixel_extent) = @_;
+	
+	# Calculate and cache the x/y values; apply the plot type modifications
+	my ($x, $y, %mods) = $self->{binning}->($self->{data}, $self);
+	$self->{x} = $x;
+	$self->{y} = $y;
+	$self->prep_plotTypes(%mods);
+	
+	# Call the parent method
+	my ($collated_min, $collated_max)
+		= $self->SUPER::compute_collated_min_max_for($axis_name, $pixel_extent);
+	
+	# Remove the cacehd x/y values
+	delete $self->{x};
+	delete $self->{y};
+	
+	# Return the collation results
+	return ($collated_min, $collated_max);
+}
+
+=back
+
+=cut
 
 ################################################################################
 #                                     Grid                                     #
