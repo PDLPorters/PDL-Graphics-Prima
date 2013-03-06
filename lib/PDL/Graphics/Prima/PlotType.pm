@@ -1742,7 +1742,7 @@ of the right axis.
 
 Here's another one. As a y-specification, this will give a location that is
 five pixels below the y-value of 12. As an x-specification, this will give a
-location that is fixe pixels to the left of the x-value of 12.
+location that is five pixels to the left of the x-value of 12.
 
  # input 
  $spec_string = '12 - 5px';
@@ -2203,9 +2203,25 @@ sub draw {
 	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
 	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
 	
+	# Set the properties for the text drawing operation and back up the old
+	# properties
+	my %properties = $self->generate_properties(qw(
+		color backColor font rop textOpaque textOutBaseline
+	));
+	my %backups = $canvas->get(keys %properties);
+	if (exists $properties{font}) {
+		$canvas->font->set(
+			%{$properties{font}}
+		);
+		delete $properties{font};
+	}
+	$canvas->set(%properties);
+	
+	# Draw the text
 	$canvas->text_out($self->{text}, $x, $y);
 	
-	# Restore the clip rectangle
+	# Restore the old properties and clip rectangle
+	$canvas->set(%backups);
 	$canvas->clipRect(@clip_rect);
 }
 
@@ -2365,12 +2381,16 @@ sub compute_collated_min_max_for {
 
 =head2 generate_properties
 
-Needs to be explained. Basically, this accumulates all the properties from the
-plotType object together with those from the dataset into a single hash that
-you can submit to one of the (PDL-based) Prima drawing methods.
+This method accumulates all the properties from the plotType object together
+with those from the dataset into a single hash that you can submit to one of the
+L<PDL-based Prima drawing methods|PDL::Drawing::Prima/> or (if you are using a
+normal L<Prima::Drawable graphics primitive|Prima::Drawable/Graphic primitives methods>
+and expect that all of the properties will be singular) the set method discussed
+in L<Prima::Object|Prima::Object/>.
 
-This function is provided for your use in the draw() function. You should not
-usually have a need to override it.
+I use this function both in the implementations of the C<draw> and 
+C<collate_min_max_wrt_many> methods, and I have never encountered a reason to
+override it.
 
 =cut
 
@@ -2382,7 +2402,7 @@ sub generate_properties {
 	my ($self, @prop_list) = @_;
 	
 	# Collect singular and plural properties
-	@prop_list = map {/((.*)s)/} @prop_list;
+	@prop_list = map {/((.*)s)$/ ? ($1, $2) : ($_) } @prop_list;
 	
 	my %properties;
 	my $dataset = $self->dataset;
@@ -2390,20 +2410,20 @@ sub generate_properties {
 	# Add all of the specified properties to a local collection that eventually
 	# gets passed to the low-level drawing routine:
 	if (ref($self)) {
-		foreach (@prop_list) {
-			if (exists $self->{$_}) {
-				$properties{$_} = $self->{$_};
+		for my $prop (@prop_list) {
+			if (exists $self->{$prop}) {
+				$properties{$prop} = $self->{$prop};
 			}
-			elsif (exists $dataset->{$_}) {
-				$properties{$_} = $dataset->{$_};
+			elsif (exists $dataset->{$prop}) {
+				$properties{$prop} = $dataset->{$prop};
 			}
 		}
 		
 	}
 	else {
-		foreach (@prop_list) {
-			if (exists $dataset->{$_}) {
-				$properties{$_} = $dataset->{$_};
+		for my $prop (@prop_list) {
+			if (exists $dataset->{$prop}) {
+				$properties{$prop} = $dataset->{$prop};
 			}
 		}
 	}
@@ -2430,9 +2450,13 @@ sub widget {
 	return $_[0]->dataset->widget;
 }
 
+# Weaken the reference to the dataset so that we don't have memory leaks
+use Scalar::Util;
 sub dataset {
-	$_[0]->{dataSet} = $_[1] if (@_ == 2);
-	return $_[0]->{dataSet};
+	return $_[0]->{dataSet} if @_ == 1;
+	my ($self, $dataSet) = @_;
+	$self->{dataSet} = $dataSet;
+	Scalar::Util::weaken($self->{dataSet});
 }
 
 # A function that gets the data, meant to be overloaded:
