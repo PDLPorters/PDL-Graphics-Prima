@@ -47,7 +47,8 @@ $wDisplay->insert(Button =>
 	},
 	text => 'Swap xs',
 	onClick => sub {
-		($min, $max) = $plot->x->minmax(lm::Hold, lm::Hold);
+		($min, $max) = $plot->x->minmax;
+		$plot->x->minmax($min, $max);
 		$x_timer->start;
 		$N_x_steps = 30;
 		$dx = -2 * $xs / $N_x_steps;

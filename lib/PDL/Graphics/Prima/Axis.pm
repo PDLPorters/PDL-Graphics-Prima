@@ -46,10 +46,8 @@ PDL::Graphics::Prima::Axis - class for axis handling
  $plot->y->min(-5);
  # Turn on x min autoscaling:
  $plot->x->min(lm::Auto);
- # Stop autoscaling, use the current max:
- $plot->x->max(lm::Hold);
- # ... which is equivalent to:
- $plot->x->max( scalar $plot->x->max );
+ # Stop autoscaling, use the current max (deprecated):
+ $plot->x->max($plot->x->max);
  
  # Note: All changes to min/max values
  # fire the ChangeBounds notification
@@ -275,7 +273,7 @@ sub _min {
 		$self->{minAuto} = 1;
 		$self->update_edges;
 	}
-	elsif ($new_value == lm::Hold) {
+	elsif ($new_value == lm::HoldNoWarn) {
 		# Hold means they want to keep the current bounds, so stop
 		# auto-scaling:
 		$self->{minAuto} = 0;
@@ -315,7 +313,7 @@ sub _max {
 		$self->{maxAuto} = 1;
 		$self->update_edges;
 	}
-	elsif ($new_value == lm::Hold) {
+	elsif ($new_value == lm::HoldNoWarn) {
 		# Hold means they want to keep the current bounds, so stop
 		# auto-scaling:
 		$self->{maxAuto} = 0;
