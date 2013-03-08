@@ -77,6 +77,14 @@ PDL::Graphics::Prima
      x => { label   => 'Time' },
      y => { label   => 'Sine' },
  );
+ 
+ 
+ # --( Managing window interaction )--
+ 
+ # In scripts and older Term::ReadLine, if you press
+ # the letter 'q' when viewing a plot, you can
+ # re-invoke interaction with:
+ twiddle;
 
 =head1 DESCRIPTION
 
@@ -1612,7 +1620,9 @@ written) L<PDL::Graphics::Prima::InteractiveTut>.
 
 # A function that allows for quick one-off plots:
 *plot = \&default_plot;
+our $auto_twiddling = 1;
 our $is_twiddling = 0;
+our $N_windows = 0;
 sub default_plot {
 	# Make sure they sent key/value pairs:
 	croak("Arguments to plot must be in key => value pairs")
@@ -1632,6 +1642,15 @@ sub default_plot {
 			my (undef, $key) = @_;
 			$is_twiddling = 0 if chr($key) =~ /q/i;
 		},
+		# Pair of functions to note when windows are created and destroyed
+		# for purposes of quitting twiddling when the last window is closed.
+		onCreate => sub {
+			$N_windows++;
+		},
+		onDestroy => sub {
+			$N_windows--;
+			$is_twiddling = 0 if $N_windows == 0;
+		},
 	);
 	my $plot = $window->insert('Plot',
 		pack => { fill => 'both', expand => 1},
@@ -1642,45 +1661,34 @@ sub default_plot {
 		$is_twiddling = 0 if chr($key) =~ /q/i;
 	});
 	
-	if (not defined wantarray) {
-		# Void context. Term::ReadLine will properly display the window if
-		# it's setup
-		return if PDL::Graphics::Prima::ReadLine->is_setup;
-		# Otherwise, we display the window in blocking fashion.
-		$window->execute;
-		return;
-	}
-	
-	# Scalar context
-	if (! wantarray) {
-		croak('Unable to call plot() in scalar context unless using Term::ReadLine')
-			unless PDL::Graphics::Prima::ReadLine->is_setup;
-		return $plot;
-	}
-	
-	# List context. Twiddle, then return both. Note that twiddling may be a
-	# no-op for some configurations. See ::ReadLine for details.
-	$window->twiddle;
-	return ($window, $plot);
+	# Twiddle, then return. Note that twiddling (defined below) may be a
+	# no-op for configurations where the application loop is already running.
+	twiddle() if $auto_twiddling;
+	return $plot;
 }
 
-# Set up twiddling if we're in the Perldl shell and we *don't* have
-# event_loop support (for whatever reason)
-if (defined $PERLDL::TERM
-	and not PDL::Graphics::Prima::ReadLine->is_setup
-) {
+sub auto_twiddle {
+	$auto_twiddling = $_[0] if @_;
+	return $auto_twiddling;
+}
+
+# Make twiddling a no-op if we're in the perldl shell and have event_loop
+# support:
+if (PDL::Graphics::Prima::ReadLine->is_setup) {
+	*twiddle = sub {};
+}
+# Otherwise, make it run the event loop:
+else {
 	print "Setting up twiddling\n";
-	*Prima::Window::twiddle = sub {
-		my $self = shift;
+	*twiddle = sub {
 		print "Twiddling plot; press q or Q when done\n";
 		$is_twiddling = 1;
 		$::application->yield while $is_twiddling;
 	};
 }
-# Otherwise, make the twiddle function a no-op
-else {
-	*Prima::Window::twiddle = sub {};
-}
+# Add the twiddle method to the Prima window
+*Prima::Window::twiddle = \&twiddle;
+*Prima::Plot::twiddle = \&twiddle;
 
 
 =head1 IMPORTED METHODS
@@ -1729,9 +1737,12 @@ on either the behavior or the name. Input is welcome!
 # import/export stuff:
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = our @EXPORT = qw(plot line_plot circle_plot triangle_plot
+our @EXPORT = qw(plot line_plot circle_plot triangle_plot
 	square_plot diamond_plot cross_plot X_plot asterisk_plot hist_plot
-	matrix_plot imag_plot func_plot);
+	matrix_plot imag_plot func_plot
+	twiddle auto_twiddle
+	);
+our @EXPORT_OK = (@EXPORT);
 
 our @default_sizes = (400, 400);
 
