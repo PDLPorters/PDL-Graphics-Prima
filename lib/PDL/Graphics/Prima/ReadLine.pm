@@ -32,21 +32,20 @@ sub setup {
 	Prima::Application->import;
 	
 	# This io watcher will (eventually) watch whatever the readline is
-	# monitoring. That will be established later in the call to event_loop
-	my $keep_running_event_loop = 1;
+	# monitoring. That will be established later in the call to event_loop.
+	# Die'ing is a simple way to exit the "go" method invoked during the
+	# event loop
 	my $prima_io_watcher = Prima::File->new(
-		onRead => sub { $keep_running_event_loop = 0 },
+		onRead => sub { die 'user pressed a key' },
 	);
 	
 	$readline_obj->event_loop( sub {
+			local $@;
 			# Run the event loop. If a key is pressed, the io watcher's
-			# callback will get called, changing the value of
-			# $keep_running_event_loop to zero and breaking us out of this
-			# while loop.
-			Prima::Application::yield() while $keep_running_event_loop;
-			# Having broken out of the loop, reset so we'll enter it the
-			# next time this gets called.
-			$keep_running_event_loop = 1;
+			# callback will get called, throwing an exception.
+			eval { $::application->go };
+			# Rethrow the exception if it's not one that we threw
+			die unless $@ =~ /user pressed a key/;
 		},
 		sub {
 			# Register the event loop, which means associating the io
