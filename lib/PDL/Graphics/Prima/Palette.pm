@@ -93,8 +93,11 @@ sub plotType {
 		croak("You can only set a palette's plot type once");
 	}
 	
-	# Otherwise, they're setting the plotType.
+	# Otherwise, they're setting the plotType. Set it and weaken the
+	# reference so we don't have a memory leak
 	$self->{plotType} = $_[0];
+	use Scalar::Util;
+	Scalar::Util::weaken($self->{plotType});
 }
 
 =head2 copy
