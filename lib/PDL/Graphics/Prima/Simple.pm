@@ -1679,11 +1679,28 @@ if (PDL::Graphics::Prima::ReadLine->is_setup) {
 }
 # Otherwise, make it run the event loop:
 else {
-	print "Setting up twiddling\n";
 	*twiddle = sub {
+		# No event looping if we don't have any open windows. Otherwise,
+		# they won't be able to exit the loop!
+		print "No open plots\n" and return if $N_windows == 0;
+		# Print a notice explaining what's going on:
 		print "Twiddling plot; press q or Q when done\n";
+		
 		$is_twiddling = 1;
-		$::application->yield while $is_twiddling;
+		# Start the timer that will check for the exit condition
+		Prima::Timer->create(
+			onTick => sub {
+				if (not $is_twiddling) {
+					$_[0]->stop;
+					# die in order to exit the application
+					die 'time to leave the loop';
+				}
+			},
+			timeout => 500, # milliseconds
+		)->start;
+		eval { $::application->go };
+		# Rethrow if it exited for any reason besides presing q/Q
+		die unless $@ =~ /time to leave the loop/;
 	};
 }
 # Add the twiddle method to the Prima window
