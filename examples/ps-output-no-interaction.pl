@@ -32,3 +32,7 @@ my $plot = Prima::Plot->create(
 );
 
 $plot->save_to_postscript('test.ps');
+# Cool. Now load it using PDL
+use PDL::IO::Pic;
+my $image = rim('test.ps');
+wim($image => 'test2.png');

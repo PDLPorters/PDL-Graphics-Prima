@@ -31,4 +31,9 @@ my $plot = Prima::Plot->create(
 	height => 200,
 );
 
-$plot->save_to_file('test.png');
+$plot->save_to_file('test.bmp');
+
+# Cool. Now load it using PDL
+use PDL::IO::Pic;
+my $image = rim('test.bmp');
+wim($image => 'test2.png');

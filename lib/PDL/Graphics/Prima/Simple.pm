@@ -95,10 +95,10 @@ focus on the latter half, making hard but very powerful things possible.
 This module tackles the other half: making easy things easy. This module
 provides a number of simple functions for quick data plotting so that you can
 easily get a first look at your data. You can think of this as providing a
-function-based interface to plotting, in contrast to the GUI/OO interface of the
-rest of L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>. Or you can look at this as providing a handy
-collection of plot (and window) constructors for the standard use cases. Either
-perspective is basically correct.
+function-based interface to plotting, in contrast to the GUI/OO interface of
+the rest of L<PDL::Graphics::Prima|PDL::Graphics::Prima/DESCRIPTION>. Or you
+can look at this as providing a handy collection of plot (and window)
+constructors for the standard use cases. Either perspective is basically correct.
 
 In addition to making easy plots easy, this module and its documentation are
 meant to serve as an introduction to L<PDL::Graphics::Prima|PDL::Graphics::Prima/>.
@@ -138,7 +138,7 @@ on each drawing operation; see L<PDL::Graphics::Prima::DataSet/ds::Func>
 =item hist_plot ($distribution, [$bin_type])
 
 takes a L<piddle|PDL::Core/pdl> of data to be plotted and an optional
-L<bin type|PDL::Graphics::Prima::DataSet/Sets>and plots a
+L<bin type|PDL::Graphics::Prima::DataSet/Sets> and plots a
 L<histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>. If no bin
 type is supplied, L<linear binning|PDL::Graphics::Prima::DataSet/bt::Linear>
 is used.
@@ -262,12 +262,11 @@ that I've had my soapbox moment, I'll tell you how to do what you want.
 =head2 Adding axis labels and titles via methods
 
 First, you can use the C<line_plot> command to build a
-L<plot object|PDL::Graphics::Prima> and
+L<plot object|PDL::Graphics::Prima/> and
 L<display window|Prima::Window>, and return them to you I<without blocking
 your script.> This will allow you to modify the properties of the 
-L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> before it gets 
-displayed. For example, I can
-L<add a plot title|PDL::Graphics::Prima/title> and
+L<plot object|PDL::Graphics::Prima/> before it gets displayed. For example, I
+can L<add a plot title|PDL::Graphics::Prima/title> and
 L<specifically choose when to view the plot|Prima::Window/execute> like so:
 
  use PDL;
@@ -289,9 +288,10 @@ L<setting the bounds|PDL::Graphics::Prima::Axis/min, max>
 or L<giving them labels|PDL::Graphics::Prima::Axis/label>. The
 L<axes|PDL::Graphics::Prima::Axis/> are sub-objects of the
 L<plot|PDL::Graphics::Prima/>, accessed with
-L<like-named accessors|PDL::Graphics::Prima/x, y>: C<< $plot->x >>. The
+L<like-named accessors|PDL::Graphics::Prima/x, y>: C<$plot-E<gt>x>. The
 properties of the axes that you can modify include the
-L<boundaries|PDL::Graphics::Prima::Axis/min, max>,
+L<min|PDL::Graphics::Prima::Axis/min, max>,
+L<max|PDL::Graphics::Prima::Axis/min, max>,
 L<scaling type|PDL::Graphics::Prima::Axis/scaling>, and
 L<axis label|PDL::Graphics::Prima::Axis/label>, and are discussed
 in greater detail
@@ -325,33 +325,35 @@ you last indicated with the navigation keys (but they are always up-to-date when
 you type normal letters). If you have any ideas for how to remedy this, please
 let me know! Thanks!
 
-If you decide to play with this from the PDL shell and you have a v1.09 or newer
-of L<Term::ReadLine>, or if you have L<App::Prima::REPL>, you can do the same
-sorts of manipulations from the console and see the updates as soon as you press
-enter. The equivalent commands as the ones shown above are:
+If you decide to play with this from the L<original PDL shell|perldl/> and
+you have a v1.09 or newer of L<Term::ReadLine>, or if you have
+L<App::Prima::REPL>, you can do the same sorts of manipulations from the
+console and see the updates as soon as you press enter. The equivalent
+commands as the ones shown above are:
 
  pdl> use PDL::Graphics::Prima::Simple
  pdl> $x = sequence(100)/10
+ # After the next commant, the line plot window will pop up
  pdl> $plot = line_plot($x, $x->sin)
- # At this point the line plot window will pop up
  pdl> $plot->title('The Harmonic Oscillator')
  pdl> $plot->x->label('time (s)')
  pdl> $plot->y->label('displacement (cm)')
 
 Each method call to the plot command will cause the plot to get updated with the
-new element. Spiffy, eh?
+new element or feature. Spiffy, eh?
 
-=head2 Axis scaling
+=head2 Axis minima and maxima
 
-If you want to set the axis scaling (continuing with the PDL shell example), you
-can use the L<min|PDL::Graphics::Prima::Axis/min>, L<max|PDL::Graphics::Prima::Axis/max>
-and L<minmax|PDL::Graphics::Prima::Axis/minmax> functions. For example, this sets the 
-x-minimum to zero:
+If you want to set the axis bounds, you can use the
+L<min|PDL::Graphics::Prima::Axis/min, max>,
+L<max|PDL::Graphics::Prima::Axis/min, max> and
+L<minmax|PDL::Graphics::Prima::Axis/minmax> functions. For example,
+continuing from the PDL shell, this sets the x-minimum to zero:
 
  pdl> $plot->x->min(0)
 
-If you were mousing around and wanted to see the current value of the min, you
-could say:
+If you drag the plot around with your mouse and want to see the current
+value of the min, you could say:
 
  pdl> p $plot->x->min
 
@@ -361,13 +363,40 @@ method in scalar context:
 
  pdl> p scalar($plot->x->min)
 
-If you want to reset autoscaling, you pass in a special value for the min/max
-denoted by the constant C<lm::Auto> as in
+If you want to re-enable autoscaling, you pass in a special value for the
+min or max (or both) denoted by the constant
+L<C<lm::Auto>|PDL::Graphics::Prima::Limits/lm::Auto> as in
 
+ # Set the x-axis to autoscaling
  pdl> $plot->x->minmax(lm::Auto, lm::Auto);
+ # Set the y-minimum to autoscaling
+ pdl> $plot->y->min(lm::Auto);
 
-This and a similar constant, C<lm::Hold> are defined in
-L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>.
+=head2 Histograms and images
+
+I've only spoken so far about connecting x/y data with lines, but there are
+other ways to visualize x/y data, and even other forms of data you may wish
+to represent. For example, if you want to visualize a distribution of data,
+you would want to use a histogram:
+
+ use PDL;
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Generate 100 samples with mean 0 and standard deviation 1
+ my $distribution = grandom(100);
+ hist_plot($distribution);
+
+Or, you may have an image of data that you want to view.
+
+
+
+
+
+
+
+
+
+
 
 =head2 Adding DataSets
 
@@ -383,31 +412,70 @@ slightly different x-range:
  my $x = sequence(100)/10;
  my ($window, $plot) = line_plot($x, $x->sin);
  
- $plot->dataSets{'cosine'} = ds::Pair(
-     
-     
-     
-     
-     # ... working here
-     
-     
-     
-     
- );
+ # Add a new dataset
+ my $x2 = sequence(100)/10 + 1;
+ $plot->dataSets{'cosine'} = ds::Pair($x2, $x2->cos);
  
  # Display the plot
  $window->execute;
 
+The important line in this example is the part that includes
+L<C<ds::Pair>|PDL::Graphics::Prima::DataSet/ds::Pair>. Like 
+L<C<lm::Auto>|PDL::Graphics::Prima::Limits/lm::Auto>,
+L<C<ds::Pair>|PDL::Graphics::Prima::DataSet/ds::Pair> is a function that
+uses a short prefix so that it's fast and easy to type. This is a L<common
+idiom in the Prima toolkit|Prima::Const/> (though in the toolkit it is used
+exclusively for specifying useful constants). 
+L<C<ds::Pair>|PDL::Graphics::Prima::DataSet/ds::Pair> is just a short-hand
+for a constructor with an enormous name:
+
+ # Short form
+ my $ds = ds::Pair($x, $y);
+ # Long form
+ my $ds = PDL::Graphics::Prima::DataSet::Pair->new(x => $x, y => $y);
+
+If you actually run that example, you will notice that the sine cureve is
+plotted as a line, just as before, but the cosine curve is plotted with a
+collection of unconnected diamonds. If you want to plot the cosine curve
+with a line, you need to specify the line plot type:
+
+ ...
+ # Add a new dataset
+ $plot->dataSets{'cosine'} = ds::Pair($x, $x->cos,
+     plotType => ppair::Lines
+ );
+ ...
+
+Perl is supposed to Do What I Mean, and you could argue that this is a case
+of the plotting library I<not> doing what you mean: the cosine curve "should"
+be plotted with L<lines|PDL::Graphics::Prima::PlotType/ppair::Lines>, because
+that's how the sine curve was plotted. However, I believe that such behavior
+violates the Principle of Least Surprise. The default plot type for pairwise
+data is L<diamonds|PDL::Graphics::Prima::PlotType/ppair::Diamonds>, so if you
+didn't specify a plot type, you actually meant to plot diamonds.
+
+That brings us to the important distinction between a
+L<DataSet|PDL::Graphics::Prima::DataSet/> and a
+L<PlotType|PDL::Graphics::Prima::PlotType/>. A 
+L<DataSet|PDL::Graphics::Prima::DataSet/> contains the x/y data, or the
+distribution, or the image matrix that you want shown, along with one or
+more means of visualizing that data. The means for visualizing that data are
+what are called L<PlotType|PDL::Graphics::Prima::PlotType/>s, and different
+L<DataSet|PDL::Graphics::Prima::DataSet/>s use distinct
+L<PlotType|PDL::Graphics::Prima::PlotType/>s.
 
 =head2 Adding axis labels and titles at construction
 
 Although interacting with the plot object after creation is fun, it is also
 nice to be able to specify all of these settings when the plot is initially
-created. I have already explained how limited the super-simple interface is, and
-why I chose to restrict it to be so limited. In light of that, I now show you 
-how to specify all of these properties and more with a single C<plot> command.
-The documentation below for L<line_plot|/line_plot>, states that the function
-call with args C<($x, $y)> is equivalent to this line:
+created. I have already explained how limited the super-simple interface is,
+and L<why I chose to restrict it to be so limited|/Soapbox>. In light of that,
+I now show you how to specify all of these properties and more with a single
+C<plot> command.
+
+Let's begin by examining the L<line_plot|/line_plot> command. The documentation
+below states that the function call with args C<($x, $y)> is equivalent to
+this line:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Lines));
 
@@ -425,13 +493,17 @@ y-label:
          plotType => ppair::Lines
      ),
      
-     # Set the title and labels
+     # Set the title and axis labels
      title => 'The Harmonic Oscillator',
-     x => { label => 'time (s)' },
-     y => { label => 'displacement (cm)' },
+     x     => { label => 'time (s)' },
+     y     => { label => 'displacement (cm)' },
  );
 
-
+Notice that all arguments to C<plot> are key/value pairs. There is a clean,
+heierarchical structure to the function call, and it is clear simply by
+examining the punctuation which settings go with which piece. For example,
+the L<ppair::Lines|PDL::Graphics::Prima::PlotType/ppair::Lines> argument
+clearly belongs to the L<ds::Pair> 
 
 
 
@@ -842,9 +914,31 @@ L<histogram pairwise plot type|PDL::Graphics::Prima::PlotType/Histogram>.
 It plots the histogram as black-outlined rectangles against a white
 background.
 
-The equivalent L<plot|/"PLOT FUNCTION"> command is:
+The equivalent L<plot|/"PLOT FUNCTION"> commands is:
 
  plot(-data => ds::Dist($distribution));
+
+A lot of defaults go into that, so it might be useful to see some of those
+expanded a bit:
+
+ plot(-data =>
+     ds::Dist($distribution,
+         plotType => ppair::Histogram,
+         binning => bt::Linear
+     )
+ );
+
+You could tweak the binning, for example by using a
+L<strict logarithmic binning|PDL::Graphics::Prima::DataSet/bt::StrictLog>,
+which throws an exception if your distribution includes negative data:
+
+ hist_plot($distribution, bt::StrictLog);
+
+or you could specify that you want 15 bins:
+
+ hist_plot($distribution, bt::Linear(nbins => 15));
+
+There is quite a bit more to explore here, and it will be covered below.
 
 =cut
 
@@ -912,8 +1006,9 @@ and the quivalent is:
 sub matrix_plot {
 	my ($x, $y, $matrix);
 	if (@_ == 1) {
-		$x = [0, 1];
-		$y = [0, 1];
+		my @dims = $matrix->dims;
+		$x = [0, $dims[0]];
+		$y = [0, $dims[1]];
 		($matrix) = @_;
 	}
 	elsif (@_ == 3) {
@@ -969,26 +1064,14 @@ and the quivalent is:
      ),
  ));
 
-NOTE: For viewing astronomical images, I find it is better to examine
-the logarithm of the reported values. I am considering revising this function
-to handle this, so THIS FUNCTION MAY CHANGE. For now, I have had best luck
-scaling my images like so:
-
- my $imag = get_image();
- imag_plot( log($imag + $imag->max/300) );
-
-The precise scaling value (300 in this case) will likely need to be tweaked
-based on your image's dynamic range. Evenually, I hope to make this function
-operate in a fashion similar to L<PDL::Graphics::PGPLOT>'s C<imag>.
-Thoughts and/or implementation suggestions are welcome!
-
 =cut
 
 sub imag_plot {
 	my ($x, $y, $matrix);
 	if (@_ == 1) {
-		$x = [0, 1];
-		$y = [0, 1];
+		my @dims = $matrix->dims;
+		$x = [0, $dims[0]];
+		$y = [0, $dims[1]];
 		($matrix) = @_;
 	}
 	elsif (@_ == 3) {

@@ -774,7 +774,7 @@ give descriptive names to many common symbols and include:
 
 =over
 
-=item Sticks
+=item ppair::Sticks
 
 =for ref
 
@@ -790,7 +790,7 @@ sub ppair::Sticks {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 2, filled => 'no');
 }
 
-=item Triangles
+=item ppair::Triangles
 
 =for ref
 
@@ -808,7 +808,7 @@ sub ppair::Triangles {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 'up', @_, N_points => 3);
 }
 
-=item Squares
+=item ppair::Squares
 
 =for ref
 
@@ -824,7 +824,7 @@ sub ppair::Squares {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 45);
 }
 
-=item Diamonds
+=item ppair::Diamonds
 
 =for ref
 
@@ -840,7 +840,7 @@ sub ppair::Diamonds {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 0);
 }
 
-=item Stars
+=item ppair::Stars
 
 =for ref
 
@@ -860,7 +860,7 @@ sub ppair::Stars {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 90, @_, skip => 2);
 }
 
-=item Asterisks
+=item ppair::Asterisks
 
 =for ref
 
@@ -878,7 +878,7 @@ sub ppair::Asterisks {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(orientation => 90, @_, skip => 0);
 }
 
-=item Xs
+=item ppair::Xs
 
 =for ref
 
@@ -893,7 +893,7 @@ sub ppair::Xs {
 	PDL::Graphics::Prima::PlotType::Pair::Symbols->new(@_, N_points => 4, orientation => 45, skip => 0);
 }
 
-=item Crosses
+=item ppair::Crosses
 
 =for ref
 
@@ -927,7 +927,7 @@ sub ppair::Crosses {
 # PDL::Graphics::Prima::PlotType::Pair::Histogram #
 #######################################################
 
-=item Histogram
+=item ppair::Histogram
 
 =for ref
 
@@ -1624,6 +1624,8 @@ sub initialize {
 	unless (exists $self->{palette}) {
 		$self->{palette} = pal::WhiteToBlack;
 	}
+	# XXX any reason we check for definedness? Any reason we don't croak if
+	# the palette exists but is not defined? working here
 	$self->{palette}->plotType($self) if defined $self->{palette};
 }
 
@@ -1651,9 +1653,21 @@ our @ISA = qw(PDL::Graphics::Prima::PlotType);
 
 While Grid-based plots focus on imaging data with a specified palette,
 Image-based plots focus on plotting data that has already been converted to
-a color representation.
+a color representation. At the moment, there is only one plot type for
+images (and there likely will remain only one plot type unless a stroke of
+brilliance hits me). As it is automatically used as the default plot type by
+L<ds::Image/PDL::Graphics::Prima::DataSet/ds::Image>, and as it does not
+have any configuration that cannot be specified in the data set, you
+probably can ignore this.
 
-working here - more details
+=item pimage::Basic
+
+The most basic image plot type simply draws the imge with the palette
+provided by the plot type
+
+=for ref
+
+ pimage::Basic()
 
 =cut
 
