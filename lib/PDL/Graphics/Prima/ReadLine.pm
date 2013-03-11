@@ -73,40 +73,82 @@ together
 
 =head1 SYNOPSIS
 
-This module's primary functionality is invoked when you use either of these
-two modules from within your pdl shell:
-
+ # This pulls in PDL::Graphics::Prima::ReadLine, and
+ # associate's the PDL Shell's readline object if it
+ # exists:
  use PDL::Graphics::Prima;
-
-or 
-
- use PDL::Graphics::Prima::Simple;
-
-If you are not using this from within the pdl shell and need to supply your
-own readline object, you can manually invoke the module and supply it as one
-of the arguments like so:
-
- BEGIN {
-   ... get $readline object ...
+ 
+ # Did it set up the readline event loop callback?
+ print "Set up Prima/ReadLine interaction\n"
+     if PDL::Graphics::Prima::ReadLine->is_setup;
+ 
+ # If you are not in the PDL shell, you can supply
+ # your own ReadLine object.
+ if (PDL::Graphics::Prima::ReadLine->is_happy_with($my_readline) {
+     PDL::Graphics::Prima::ReadLine->setup($my_readline);
  }
- use PDL::Graphics::Prima::ReadLine ($readline_obj);
-
-If you don't want to fiddle with a C<BEGIN> block, you can say this:
-
- ... get $readline_obj ...
- require PDL::Graphics::Prima::ReadLine;
- PDL::Graphics::Prima::ReadLine->import($readline_obj);
+ 
+ # If you don't validate first, setup() may croak.
+ # In other words, instead of this:
+ if (PDL::Graphics::Prima::ReadLine->is_happy_with($my_readline) {
+     PDL::Graphics::Prima::ReadLine->setup($my_readline);
+ }
+ else {
+     die "Unable to setup Prima/ReadLine interaction\n";
+ }
+ # You could just say this instead:
+ PDL::Graphics::Prima::ReadLine->setup($my_readline);
 
 =head1 DESCRIPTION
 
-Recent versions of L<Term::ReadLine> (v1.09 and higher) add support for
-arbitrary event loops. This means that it is possible to add the Prima event
-loop to the readline, letting you simultaneously interact with a plot and
-type commands into the terminal.
+This module's job is to encapsulate the vagaries of setting up interaction
+between the L<Prima event loop|Prima::Application/go> and
+L<Term::ReadLine's event loop|Term::ReadLine/event_loop>. Loading the
+module does not have any side-effects, and it is always loaded by
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/>. Furthermore,
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/> will set up the event loop
+interaction with the L<PDL shell|perldl/> if it detects the shell's
+ReadLine object.
 
-This module is idempotent, which means you can invoke it multiple times
-without any trouble. The first invocation of the class's C<import> method is
-guaranteed to either set up the event loop or die.
+Generally speaking, if you intend to have user interaction and want to use
+L<PDL::Graphics::Prima|PDL::Graphics::Prima/>, you should probably just use
+L<Prima|Prima/> to build a simple interactive application. (Docmentation for
+getting started with this is coming soon, I promise.) However, if you want
+to integrate L<PDL::Graphics::Prima|PDL::Graphics::Prima/> into a pluggable
+application that already uses L<Term::ReadLine|Term::ReadLine/>, this
+module should make that procedure as straight-forward as one can hope.
+
+C<PDL::Graphics::Prima::ReadLine> can only hook into the event loop for
+newer versions of L<Term::ReadLine|Term::ReadLine/> (specifically, versions
+that support L<event_loop|Term::ReadLine/event_loop>). Also, due to current
+limitations in my knowledge of Prima's monitoring of STDIN, this module
+cannot hook into the event loop on Windows operating systems, both Cygwin
+and Strawberry Perl.
+
+=head2 is_happy_with
+
+If you want to set up the event loop interaction on your own ReadLine object,
+you can ask C<PDL::Graphics::Prima::ReadLine> if it can work with your
+object by calling the C<is_happy_with> class method and supplying your
+objects. This method returns a boolean value indicating whether or not the
+object can do what C<PDL::Graphics::Prima::ReadLine> needs:
+
+ if (PDL::Graphics::Prima::ReadLine->is_happy_with($my_readline) {
+     print "Setting up Prima/ReadLine interaction\n";
+     PDL::Graphics::Prima::ReadLine->setup($my_readline);
+ }
+
+=head2 setup
+
+To hook Prima's event loop into your ReadLine's event loop, you can call the
+C<setup> class method:
+
+ PDL::Graphics::Prima::ReadLine->setup($readline_obj);
+
+This method may (should) fail if the ReadLine object provided cannot support
+the functionality needed for hooking Prima into ReadLine. This could happen
+either because your version of ReadLine is too old or because you are running
+on Windows, which is not (yet) supported by C<PDL::Graphics::Prima::ReadLine>.
 
 =head1 AUTHOR
 
