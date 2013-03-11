@@ -6,6 +6,8 @@ use Carp;
 my $is_setup = 0;
 
 sub is_happy_with {
+	# Stop-gap until I figure out better readline support for Windows
+	return 0 if $^O =~ /Win/ or $^O =~ /cygwin/;
 	my ($class, $readline_obj) = @_;
 	return eval{ $readline_obj->can('event_loop')
 		and not $readline_obj->tkRunning };
