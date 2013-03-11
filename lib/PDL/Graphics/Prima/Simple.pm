@@ -1769,21 +1769,29 @@ else {
 		# Print a notice explaining what's going on:
 		print "Twiddling plot; press q or Q when done\n";
 		
+		# We will use Prima's nice exception handling to exit the go()
+		# method. In order to prevent undue error propogation, localize
+		# the error message:
+		local $@;
+		
 		$is_twiddling = 1;
-		# Start the timer that will check for the exit condition
+		# Start the timer that will check for the exit condition. There
+		# are a number of ways in which the loop will want to exit; placing
+		# the exit excption here centralizes the exception handling.
 		Prima::Timer->create(
 			onTick => sub {
 				if (not $is_twiddling) {
 					$_[0]->stop;
-					# die in order to exit the application
-					die 'time to leave the loop';
+					# die in order to exit the application loop
+					die 'done with event loop';
 				}
 			},
 			timeout => 500, # milliseconds
 		)->start;
+		# Run go() in an eval so we catch the exit exception
 		eval { $::application->go };
-		# Rethrow if it exited for any reason besides presing q/Q
-		die unless $@ =~ /time to leave the loop/;
+		# Rethrow the error unless it was the exit exception
+		die unless $@ =~ /^done with event loop/;
 	};
 }
 # Add the twiddle method to the Prima window
