@@ -706,12 +706,17 @@ Called when the title or titleSpace gets changed
 
 =cut
 
-# For a change in title, recompute the autoscaling and replot.
+# For a change in title, recompute the autoscaling and issue an immediate
+# repaint. Replotting is not appropriate here as replotting issues a timer
+# event that may not get triggered if the event loop isn't running (i.e.
+# we're in the PDL shell without ReadLine integration).
 sub on_changetitle {
 	my $self = shift;
 	$self->x->update_edges;
 	$self->y->update_edges;
-	$self->notify('Replot');
+	$self->notify('Paint');
+	# Clear the event queue so this hits immediately in the PDL shell
+	$::application->yield if defined $::application;
 }
 
 =head2 Replot

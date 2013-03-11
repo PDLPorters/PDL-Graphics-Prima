@@ -497,7 +497,9 @@ user or other interaction.
 
 sub repaint_parent {
 	my $axis = shift;
-	$axis->owner->notify('Replot')
+	$axis->owner->notify('Paint');
+	# Clear the event queue so this hits immediately in the PDL shell
+	$::application->yield if defined $::application;
 }
 *on_changebounds = \&repaint_parent;
 *on_changescaling = \&repaint_parent;
