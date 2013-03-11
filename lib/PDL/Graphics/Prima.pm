@@ -964,7 +964,9 @@ sub on_mousemove {
 			$self->y->_max($new_max);
 		}
 	}
-	$self->notify('Replot');
+	
+	# Repaint if they're dragging the mouse
+	$self->notify('Replot') if $drag_button;
 
 	# Store the intermediate locations:
 	$self->{mouse_move_rel} = [$x_stop_rel, $y_stop_rel];
