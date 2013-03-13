@@ -418,7 +418,7 @@ sub scaling {
 =head2 label
 
 Gets or sets the axis' label. You can remove the label by passing an empty
-string or by explicitly passing an undefined value. Adding a lable will cause
+string or by explicitly passing an undefined value. Adding a label will cause
 the viewing rectangle to shrink so that your widget can accomodate the label
 dimensions.
 
