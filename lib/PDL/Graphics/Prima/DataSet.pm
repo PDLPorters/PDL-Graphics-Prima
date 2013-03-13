@@ -626,7 +626,9 @@ Generates a histogram from the data with linear spacing. The default C<min> is t
 data's minimum, the default C<max> is the data's maximum, the binning will
 C<drop_extremes> by default (i.e. C<< drop_extremes => 1 >>) and the binning
 normalizes the data (i.e. C<< normalize => 1 >>). You can also specify the
-number of bins with C<nbins>. The default is 20.
+number of bins with C<nbins>. The default is 20. If you want empty bins to
+be marked as bad, specify C<< mark_empty_as => 'bad' >>. The default is to
+mark them as zero.
 
 In this case, normalization means that the "integral" of the histogram is
 1, which means that the sum of the heights I<times the widths> is 1.
@@ -669,7 +671,8 @@ use PDL;
 sub Linear {
 	croak('bt::Linear expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, 
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -697,6 +700,9 @@ sub Linear {
 		# Accumulate the counts
 		my $hist = bin_by_data($data => $bounds, $min, $max, $opts{drop_extremes});
 		
+		# Mark empties as bad, if requested
+		$hist = $hist->setvaltobad(0) if $opts{mark_empty_as} eq 'bad';
+		
 		if ($opts{normalize}) {
 			# Normalize by count
 			$hist /= $hist->sumover;
@@ -715,17 +721,33 @@ no PDL::NiceSlice;
 
 =item bt::Log
 
+Generates a histogram from the data with logarithmic spacing. The default
+C<min> is the data's smallest positive value and the default max is the data's
+maximum value. If none of the data is positive, the binning type croaks.
+The binning will C<drop_extremes> by default (i.e. C<< drop_extremes => 1 >>)
+and the binning normalizes the data (i.e. C<< normalize => 1 >>). You can also
+specify the number of bins with C<nbins>. The default is 20. If you want empty bins to
+be marked as bad, specify C<< mark_empty_as => 'bad' >>. The default is to
+mark them as zero.
+
+As with linear binning, normalization means that the "integral" of the histogram is
+1, which means that the sum of the heights I<times the widths> is 1.
+
 =item bt::StrictLog
 
-=back
+Identical to L<bt::Log|/bt::Log>, except that it croaks if it encounters
+B<any> negative values. You can use this in place of L<bt::Log|/bt::Log> to
+sanity check your data.
 
+=back
 
 =cut
 
 sub Log {
 	croak('bt::Log expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20,
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -743,7 +765,8 @@ sub Log {
 sub StrictLog {
 	croak('bt::StrictLog expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20,
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -789,6 +812,9 @@ sub logarithmic_binning {
 	# Accumulate the counts
 	my $hist = bin_by_data($data => $bounds, $min, $max, $opts->{drop_extremes});
 	
+	# Mark empties as bad, if requested
+	$hist = $hist->setvaltobad(0) if $opts->{mark_empty_as} eq 'bad';
+
 	if ($opts->{normalize}) {
 		# Normalize by count
 		$hist /= $hist->sumover;
@@ -803,6 +829,48 @@ sub logarithmic_binning {
 	);
 }
 no PDL::NiceSlice;
+
+=item bt::NormFit
+
+"Fits" the distribution between the specified min and max (defaults to the
+data's min and max) to a normal distribution. This bin type does not pay
+attention to the C<drop_extremes> key, but it cares about the C<normalize>
+key. If unspecified (the default), the curve will be scaled so that the area
+underneath it is the number of data points being fit. If normalized, the
+curve will be scaled so that the area under the curve will be 1. You can
+also specify the number of points to use in generating the curves by including
+the C<N_points> key/value pair.
+
+I am pondering allowing the curve's min/max to take the current axis bounds
+min/max if the axes are not autoscaling. Thoughts appreciated.
+
+=cut
+
+sub NormFit {
+	croak('bt::NormFit expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (normalize => 1, nbins => 20, N_points => 200, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		local *__ANNON__ = 'bt::NormFit';
+		
+		my ($min, $max) = get_min_max($data, $opts{min}, $opts{max});
+		my $data_to_analyze = $data->setbadif(($data < $min) | ($data > $max));
+		my ($means, $stdevs) = $data_to_analyze->dummy(1, 1)->statsover;
+		
+		my @dims = $data->dims;
+		$dims[0] = $opts{N_points};
+		my $xs = zeroes(@dims)->xlinvals($min, $max);
+		use PDL::Constants qw(PI);
+		my $ys = exp(-($xs - $means)**2 / 2 / $stdevs**2)
+				/ sqrt(2 * PI) / $stdevs;
+		$ys *= $data_to_analyze->ngoodover->dummy(0)
+			if not $opts{normalize};
+		
+		return ($xs, $ys);
+	};
+}
 
 package PDL::Graphics::Prima::DataSet::Dist;
 our @ISA = qw(PDL::Graphics::Prima::DataSet::Pair);
@@ -941,7 +1009,7 @@ use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
 use PDL;
 
-=head2 Grids
+=head2 Grid
 
 Grids are collections of data that is regularly ordered in two dimensions. Put
 differently, it is a structure in which the data is described by two indices.
