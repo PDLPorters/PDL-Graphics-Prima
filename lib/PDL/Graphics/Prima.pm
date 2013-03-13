@@ -889,7 +889,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
  
- # Generate a greyscale image:
+ # Generate a grayscale image:
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
  

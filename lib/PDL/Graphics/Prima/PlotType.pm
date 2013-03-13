@@ -1555,7 +1555,7 @@ sub draw {
 
 =head2 Grid-based plot types
 
-Other plots focus on using color or greyscale to visualize data that is a
+Other plots focus on using color or grayscale to visualize data that is a
 function of two variables. If you need to visualize the elements of a matrix,
 you will use these plot types. If would like to
 visualize an image and have already computed the RGB, HSV, or similar values,
@@ -1595,7 +1595,7 @@ use Carp 'croak';
 
 This plot type lets you specify colors or values on a grid to visualize
 rasterized contour plots (as opposed to line contour plots).
-The default palette is a greyscale one but you can specify whichever
+The default palette is a grayscale one but you can specify whichever
 palette you like. See L<PDL::Graphics::Prima::Palette>. If would like to
 visualize an image and have already computed the RGB, HSV, or similar values,
 you should use pimage::Basic instead.
@@ -2625,9 +2625,12 @@ sub compute_collated_min_max_for {
 
 1;
 
+__END__
+
 =head1 TODO
 
-I have lots of things that need to happen to improve this library.
+I have lots of things that need to happen to improve this component of the
+library.
 
 =over
 
@@ -2635,12 +2638,6 @@ I have lots of things that need to happen to improve this library.
 
 Are string-properties OK, or should they be constants? (threadlike, for example)
 Should properties be threadable?
-
-=item Add support for 3d Plots
-
-Dmitry has written a proof-of-concept widget that uses openGL and it should
-be possible to make many of these plotTypes work with 3d data just as well
-as with 2d data.
 
 =item Documentation on Combining
 
@@ -2685,7 +2682,7 @@ Surely there are others. In addition:
 
 =item PairSet
 
-A plot type that bins Pair data in x/y bins and plots a greyscale. This
+A plot type that bins Pair data in x/y bins and plots a grayscale. This
 would be useful for visualizing huge quantities of x/y data, when plotting
 with points would fail due to too many in the same place.
 
@@ -2702,6 +2699,12 @@ be possible.
 
 Many of these plottypes could speed up bounds calculations by caching certain
 results. I need to implement a generic interface for caching, and cache clearing.
+
+=item Add support for 3d Plots
+
+Dmitry has written a proof-of-concept widget that uses openGL and it should
+be possible to make many of these plotTypes work with 3d data just as well
+as with 2d data.
 
 =back
 

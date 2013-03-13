@@ -50,7 +50,7 @@ PDL::Graphics::Prima
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
  
- # Generate a greyscale image:
+ # Generate a grayscale image:
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
  
@@ -110,49 +110,51 @@ L<Prima|Prima> to use this tutorial, but you should know
 L<the basics of PDL|PDL::QuickStart>.
 
 When you use this library, you get a handful of functions for quick data
-plotting, including
+plotting that include
 
 =over
 
-=item line_plot ([$x,] $y)
+=item lines
 
-takes one or two L<piddle|PDL::Core/pdl>s, one for y and optionally one for
+L<line_plot|/line_plot> takes one or two L<piddle|PDL::Core/pdl>s, one for y and optionally one for
 x, and makes a L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> with
 them; if you don't give an x L<piddle|PDL::Core/pdl>, it uses
 L<sequential integers starting from zero|PDL::Basic/xvals>. 
 
-=item <symbol>_plot ([$x,] $y)
+=item symbols
 
-takes one or two L<piddle|PDL::Core/pdl>s, one for y and optionally one for
+Various symbol plots, like L<cross_plot|/cross_plot> and
+L<diamond_plot|/diamond_plot>, take one or two L<piddle|PDL::Core/pdl>s, one
+for y and optionally one for
 x, and and plots the L<symbol|PDL::Graphics::Prima::PlotType/ppair::Symbols>
 at the given points; if you don't give an x L<piddle|PDL::Core/pdl>, it uses
 L<sequential integers starting from zero|PDL::Basic/xvals>. 
 
-=item func_plot ($x_min, $x_max, $func_ref, [$N_points])
+=item functions
 
-takes an I<initial> plot min/max and a L<function reference|perlsub> and
+L<func_plot|/func_plot> takes an I<initial> plot min/max and a L<function reference|perlsub> and
 makes a L<line plot|PDL::Graphics::Prima::PlotType/ppair::Lines> of the
 L<function|perlsub>; it can optionally take the number of points to evaluate
 on each drawing operation; see L<PDL::Graphics::Prima::DataSet/ds::Func>
 
-=item hist_plot ($distribution, [$bin_type])
+=item histograms
 
-takes a L<piddle|PDL::Core/pdl> of data to be plotted and an optional
+L<hist_plot|/hist_plot> takes a L<piddle|PDL::Core/pdl> of data to be plotted and an optional
 L<bin type|PDL::Graphics::Prima::DataSet/Sets> and plots a
 L<histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>. If no bin
 type is supplied, L<linear binning|PDL::Graphics::Prima::DataSet/bt::Linear>
 is used.
 
-=item matrix_plot ($xbounds, $ybounds, $matrix)
+=item images
 
-=item imag_plot($xbounds, $ybounds, $matrix)
-
-takes three arguments, the first two of which specify the x-bounds and the
-y-bounds, the third of which is the matrix to plot
+Both L<matrix_plot|/matrix_plot> and L<imag_plot|/imag_plot> take one or
+three arguments, the first two of which specify the x-bounds and the
+y-bounds, the third (or only) of which is the matrix to plot
 
 =item plot (...)
 
-a much more powerful routine that takes the same arguments you would pass to
+L<plot|/"PLOT FUNCTION"> is a much more powerful routine that takes the same
+arguments you would pass to
 the constructor of a L<plot widget|PDL::Graphics::Prima/>, and packs the
 resulting plot widget in a L<stand-alone window|Prima::Window>.
 
@@ -633,7 +635,7 @@ sub line_plot {
 
 =item circle_plot ([$x], $y)
 
-Plots filled circles at (x, y). (See line_plot for a more detailed description.)
+Plots filled circles at (x, y). (See L<line_plot|/line_plot> for a more detailed description.)
 Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument forms include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Blobs));
@@ -655,7 +657,7 @@ sub circle_plot {
 
 =item triangle_plot ([$x], $y)
 
-Plots filled upright triangles at (x, y). (See line_plot for a more detailed
+Plots filled upright triangles at (x, y). (See L<line_plot|/line_plot> for a more detailed
 description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
 form include:
 
@@ -684,7 +686,7 @@ sub triangle_plot {
 
 =item square_plot ([$x], $y)
 
-Plots filled squares at (x, y). (See line_plot for a more detailed description.)
+Plots filled squares at (x, y). (See L<line_plot|/line_plot> for a more detailed description.)
 Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair(
@@ -712,7 +714,7 @@ sub square_plot {
 
 =item diamond_plot ([$x], $y)
 
-Plots filled diamonds at (x, y). (See line_plot for a more detailed description.)
+Plots filled diamonds at (x, y). (See L<line_plot|/line_plot> for a more detailed description.)
 Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair($x, $y));
@@ -739,7 +741,7 @@ sub diamond_plot {
 
 =item cross_plot ([$x], $y)
 
-Plots crosses (i.e. plus symbols) at (x, y). (See line_plot for a more detailed
+Plots crosses (i.e. plus symbols) at (x, y). (See L<line_plot|/line_plot> for a more detailed
 description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
 form include:
 
@@ -762,7 +764,7 @@ sub cross_plot {
 
 =item X_plot ([$x], $y)
 
-Plots X symbols at (x, y). (See line_plot for a more detailed description.)
+Plots X symbols at (x, y). (See L<line_plot|/line_plot> for a more detailed description.)
 Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 
  plot(-data => ds::Pair($x, $y, plotType => ppair::Xs));
@@ -785,7 +787,7 @@ sub X_plot {
 
 =item asterisk_plot ([$x], $y)
 
-Plots five-pointed asterisks at (x, y). (See line_plot for a more detailed
+Plots five-pointed asterisks at (x, y). (See L<line_plot|/line_plot> for a more detailed
 description.) Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument
 form include:
 
@@ -958,10 +960,13 @@ sub hist_plot {
 
 =item matrix_plot ([$x_edges, $y_edges,] $matrix)
 
-The C<matrix_plot> function takes either one or three arguments. The first
-designates the x min and max of the plot; the second designates the y min
-and max of the plot, and the third specifies a matrix that you want to have
-plotted in grey-scale. The x-edges and y-edges arguments should be
+The C<matrix_plot> function plots a grayscale rendering of a matrix with
+the largest values closest to black, the smallest values closest to white.
+(For the opposite color sense, see L<imag_plot|/imag_plot>.) This function
+takes either one or three arguments. The first designates the x min and max
+of the plot; the second designates the y min and max of the plot, and the
+third (or only) specifies a matrix that you want to have
+plotted in grayscale. The x-edges and y-edges arguments should be
 two-element array references, such as:
 
  matrix_plot ([0 => 5], [1 => 10], $matrix);
@@ -1030,10 +1035,10 @@ sub matrix_plot {
 
 =item imag_plot ([$x_edges, $y_edges,] $matrix)
 
-The C<imag_plot> function is identical to C<matrix_plot> except that the
+The C<imag_plot> function is identical to L<matrix_plot|/matrix_plot> except that the
 color scaling runs from black (lowest) to white (highest). This form is
-especially useful for plotting images, in which the brightest points should
-be white, in contrast to data, in which the largest values should be black.
+especially useful for plotting black and white images, in which case the
+brightest points should be white.
 
 Omitting edges, the command looks like this:
 
@@ -1101,7 +1106,7 @@ sub imag_plot {
 
 The C<plot> function is the real workhorse of this module. Not only does it
 provide the functionality behind all of the above simple functions, but it
-also lets you plot multiple L<DataSet|PDL::Graphics::Prima::DataSet>s, specify
+also lets you plot multiple L<DataSet|PDL::Graphics::Prima::DataSet/>s, specify
 axis labels and a plot title, direct the axis scaling (linear or logarithmic), and set many other properties
 of the plot.
 
@@ -1111,7 +1116,7 @@ for playing with the widget's constructor. Also, once you understand how to use
 this function, using the actual widget in an interactive GUI script is simply a
 matter of understanding how to structure a GUI program.
 
-The C<plot> function takes options and L<DataSet|PDL::Graphics::Prima::DataSet>
+The C<plot> function takes options and L<DataSet|PDL::Graphics::Prima::DataSet/>
 specifications as key/value pairs. The basic usage of C<plot> looks like this:
 
  plot(
@@ -1132,27 +1137,27 @@ specifications as key/value pairs. The basic usage of C<plot> looks like this:
 
 Notice that some of the keys begin with a dash while others do not. Any key
 that begins with a dash should be followed by a
-L<DataSet|PDL::Graphics::Prima::DataSet> object (created using the C<ds::xxx>
+L<DataSet|PDL::Graphics::Prima::DataSet/> object (created using the C<ds::xxx>
 constructors). You can use any name that you wish for your
-L<DataSet|PDL::Graphics::Prima::DataSet>s, the only requirement is that the name
+L<DataSet|PDL::Graphics::Prima::DataSet/>s, the only requirement is that the name
 begins with a dash. (The dash is optional when it comes time to retrieve the
-L<DataSet|PDL::Graphics::Prima::DataSet> later.) The keys that do not begin with
+L<DataSet|PDL::Graphics::Prima::DataSet/> later.) The keys that do not begin with
 a dash are Plot options. The Plot widget has a
 handful of Plot-specific properties, but you can also specify any property of a
 L<Prima::Widget> object.
 
 In the world of C<PDL::Graphics::Prima>, the fundamental object is the Plot.
-Each plot can hold one or more L<DataSet|PDL::Graphics::Prima::DataSet>s, and
-each L<DataSet|PDL::Graphics::Prima::DataSet> is visualized using one or more
-L<PDL::Graphics::Prima::PlotType>s. This makes the plotType the simplest element
+Each plot can hold one or more L<DataSet|PDL::Graphics::Prima::DataSet/>s, and
+each L<DataSet|PDL::Graphics::Prima::DataSet/> is visualized using one or more
+L<PDL::Graphics::Prima::PlotType/>s. This makes the plotType the simplest element
 to discuss, so I'll start there.
 
 =head2 Plot Types
 
-Each L<DataSet|PDL::Graphics::Prima::DataSet> can have one or more plotTypes. If
+Each L<DataSet|PDL::Graphics::Prima::DataSet/> can have one or more plotTypes. If
 you only want to specify a
 single plotType, you can do so by specifying it after the plotType key for your
-L<DataSet|PDL::Graphics::Prima::DataSet>:
+L<DataSet|PDL::Graphics::Prima::DataSet/>:
 
  -data => ds::Pair(
      ...
@@ -1172,46 +1177,47 @@ You can specify multiple plotTypes by passing them in an anonymous array:
 interchangeable. Use whichever is appropriate.)
 
 All the plotTypes take key/value paired arguments. You can specify various
-L<Prima::Drawable> properties like line-width using the C<lineWidth> key
-or color using the C<color> key; you can pass plotType-specific options
-like symbol size (for C<ppair::Symbol> and its derivatives) using the C<size> key
-or the baseline height for C<pt::Histogram> using the C<baseline> key; and
-some of the plotTypes have required arguments, such as at least one error bar
-specification with C<ppair::ErrorBars>. To create red blobs, you would use
-something like this:
+L<Prima::Drawable|Prima::Drawable/> properties like
+L<lineWidth|Prima::Drawable/lineWidth> or L<color|Prima::Drawable/color>; you
+can pass plotType-specific options like symbol size
+(for L<ppair::Symbol|PDL::Graphics::Prima::PlotType/ppair::Symbol> and its
+derivatives) using the C<size> key or the baseline height for
+L<ppair::Histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram> using the
+C<baseline> key; and some of the plotTypes have required arguments, such as
+at least one error bar specification with
+L<ppair::ErrorBars|PDL::Graphics::Prima::PlotType/ppair::ErrorBars>. To create
+L<red|Prima::Const/cl> L<blobs|PDL::Graphics::Prima::PlotType/ppair::Blobs>,
+you would use something like this:
 
  ppair::Blobs(color => cl::LightRed)
 
-To create blobs of all different colors, you would use the plural C<colors>
+To create L<blobs|PDL::Graphics::Prima::PlotType/ppair::Blobs> of all
+different colors, you would use the plural C<colors>
 key and specify a piddle with Color values. (That's discussed below in an
 example.) To specify a 5-pixel line width for a Lines plotType, you would say
 
  ppair::Lines(lineWidth => 5)
 
-When a L<DataSet|PDL::Graphics::Prima::DataSet> gets drawn, it draws the
+When a L<DataSet|PDL::Graphics::Prima::DataSet/> gets drawn, it draws the
 different plotTypes in the order
 specified. For example, suppose you specify C<cl::Black> filled triangles and
 C<cl::LightRed> lines. If the triangles are specified first, they will have red
 lines drawn through them, and if the triangles are second, the triangles will
 be drawn over the red lines.
 
-Each L<DataSet|PDL::Graphics::Prima::DataSet> has a default plot type. For 
-L<Sets|PDL::Graphics::Prima::DataSet/Sets>, it is
-L<C<pset::CDF>|PDL::Graphics::Prima::PlotType/pset::CDF>. For
-L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>, it is
-L<C<ppair::Diamonds>|PDL::Graphics::Prima::PlotType/ppair::Diamonds>. For
+Each L<DataSet|PDL::Graphics::Prima::DataSet/> has a default plot type. For 
+L<Dist|PDL::Graphics::Prima::DataSet/Dist>s, it is
+L<ppair::histogram|PDL::Graphics::Prima::PlotType/ppair::Histogram>. For
+L<Pairs|PDL::Graphics::Prima::DataSet/Pair>, it is
+L<ppair::Diamonds|PDL::Graphics::Prima::PlotType/ppair::Diamonds>. For
 L<Grids|PDL::Graphics::Prima::DataSet/>, it is
-L<C<pgrid::Matrix>|PDL::Graphics::Prima::PlotType/pgrid::Matrix>. If you
+L<pgrid::Matrix|PDL::Graphics::Prima::PlotType/pgrid::Matrix>. If you
 want to use a different plotType, you need to specify it as illustrated
 by the translations given in the super-simple examples above. The plotTypes are
-discussed thoroughly in L<PDL::Graphics::Prima::PlotType>, and are summarized
-below:
+discussed thoroughly in
+L<PDL::Graphics::Prima::PlotType|PDL::Graphics::Prima::PlotType/>, and are
+summarized below:
 
- Set plotTypes
- =============
- pset::CDF         - plots a cumulative distribution curve for the given data
- 
- 
  Pair plotTypes
  ==============
  ppair::Lines      - lines from point to point
@@ -1244,60 +1250,69 @@ below:
 More plot types are planned, but the ones listed above are the currently
 implemented ones.
 
-The plotTypes are the simplest unit in L<PDL::Graphics::Prima>. The next
-largest unit is the L<DataSet|PDL::Graphics::Prima::DataSet>, which not only
+The plotTypes are the simplest unit in L<PDL::Graphics::Prima/>. The next
+largest unit is the L<DataSet|PDL::Graphics::Prima::DataSet/>, which not only
 holds data of various kinds, but
 also holds the plotTypes that are to be applied to the given data.
 
 =head2 DataSets
 
 You can plot one or more sets of data on a given Plot. You do this by specifying
-the L<DataSet|PDL::Graphics::Prima::DataSet>'s name with a dash, followed by a
-L<DataSet|PDL::Graphics::Prima::DataSet> constructor. The
-L<DataSet|PDL::Graphics::Prima::DataSet> constructor specifies the properties of
-your L<DataSet|PDL::Graphics::Prima::DataSet>, including the data
+the L<DataSet|PDL::Graphics::Prima::DataSet/>'s name with a dash, followed by a
+L<DataSet|PDL::Graphics::Prima::DataSet/> constructor. The
+L<DataSet|PDL::Graphics::Prima::DataSet/> constructor specifies the properties of
+your L<DataSet|PDL::Graphics::Prima::DataSet/>, including the data
 itself along with the plotType or plotTypes.
 
-As I have already aluded, there are three kinds of
-L<DataSet|PDL::Graphics::Prima::DataSet>s:
-L<Sets|PDL::Graphics::Prima::DataSet/Sets>,
-L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>,
-L<Grids|PDL::Graphics::Prima::DataSet/Grids>. The
-L<Function Pairs DataSet|PDL::Graphics::Prima::DataSet/Func> is a drop-in
-replacement for a L<Pairs DataSet|PDL::Graphics::Prima::DataSet/Pairs>
-that dynamically generates x/y data based on the current x-axis bounds.
+In addition to the two types that I have already alluded to, namely
+L<Pairs|PDL::Graphics::Prima::DataSet/Pair> and
+L<Grids|PDL::Graphics::Prima::DataSet/Grid>, there are a collection of
+derived L<Datasets|PDL::Graphics::Prima::DataSet/>. These include the
+L<Function-based DataSet|PDL::Graphics::Prima::DataSet/Func> and the
+L<Distribution Dataset|PDL::Graphics::Prima::DataSet/Dist>.
 
-L<Sets|PDL::Graphics::Prima::DataSet/Sets> take a single piddle of unordered
-data and visually represents it with agregated plots like probability
-distributions (planned) or cumulative distributions. The
-L<constructor|PDL::Graphics::Prima::DataSet/ds::Set> takes a
-single piddle argument that represents that data to plot, and then key/value
-pairs that let you tweak how the data is visualized:
-
- -distribution => ds::Set($camel_weights, ...options...)
-
-L<The Pairs DataSet|PDL::Graphics::Prima::DataSet/Pairs> targets x/y paired data
+L<The Pairs DataSet|PDL::Graphics::Prima::DataSet/Pair> targets x/y paired data
 and lets you visualize trends and correlations between two collections of data.
 The L<constructor|PDL::Graphics::Prima::DataSet/ds::Pair> takes two arguments
 (the x-data and the y-data) and then key/value pairs that indicate
 your plotTypes and specify precisely how you want the data visualized:
 
- -scatter => ds::Pair($camel_weights, $camel_heights, ...options...)
+ -scatter => ds::Pair($student_weights, $student_heights, ...options...)
 
 Typical x/y plots are plotted in such a way that the x-data is sorted in
 increasing order, but this is not required. This means that it is just as
 easy to draw a sine function as it is to draw a spiral or a scatter plot.
 
+L<Dists|PDL::Graphics::Prima::DataSet/Dist> take a single piddle of unordered
+data and visually represents it with aggregated plots like histograms,
+cumulative distributions, or curves to distribution fits. The
+L<constructor|PDL::Graphics::Prima::DataSet/ds::Dist> takes a
+single piddle argument that represents that data to plot, and then key/value
+pairs that let you tweak how the data is visualized. The most important
+key is the binning key, which dictates how the distribution should be mapped
+to pairwise data.
+
+ -distribution => ds::Dist($student_heights,
+     binning => bt::Log(min => 2),
+     ...options...
+ )
+
+Any pairwise plot type will work with the distribution plot types, but
+some make more (or less) sense than others. For example,
+L<CDFs|PDL::Graphics::Prima::DataSet/bt::CDF> are better visualized with
+lines whereas L<linearly binned data|PDL::Graphics::Prima::DataSet/bt::Linear>
+are sometimes better visualized with histograms.
+
 L<Func DataSets|PDL::Graphics::Prima::DataSet/Func> let you specify a function
 to plot, rather than forcing you to evaluate a specific function at fixed values
-of x. They inherit from L<Pairs|PDL::Graphics::Prima::DataSet/Pairs> (in an OO
+of x. They inherit from L<Pairs|PDL::Graphics::Prima::DataSet/Pair> (in an OO
 sense) and differ in that the constructor expects a single function reference
 rather than two piddles of data:
 
  -model => ds::Func(\&my_model, ...options...)
 
 Because L<Func|PDL::Graphics::Prima::DataSet/Func> inherits from
-L<Pairs|PDL::Graphics::Prima::DataSet/Pairs>, any
+L<Pairs|PDL::Graphics::Prima::DataSet/Pair>, any
 L<Pairs PlotType|PDL::Graphics::Prima::PlotType/Pairs> will also work with
 a L<Func DataSet|PDL::Graphics::Prima::DataSet/Func>.
 
