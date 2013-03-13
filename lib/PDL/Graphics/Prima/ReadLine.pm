@@ -150,6 +150,11 @@ the functionality needed for hooking Prima into ReadLine. This could happen
 either because your version of ReadLine is too old or because you are running
 on Windows, which is not (yet) supported by C<PDL::Graphics::Prima::ReadLine>.
 
+=head1 SEE ALSO
+
+For purposes of this module, you should check out L<Term::ReadLine>. This
+module is implemented using L<Prima::File>.
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)

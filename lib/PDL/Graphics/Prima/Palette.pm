@@ -412,6 +412,21 @@ sub pal::HSVrange {
 	return PDL::Graphics::Prima::Palette::HSVrange->new(@_);
 }
 
+## Basic histogram equalization implementation, worth considering:
+## See http://www.generation5.org/content/2004/histogramEqualization.asp
+#
+## Let's try histogram equalization on this
+#my $xs = $m51->flat->qsort;
+## Find the bottom 10% and top 10% and clip by them
+#$m51->flat .= $m51->flat->vsearch($xs);
+#my $ys = $xs->xlinvals(0, 1);
+#line_plot($xs, $ys);
+#
+## Interesting clipping idea:
+#my $min = $xs->at($xs->nelem/10);
+#my $max = $xs->at($xs->nelem*0.9);
+#$m51->clip($min, $max);
+
 1;
 
 =back
@@ -488,20 +503,3 @@ This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
-__END__
-
-# Basic histogram equalization implementation, worth considering:
-# See http://www.generation5.org/content/2004/histogramEqualization.asp
-
-# Let's try histogram equalization on this
-my $xs = $m51->flat->qsort;
-# Find the bottom 10% and top 10% and clip by them
-$m51->flat .= $m51->flat->vsearch($xs);
-my $ys = $xs->xlinvals(0, 1);
-line_plot($xs, $ys);
-
-# Interesting clipping idea:
-my $min = $xs->at($xs->nelem/10);
-my $max = $xs->at($xs->nelem*0.9);
-$m51->clip($min, $max);

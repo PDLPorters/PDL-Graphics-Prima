@@ -1909,13 +1909,13 @@ L<http://github.com/run4flat/PDL-Graphics-Prima/issues>.
 
 =back
 
-=head1 AUTHOR
-
-David Mertens (dcmertens.perl@gmail.com)
-
 =head1 SEE ALSO
 
 For an introduction to L<Prima> see L<Prima::tutorial>.
+
+=head1 AUTHOR
+
+David Mertens (dcmertens.perl@gmail.com)
 
 This is a component of L<PDL::Graphics::Prima|PDL::Graphics::Prima/>, a
 library composed of many modules:
