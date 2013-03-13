@@ -1006,6 +1006,7 @@ and the quivalent is:
 sub matrix_plot {
 	my ($x, $y, $matrix);
 	if (@_ == 1) {
+		$matrix = $_[0];
 		my @dims = $matrix->dims;
 		$x = [0, $dims[0]];
 		$y = [0, $dims[1]];
@@ -1767,7 +1768,7 @@ else {
 		# they won't be able to exit the loop!
 		print "No open plots\n" and return if $N_windows == 0;
 		# Print a notice explaining what's going on:
-		print "Twiddling plot; press q or Q when done\n";
+		print "Twiddling plot; close window or press q or Q to resume\n";
 		
 		# We will use Prima's nice exception handling to exit the go()
 		# method. In order to prevent undue error propogation, localize
