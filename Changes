@@ -1,0 +1,179 @@
+Put changes under the appropriate header. Headers can include API CHANGES, BUG
+FIXES, ENHANCEMENTS, NEW FEATURES, and OTHER. Entries should be in chronological
+order, i.e. oldest at the top
+
+0.12 Mon, Jan 21, 2013
+
+  [BUG FIXES]
+  
+  * Included PDL::Graphics::Prima::ReadLine in the MANIFEST file.
+
+0.11 Sun, Jan 20, 2013
+
+  XXX WORKING HERE
+
+0.10 ** SKIPPED **
+
+  * Another version bump gone awry.
+
+0.09 Mon, Aug 6, 2012
+
+  [BUG FIXES]
+  
+  * Finally got save-to-image behavior working, thanks to Dmitry!
+  
+  [ENHANCEMENTS]
+  
+  * PDL::Drawing::Prima saw an extensive overhaul with the release of PDP v0.07,
+    one which handles singular as well as plural properties, and correctly
+    restores the canvas state after the drawing operation is complete. That
+    allowed me to simplify the canvas property handling in PDL::Graphics::Prima.
+    It also means that singular properties Just Work now! :-D
+
+0.08 Sun, Jul 1, 2012
+
+  [ENHANCEMENTS]
+  
+  * Build.PL is more specific about its requirements.
+  
+  * Super-simple pairwise api functions now accept single piddles as arguments,
+    taking them as y-values and creating sequential x-values.
+
+0.07 Mon, Jun 25, 2012
+
+  [BUG FIXES]
+  
+  * The Palette suffered a divide by zero bug when sent data with identical
+    values. Also, empty piddles sent to Palette are now handled more gracefully.
+  
+  * Linear scaling now handles degenerate input more gracefully. In particular,
+    when the data is all the same *negative* value, it now gives useful minima
+    and maxima.
+  
+  * A recent revision in x autoscaling generated a bug in y autoscaling, such
+    that y-axes would autoscale even when I explicitly set their min and/or max.
+  
+  [ENHANCEMENTS]
+  
+  * The plot constructor now accepts axis objects. Before, it only accepted a
+    hash with the axis properties.
+  
+  * Histogram autoscaling now performs the correct threaded calculations.
+  
+  [NEW FEATURES]
+  
+  * Added image_plot to the Simple interface.
+
+0.06 ** SKIPPED **
+
+  * I hadn't realized that I had already incremented the version number. Oops.
+
+0.05 Thu, Mar 15, 2012
+
+  * Minor docs typo fixes and bug fixes
+
+0.04 Wed, Feb 29, 2012
+
+  * Added dependency on Prima in the Build.PL file
+
+0.03 Tue, Feb 28, 2012
+
+  * Added dependency on PDL in the Build.PL file
+
+0.02 Sun, Feb 26, 2012
+
+  * First CPAN release
+  
+  * Switched to Module::Build
+  
+  [API CHANGES]
+  
+  * Changed naming from pt::<Type> to pseq::<Type>.
+
+  * Differentiated datasets and introduced short-form dataset constructors.
+  
+  * Switched name from pseq::<Type> to ppair::<Type>.
+  
+  * Lots of naming consolidation.
+  
+  [ENHANCEMENTS]
+  
+  * Added first tests to check that the modules load.
+  
+  * Smooth axis movement.
+  
+  * Improved autoscaling.
+  
+  [NEW FEATURES]
+  
+  * Added ds::Func, ds::Image, and ds::Grid.
+  
+  * Added pimage::Basic and pgrid::matrix.
+  
+  * Preliminary postscript output.
+  
+Entries below are in reverse chronological order, newest first
+
+0.01 Thu, Dec 22, 2011
+
+  * Added pt::NGons, renamed to pt::Symbols; added lots of derived plot types;
+    added pt::TrendLines.
+  
+  * Simple API now includes plot, line_plot, circle plot, triangle_plot,
+    square_plot, diamond_plot, cross_plot, X_plot, asterisk_plot, hist_plot,
+    matrix_plot, and func_plot.
+  
+  * Right-click menu added.
+  
+  * Postscript and clipboard output added.
+
+0.00 Tue, Oct 25, 2011
+
+  * Windows is now preliminarily supported.
+  
+  * DataSets are now plotted in asciibetical order, by name.
+
+0.00 Wed, Oct 19, 2011
+
+  * Added PDL::Graphics::Prima::Simple and PDL::Graphics::Prima::Palette.
+  
+  * Pushed label handling from a plot responsibility to an axis responsibility.
+  
+  * Implemented collation-based autoscaling.
+
+0.00 Tue, Sep 20, 2011
+
+  * Added pt::Spikes, pt::CallBack, pt::ErrorBars, pt::ColorGrid
+  
+  * Switched DataSet handling from being a tied array to a tied hash.
+  
+  * Renamed from Prima::Ex::Graph to PDL::Graphics::Prima and shuffled the files
+    into a more standard CPAN distribution layout.
+  
+  * Moved PDL::PP code into PDL::Drawing::Prima
+  
+  * Added logarithmic scaling
+
+0.00 Thu, Feb 3, 2011
+
+  * First realization as a widget is completed under the name Prima::Ex::Graph.
+    The primary components of the library included Axis.pm, DataSet.pm,
+    Graph.pm, Limits.pm, PlotType.pm, Scaling.pm, and pdlprima.pd.
+  
+  * Plot types included pt::Lines, pt::Blobs, and pt::Histogram
+  
+  * Scaling.pm included linear scaling, but not yet logarithmic.
+
+0.00 Thu, Jan 20, 2011
+
+  * Basic line plotting, histogram binning and drawing, and axes scaling and
+    tick drawing were prototyped in per-widget onDraw callbacks. These callbacks
+    were added systematically to a widget via the endow_widget function.
+  
+  * Very first plotting interface was a Prima::Drawable method called graph(),
+    followed shortly by an additional Drawable method called bin()
+
+0.00 Wed, Jan 15, 2011
+
+  * Initially conceived as PDL::PrimaPoly, a set of PDL bindings to Prima's
+    polyline method. This would eventually grow into PDL::Drawing::Prima.
