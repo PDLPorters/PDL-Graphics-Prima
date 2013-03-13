@@ -12,58 +12,62 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 
 =head1 SYNOPSIS
 
- -distribution => ds::Set(
-     $data, plotType => pset::CDF
+ -distribution => ds::Dist(
+     $data, plotType => ppair::Lines,
+     binning => bt::Linear,
  ),
  -lines => ds::Pair(
-     $x, $y, plotType => [ppair::Lines, ppair::Diamonds]
+     $x, $y, plotTypes => [ppair::Lines, ppair::Diamonds]
  ),
  -contour => ds::Grid(
-     $matrix, bounds => [$left, $bottom, $right, $top],
-              y_edges => $ys, x_bounds => [$left, $right],
-              x_edges => $xs, y_bounds => [$bottom, $top],
-              plotType => pgrid::Matrix(palette => $palette),
+     $matrix,
+     # Specify your bounds in one of these three ways
+     bounds => [$left, $bottom, $right, $top],
+     y_edges => $ys, x_edges => $xs, 
+     x_bounds => [$left, $right], y_bounds => [$bottom, $top],
+     # Unnecessary if you want the default palette
+     plotType => pgrid::Matrix(palette => $palette),
  ),
  -image => ds::Image(
      $image, format => 'string',
-             ... ds::Grid bounder options ...
-             plotType => pimage::Basic,
+     ... ds::Grid bounder options ...
+     # Unnecessary at the moment
+     plotType => pimage::Basic,
  ),
  -function => ds::Func(
      $func_ref, xmin => $left, xmax => $right, N_points => 200,
- ),
- -func_grid => ds::FGrid(
-     $matrix, ... same as for ds::Grid ...
-              N_points => 200,
-              N_points => [200, 300],
  ),
  
 
 =head1 DESCRIPTION
 
-C<PDL::Graphics::Prima> differentiates between a few kinds of data: Sets,
-Pair collections, and Grids. A Set is an unordered collection of data, such as the
-heights of a class of students. A Pair collection is an collection of x/y
-pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
-colors of a photograph.
+C<PDL::Graphics::Prima> fundamentally conceives of two different kinds of
+data representations. There are pairwise representations, such as line plot
+used to visualize a time series, and there are gridded representations,
+such as raster images used to visualize heat maps (or images). Any data that
+you want to represent must have some way to conceive of itself as either
+pairwise or gridded.
 
-working here - this needs to be cleaned up!
+Of course, there are plenty of things we want to visualize that are not
+pairwise data or grids. For example, what if we want to plot the
+distribution of scores on an exam? In this case, we would probably use a
+histogram. When you think about it, a histogram is just a pairwise
+visual representation. In other words, to visualize a distribution, we have
+to first map the distribution into a pairwise representation, and then
+choose an appropriate way to visualize that representation, in this case a
+histogram.
 
-In addition, there are two derived kinds of datasets when you wish to specify
-a function instead of raw set of data. For example, to plot an analytic function,
-you could use a Function instead of Pairs. This has the advantage that if
-you zoom in on the function, the curve is recalculated and looks smooth instead
-of jagged. Similarly, if you can describe a surface by a function, you can plot
-that function using a function grid, i.e. FGrid.
-
-Once upon a time, this made sense, but it needs to be revised:
-
- At the moment there are two kinds of datasets. The piddle-based datasets have
- piddles for their x- and y-data. The function-based datasets create their
- x-values on the fly and evaluate their y-values using the supplied function
- reference. The x-values are generated using the C<sample_evenly> function which
- belongs to the x-axis's scaling object/class. As such, any scaling class needs
- to implement a C<sample_evenly> function to support function-based datasets.
+So, we have two fundamental ways to represent data, but many possible
+data sets. For pairwise representations, we have L<ds::Pair|/Pair>, the
+basic pairwise DataSet. L<ds::Dist|/Dist> is a derived DataSet which
+includes a binning specification that bins the distribution into bin centers
+(x) and heights (y) to get a pairwise representation. L<ds::Func|/Func>
+is another derived DataSet that generates evenly sampled data based on the
+axis bounds and evaluates the supplied function at those points to get a
+pairwise representation. L<ds::Image|/Image> provides a simple means for
+visualizing images, and L<ds::Grid|/Grid> provides a means for mapping a
+gridded collection of data into an image, using
+L<palettes|PDL::Graphics::Prima::Palette/>.
 
 =head2 Base Class
 
@@ -436,10 +440,10 @@ sub _change_data {
 =cut
 
 ################################################################################
-#                                     Sets                                     #
+#                                     Dist                                     #
 ################################################################################
 
-package PDL::Graphics::Prima::DataSet::Set;
+package PDL::Graphics::Prima::DataSet::Dist;
 use base 'PDL::Graphics::Prima::DataSet::Pair';
 use Carp;
 
