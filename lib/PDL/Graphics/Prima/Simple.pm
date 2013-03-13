@@ -1917,8 +1917,9 @@ For an introduction to L<Prima> see L<Prima::tutorial>.
 
 David Mertens (dcmertens.perl@gmail.com)
 
-This is a component of L<PDL::Graphics::Prima|PDL::Graphics::Prima/>, a
-library composed of many modules:
+=head1 ADDITIONAL MODULES
+
+Here is the full list of modules in this distribution:
 
 =over
 
@@ -1933,11 +1934,6 @@ Specifies the behavior of axes (but not the scaling)
 =item L<PDL::Graphics::Prima::DataSet|PDL::Graphics::Prima::DataSet/>
 
 Specifies the behavior of DataSets
-
-=item L<PDL::Graphics::Prima::Internals|PDL::Graphics::Prima::Internals/>
-
-A dumping ground for my partial documentation of some of the more complicated
-stuff. It's not organized, so you probably shouldn't read it.
 
 =item L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>
 
