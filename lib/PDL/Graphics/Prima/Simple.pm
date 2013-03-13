@@ -242,7 +242,7 @@ can be resized and it will be updated and redrawn smoothly.
 The library lets you
 L<specify the|PDL::Graphics::Prima::Axis/min, max>
 L<x- and y-bounds of the plot|PDL::Graphics::Prima::Axis/minmax>, but if you do
-not specify bounds, the axes bounds will be calculated to tightly fit the data.
+not specify bounds, the axis bounds will be calculated to tightly fit the data.
 In fact, the library is designed to automatically choose axis boundaries that fit your
 data and symbols exactly. (And if you wanted a bit of padding included in that
 auto-fitting... well... it's on my todo list. :-)
@@ -250,23 +250,30 @@ auto-fitting... well... it's on my todo list. :-)
 =head2 Soapbox
 
 Having played around with the plot widget, you probably want to know how to
-modify it programatically, by adding a
-L<title|PDL::Graphics::Prima/title> or
-L<axis labels|PDL::Graphics::Prima::Axis/label>, perhaps. "What sort
-of options," you ask, "does C<line_plot> accept for me to specify these things?"
-Well, you can't specify those in your call to C<line_plot>. B<All of the
-C<xxx_plot> functions are super-simple and should be considered training wheels>.
-These plots are actually objects, and B<I believe that it is better to learn a
-single object construction and interaction interface rather than learn a
-function-based interface first and then re-learn the object interface.> And now
-that I've had my soapbox moment, I'll tell you how to do what you want.
+modify it programatically, by adding a L<title|PDL::Graphics::Prima/title> or
+L<axis labels|PDL::Graphics::Prima::Axis/label>, perhaps. "What sort of
+options," you ask, "does L<line_plot|/line_plot> accept for me to specify
+these things?" Well, you can't specify those in your call to
+L<line_plot|/line_plot>. You either add them to the object after
+L<line_plot|/line_plot> builds something for you, or you use the more
+powerful but verbose L<plot function|/"PLOT FUNCTION">.
+
+"But WHY?" you ask. "WHY can't I just specify a plot title in
+L<line_plot|/line_plot> and be done with it?" The reason is simple. The
+underlying library is built on a very clean and well-thought-out object and
+I would rather not waste my time creating or your time learning some
+intermediate API. A means for specifying the plot title in
+L<line_plot|/line_plot> is the first step down the road of confused mental
+models. So, it's really in your best interst. Honest. :-)
+
+"But WHY?" you ask again. OK, OK, I'll tell you how to essentially get what
+you want.
 
 =head2 Adding axis labels and titles via methods
 
 First, you can use the C<line_plot> command to build a
-L<plot object|PDL::Graphics::Prima/> and
-L<display window|Prima::Window>, and return them to you I<without blocking
-your script.> This will allow you to modify the properties of the 
+L<plot object|PDL::Graphics::Prima/> and return them to you I<without
+blocking your script.> This will allow you to modify the properties of the 
 L<plot object|PDL::Graphics::Prima/> before it gets displayed. For example, I
 can L<add a plot title|PDL::Graphics::Prima/title> and
 L<specifically choose when to view the plot|Prima::Window/execute> like so:
@@ -274,15 +281,18 @@ L<specifically choose when to view the plot|Prima::Window/execute> like so:
  use PDL;
  use PDL::Graphics::Prima::Simple;
  
+ # Non-blocking
+ auto_twiddle(0);
+ 
  # Build the plot
  my $x = sequence(100)/10;
- my ($window, $plot) = line_plot($x, $x->sin);
+ my $plot = line_plot($x, $x->sin);
  
  # Add a title
  $plot->title('The sine wave');
  
  # Display the plot
- $window->execute;
+ twiddle();
 
 You next may ask how you modify the
 L<axis properties|PDL::Graphics::Prima::Axis/>, such as
@@ -290,7 +300,7 @@ L<setting the bounds|PDL::Graphics::Prima::Axis/min, max>
 or L<giving them labels|PDL::Graphics::Prima::Axis/label>. The
 L<axes|PDL::Graphics::Prima::Axis/> are sub-objects of the
 L<plot|PDL::Graphics::Prima/>, accessed with
-L<like-named accessors|PDL::Graphics::Prima/x, y>: C<$plot-E<gt>x>. The
+L<like-named accessors|PDL::Graphics::Prima/x, y>: $plot->x. The
 properties of the axes that you can modify include the
 L<min|PDL::Graphics::Prima::Axis/min, max>,
 L<max|PDL::Graphics::Prima::Axis/min, max>,
@@ -306,8 +316,9 @@ L<labels|PDL::Graphics::Prima::Axis/label>:
  use PDL::Graphics::Prima::Simple;
  
  # Build the plot
+ auto_twiddle(0);
  my $x = sequence(100)/10;
- my ($window, $plot) = line_plot($x, $x->sin);
+ my $plot = line_plot($x, $x->sin);
  
  # Add a title and axis labels
  $plot->title('The Harmonic Oscillator');
@@ -315,9 +326,13 @@ L<labels|PDL::Graphics::Prima::Axis/label>:
  $plot->y->label('displacement (cm)');
  
  # Display the plot
- $window->execute;
+ twiddle();
 
 =head2 Working with plot objects in the PDL shell
+
+NOTE: The current state of readline integration, and its work-around, are
+in a state of flux. These docs are not entirely accurate. But they're
+close enough. Expect this to get fixed soon.
 
 NOTE: L<Term::ReadLine::Perl> is a pure-perl implementation of L<Term::ReadLine::Gnu>
 and it is very nice. However, it does not play nicely with the Prima readline
@@ -327,13 +342,12 @@ you last indicated with the navigation keys (but they are always up-to-date when
 you type normal letters). If you have any ideas for how to remedy this, please
 let me know! Thanks!
 
-If you decide to play with this from the L<original PDL shell|perldl/> and
-you have a v1.09 or newer of L<Term::ReadLine>, or if you have
-L<App::Prima::REPL>, you can do the same sorts of manipulations from the
+You can do the same sorts of manipulations from the
 console and see the updates as soon as you press enter. The equivalent
 commands as the ones shown above are:
 
  pdl> use PDL::Graphics::Prima::Simple
+ pdl> auto_twiddle(0)
  pdl> $x = sequence(100)/10
  # After the next commant, the line plot window will pop up
  pdl> $plot = line_plot($x, $x->sin)
@@ -342,7 +356,7 @@ commands as the ones shown above are:
  pdl> $plot->y->label('displacement (cm)')
 
 Each method call to the plot command will cause the plot to get updated with the
-new element or feature. Spiffy, eh?
+new element or feature.
 
 =head2 Axis minima and maxima
 
