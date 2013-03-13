@@ -1070,6 +1070,7 @@ and the quivalent is:
 sub imag_plot {
 	my ($x, $y, $matrix);
 	if (@_ == 1) {
+		$matrix = $_[0];
 		my @dims = $matrix->dims;
 		$x = [0, $dims[0]];
 		$y = [0, $dims[1]];
@@ -1888,6 +1889,8 @@ sub import {
 }
 
 1;
+
+__END__
 
 =head1 LIMITATIONS AND BUGS
 
