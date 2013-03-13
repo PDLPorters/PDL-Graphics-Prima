@@ -150,58 +150,55 @@ the functionality needed for hooking Prima into ReadLine. This could happen
 either because your version of ReadLine is too old or because you are running
 on Windows, which is not (yet) supported by C<PDL::Graphics::Prima::ReadLine>.
 
+=head1 SEE ALSO
+
+For purposes of this module, you should check out L<Term::ReadLine>. This
+module is implemented using L<Prima::File>.
+
 =head1 AUTHOR
 
 David Mertens (dcmertens.perl@gmail.com)
 
-=head1 SEE ALSO
+=head1 ADDITIONAL MODULES
 
-For an introduction to L<Prima> see L<Prima::tutorial>.
-
-This is a component of L<PDL::Graphics::Prima>, a library composed of many
-modules:
+Here is the full list of modules in this distribution:
 
 =over
 
-=item L<PDL::Graphics::Prima>
+=item L<PDL::Graphics::Prima|PDL::Graphics::Prima/>
 
 Defines the Plot widget for use in Prima applications
 
-=item L<PDL::Graphics::Prima::Axis>
+=item L<PDL::Graphics::Prima::Axis|PDL::Graphics::Prima::Axis/>
 
 Specifies the behavior of axes (but not the scaling)
 
-=item L<PDL::Graphics::Prima::DataSet>
+=item L<PDL::Graphics::Prima::DataSet|PDL::Graphics::Prima::DataSet/>
 
 Specifies the behavior of DataSets
 
-=item L<PDL::Graphics::Prima::Internals>
-
-A dumping ground for my partial documentation of some of the more complicated
-stuff. It's not organized, so you probably shouldn't read it.
-
-=item L<PDL::Graphics::Prima::Limits>
+=item L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>
 
 Defines the lm:: namespace
 
-=item L<PDL::Graphics::Prima::Palette>
+=item L<PDL::Graphics::Prima::Palette|PDL::Graphics::Prima::Palette/>
 
 Specifies a collection of different color palettes
 
-=item L<PDL::Graphics::Prima::PlotType>
+=item L<PDL::Graphics::Prima::PlotType|PDL::Graphics::Prima::PlotType/>
 
 Defines the different ways to visualize your data
 
-=item L<PDL::Graphics::Prima::ReadLine>
+=item L<PDL::Graphics::Prima::ReadLine|PDL::Graphics::Prima::ReadLine/>
 
 Encapsulates all interaction with the L<Term::ReadLine> family of
 modules.
 
-=item L<PDL::Graphics::Prima::Scaling>
+=item L<PDL::Graphics::Prima::Scaling|PDL::Graphics::Prima::Scaling/>
 
 Specifies different kinds of scaling, including linear and logarithmic
 
-=item L<PDL::Graphics::Prima::Simple>
+=item L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>
 
 Defines a number of useful functions for generating simple and not-so-simple
 plots
@@ -210,9 +207,13 @@ plots
 
 =head1 LICENSE AND COPYRIGHT
 
-This module's code are copyright (c) 2013 Northwestern University.
+Portions of this module's code are copyright (c) 2011 The Board of Trustees at
+the University of Illinois.
 
-This module's documentation are copyright (c) 2013 David Mertens.
+Portions of this module's code are copyright (c) 2011-2013 Northwestern
+University.
+
+This module's documentation are copyright (c) 2011-2013 David Mertens.
 
 All rights reserved.
 

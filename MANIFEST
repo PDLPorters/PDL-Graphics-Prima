@@ -4,7 +4,6 @@ README.pod
 lib/PDL/Graphics/Prima.pm
 lib/PDL/Graphics/Prima/Axis.pm
 lib/PDL/Graphics/Prima/DataSet.pm
-lib/PDL/Graphics/Prima/Internals.pod
 lib/PDL/Graphics/Prima/Limits.pm
 lib/PDL/Graphics/Prima/Palette.pm
 lib/PDL/Graphics/Prima/PlotType.pm
@@ -29,5 +28,6 @@ examples/test-spikes.pl
 examples/test3.pl
 t/00-load-main.t
 t/01-load-simple.t
+t/200-binning.t
 META.yml
 META.json

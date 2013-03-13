@@ -12,58 +12,62 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 
 =head1 SYNOPSIS
 
- -distribution => ds::Set(
-     $data, plotType => pset::CDF
+ -distribution => ds::Dist(
+     $data, plotType => ppair::Lines,
+     binning => bt::Linear,
  ),
  -lines => ds::Pair(
-     $x, $y, plotType => [ppair::Lines, ppair::Diamonds]
+     $x, $y, plotTypes => [ppair::Lines, ppair::Diamonds]
  ),
  -contour => ds::Grid(
-     $matrix, bounds => [$left, $bottom, $right, $top],
-              y_edges => $ys, x_bounds => [$left, $right],
-              x_edges => $xs, y_bounds => [$bottom, $top],
-              plotType => pgrid::Matrix(palette => $palette),
+     $matrix,
+     # Specify your bounds in one of these three ways
+     bounds => [$left, $bottom, $right, $top],
+     y_edges => $ys, x_edges => $xs, 
+     x_bounds => [$left, $right], y_bounds => [$bottom, $top],
+     # Unnecessary if you want the default palette
+     plotType => pgrid::Matrix(palette => $palette),
  ),
  -image => ds::Image(
      $image, format => 'string',
-             ... ds::Grid bounder options ...
-             plotType => pimage::Basic,
+     ... ds::Grid bounder options ...
+     # Unnecessary at the moment
+     plotType => pimage::Basic,
  ),
  -function => ds::Func(
      $func_ref, xmin => $left, xmax => $right, N_points => 200,
- ),
- -func_grid => ds::FGrid(
-     $matrix, ... same as for ds::Grid ...
-              N_points => 200,
-              N_points => [200, 300],
  ),
  
 
 =head1 DESCRIPTION
 
-C<PDL::Graphics::Prima> differentiates between a few kinds of data: Sets,
-Pair collections, and Grids. A Set is an unordered collection of data, such as the
-heights of a class of students. A Pair collection is an collection of x/y
-pairs, such as a time series. A Grid is, well, a matrix, such as the pixel
-colors of a photograph.
+C<PDL::Graphics::Prima> fundamentally conceives of two different kinds of
+data representations. There are pairwise representations, such as line plot
+used to visualize a time series, and there are gridded representations,
+such as raster images used to visualize heat maps (or images). Any data that
+you want to represent must have some way to conceive of itself as either
+pairwise or gridded.
 
-working here - this needs to be cleaned up!
+Of course, there are plenty of things we want to visualize that are not
+pairwise data or grids. For example, what if we want to plot the
+distribution of scores on an exam? In this case, we would probably use a
+histogram. When you think about it, a histogram is just a pairwise
+visual representation. In other words, to visualize a distribution, we have
+to first map the distribution into a pairwise representation, and then
+choose an appropriate way to visualize that representation, in this case a
+histogram.
 
-In addition, there are two derived kinds of datasets when you wish to specify
-a function instead of raw set of data. For example, to plot an analytic function,
-you could use a Function instead of Pairs. This has the advantage that if
-you zoom in on the function, the curve is recalculated and looks smooth instead
-of jagged. Similarly, if you can describe a surface by a function, you can plot
-that function using a function grid, i.e. FGrid.
-
-Once upon a time, this made sense, but it needs to be revised:
-
- At the moment there are two kinds of datasets. The piddle-based datasets have
- piddles for their x- and y-data. The function-based datasets create their
- x-values on the fly and evaluate their y-values using the supplied function
- reference. The x-values are generated using the C<sample_evenly> function which
- belongs to the x-axis's scaling object/class. As such, any scaling class needs
- to implement a C<sample_evenly> function to support function-based datasets.
+So, we have two fundamental ways to represent data, but many possible
+data sets. For pairwise representations, we have L<ds::Pair|/Pair>, the
+basic pairwise DataSet. L<ds::Dist|/Dist> is a derived DataSet which
+includes a binning specification that bins the distribution into bin centers
+(x) and heights (y) to get a pairwise representation. L<ds::Func|/Func>
+is another derived DataSet that generates evenly sampled data based on the
+axis bounds and evaluates the supplied function at those points to get a
+pairwise representation. L<ds::Image|/Image> provides a simple means for
+visualizing images, and L<ds::Grid|/Grid> provides a means for mapping a
+gridded collection of data into an image, using
+L<palettes|PDL::Graphics::Prima::Palette/>.
 
 =head2 Base Class
 
@@ -436,10 +440,10 @@ sub _change_data {
 =cut
 
 ################################################################################
-#                                     Sets                                     #
+#                                     Dist                                     #
 ################################################################################
 
-package PDL::Graphics::Prima::DataSet::Set;
+package PDL::Graphics::Prima::DataSet::Dist;
 use base 'PDL::Graphics::Prima::DataSet::Pair';
 use Carp;
 
@@ -622,7 +626,9 @@ Generates a histogram from the data with linear spacing. The default C<min> is t
 data's minimum, the default C<max> is the data's maximum, the binning will
 C<drop_extremes> by default (i.e. C<< drop_extremes => 1 >>) and the binning
 normalizes the data (i.e. C<< normalize => 1 >>). You can also specify the
-number of bins with C<nbins>. The default is 20.
+number of bins with C<nbins>. The default is 20. If you want empty bins to
+be marked as bad, specify C<< mark_empty_as => 'bad' >>. The default is to
+mark them as zero.
 
 In this case, normalization means that the "integral" of the histogram is
 1, which means that the sum of the heights I<times the widths> is 1.
@@ -665,7 +671,8 @@ use PDL;
 sub Linear {
 	croak('bt::Linear expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, 
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -693,6 +700,9 @@ sub Linear {
 		# Accumulate the counts
 		my $hist = bin_by_data($data => $bounds, $min, $max, $opts{drop_extremes});
 		
+		# Mark empties as bad, if requested
+		$hist = $hist->setvaltobad(0) if $opts{mark_empty_as} eq 'bad';
+		
 		if ($opts{normalize}) {
 			# Normalize by count
 			$hist /= $hist->sumover;
@@ -711,17 +721,33 @@ no PDL::NiceSlice;
 
 =item bt::Log
 
+Generates a histogram from the data with logarithmic spacing. The default
+C<min> is the data's smallest positive value and the default max is the data's
+maximum value. If none of the data is positive, the binning type croaks.
+The binning will C<drop_extremes> by default (i.e. C<< drop_extremes => 1 >>)
+and the binning normalizes the data (i.e. C<< normalize => 1 >>). You can also
+specify the number of bins with C<nbins>. The default is 20. If you want empty bins to
+be marked as bad, specify C<< mark_empty_as => 'bad' >>. The default is to
+mark them as zero.
+
+As with linear binning, normalization means that the "integral" of the histogram is
+1, which means that the sum of the heights I<times the widths> is 1.
+
 =item bt::StrictLog
 
-=back
+Identical to L<bt::Log|/bt::Log>, except that it croaks if it encounters
+B<any> negative values. You can use this in place of L<bt::Log|/bt::Log> to
+sanity check your data.
 
+=back
 
 =cut
 
 sub Log {
 	croak('bt::Log expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20,
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -739,7 +765,8 @@ sub Log {
 sub StrictLog {
 	croak('bt::StrictLog expects key/value pairs but you supplied an odd number of arguments')
 		if @_ % 2 == 1;
-	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20, @_);
+	my %opts = (drop_extremes => 1, normalize => 1, nbins => 20,
+				mark_empty_as => 0, @_);
 	
 	return sub {
 		my ($data, $set_obj) = @_;
@@ -785,6 +812,9 @@ sub logarithmic_binning {
 	# Accumulate the counts
 	my $hist = bin_by_data($data => $bounds, $min, $max, $opts->{drop_extremes});
 	
+	# Mark empties as bad, if requested
+	$hist = $hist->setvaltobad(0) if $opts->{mark_empty_as} eq 'bad';
+
 	if ($opts->{normalize}) {
 		# Normalize by count
 		$hist /= $hist->sumover;
@@ -799,6 +829,48 @@ sub logarithmic_binning {
 	);
 }
 no PDL::NiceSlice;
+
+=item bt::NormFit
+
+"Fits" the distribution between the specified min and max (defaults to the
+data's min and max) to a normal distribution. This bin type does not pay
+attention to the C<drop_extremes> key, but it cares about the C<normalize>
+key. If unspecified (the default), the curve will be scaled so that the area
+underneath it is the number of data points being fit. If normalized, the
+curve will be scaled so that the area under the curve will be 1. You can
+also specify the number of points to use in generating the curves by including
+the C<N_points> key/value pair.
+
+I am pondering allowing the curve's min/max to take the current axis bounds
+min/max if the axes are not autoscaling. Thoughts appreciated.
+
+=cut
+
+sub NormFit {
+	croak('bt::NormFit expects key/value pairs but you supplied an odd number of arguments')
+		if @_ % 2 == 1;
+	my %opts = (normalize => 1, nbins => 20, N_points => 200, @_);
+	
+	return sub {
+		my ($data, $set_obj) = @_;
+		local *__ANNON__ = 'bt::NormFit';
+		
+		my ($min, $max) = get_min_max($data, $opts{min}, $opts{max});
+		my $data_to_analyze = $data->setbadif(($data < $min) | ($data > $max));
+		my ($means, $stdevs) = $data_to_analyze->dummy(1, 1)->statsover;
+		
+		my @dims = $data->dims;
+		$dims[0] = $opts{N_points};
+		my $xs = zeroes(@dims)->xlinvals($min, $max);
+		use PDL::Constants qw(PI);
+		my $ys = exp(-($xs - $means)**2 / 2 / $stdevs**2)
+				/ sqrt(2 * PI) / $stdevs;
+		$ys *= $data_to_analyze->ngoodover->dummy(0)
+			if not $opts{normalize};
+		
+		return ($xs, $ys);
+	};
+}
 
 package PDL::Graphics::Prima::DataSet::Dist;
 our @ISA = qw(PDL::Graphics::Prima::DataSet::Pair);
@@ -937,7 +1009,7 @@ use base 'PDL::Graphics::Prima::DataSet';
 use Carp 'croak';
 use PDL;
 
-=head2 Grids
+=head2 Grid
 
 Grids are collections of data that is regularly ordered in two dimensions. Put
 differently, it is a structure in which the data is described by two indices.
@@ -1895,52 +1967,46 @@ tone.
 
 David Mertens (dcmertens.perl@gmail.com)
 
-=head1 SEE ALSO
+=head1 ADDITIONAL MODULES
 
-This is a component of L<PDL::Graphics::Prima>. This library is composed of many
-modules, including:
+Here is the full list of modules in this distribution:
 
 =over
 
-=item L<PDL::Graphics::Prima>
+=item L<PDL::Graphics::Prima|PDL::Graphics::Prima/>
 
 Defines the Plot widget for use in Prima applications
 
-=item L<PDL::Graphics::Prima::Axis>
+=item L<PDL::Graphics::Prima::Axis|PDL::Graphics::Prima::Axis/>
 
 Specifies the behavior of axes (but not the scaling)
 
-=item L<PDL::Graphics::Prima::DataSet>
+=item L<PDL::Graphics::Prima::DataSet|PDL::Graphics::Prima::DataSet/>
 
 Specifies the behavior of DataSets
 
-=item L<PDL::Graphics::Prima::Internals>
-
-A dumping ground for my partial documentation of some of the more complicated
-stuff. It's not organized, so you probably shouldn't read it.
-
-=item L<PDL::Graphics::Prima::Limits>
+=item L<PDL::Graphics::Prima::Limits|PDL::Graphics::Prima::Limits/>
 
 Defines the lm:: namespace
 
-=item L<PDL::Graphics::Prima::ReadLine>
+=item L<PDL::Graphics::Prima::Palette|PDL::Graphics::Prima::Palette/>
+
+Specifies a collection of different color palettes
+
+=item L<PDL::Graphics::Prima::PlotType|PDL::Graphics::Prima::PlotType/>
+
+Defines the different ways to visualize your data
+
+=item L<PDL::Graphics::Prima::ReadLine|PDL::Graphics::Prima::ReadLine/>
 
 Encapsulates all interaction with the L<Term::ReadLine> family of
 modules.
 
-=item L<PDL::Graphics::Prima::Palette>
-
-Specifies a collection of different color palettes
-
-=item L<PDL::Graphics::Prima::PlotType>
-
-Defines the different ways to visualize your data
-
-=item L<PDL::Graphics::Prima::Scaling>
+=item L<PDL::Graphics::Prima::Scaling|PDL::Graphics::Prima::Scaling/>
 
 Specifies different kinds of scaling, including linear and logarithmic
 
-=item L<PDL::Graphics::Prima::Simple>
+=item L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>
 
 Defines a number of useful functions for generating simple and not-so-simple
 plots
@@ -1952,10 +2018,10 @@ plots
 Portions of this module's code are copyright (c) 2011 The Board of Trustees at
 the University of Illinois.
 
-Portions of this module's code are copyright (c) 2011-2012 Northwestern
+Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-This module's documentation are copyright (c) 2011-2012 David Mertens.
+This module's documentation are copyright (c) 2011-2013 David Mertens.
 
 All rights reserved.
 
