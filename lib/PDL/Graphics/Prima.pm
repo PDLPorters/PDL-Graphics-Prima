@@ -1,7 +1,9 @@
 use strict;
 use warnings;
 
-package PDL::Graphics::Prima;
+############################################################################
+                       package PDL::Graphics::Prima;
+############################################################################
 our $VERSION = 0.12_01;
 
 # Add automatic support for PDL terminal interactivity
@@ -14,8 +16,11 @@ sub import {
 		if PDL::Graphics::Prima::ReadLine->is_happy_with($PERLDL::TERM);
 }
 
-package Prima::Plot;
-use PDL::Lite;
+############################################################################
+                           package Prima::Plot;
+############################################################################
+
+# Prima
 use Prima;
 use Prima::ImageDialog;
 use Prima::MsgBox;
@@ -23,131 +28,37 @@ use Prima::Utils;
 
 use base 'Prima::Widget';
 
+# Error reporting
 use Carp;
+
+# PDL
+use PDL::Lite;
 use PDL::NiceSlice;
 use PDL::Drawing::Prima;
 
-# I will need these graph-specific modules, too:
+# library-specific modules whose functionality I need
 use PDL::Graphics::Prima::Axis;
 use PDL::Graphics::Prima::DataSet;
 
-=head1 NAME
+# Next: use block-comments to describe the purpose of each method.
 
-PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Prima
+######################################
+# Name       : 
+# Arguments  : 
+# Invocation : 
+# Purpose    : 
+# Returns    : 
+# Throws     : 
+# Comments   : 
 
-=head1 SIMPLE SYNOPSIS
-
- use PDL::Graphics::Prima::Simple;
- use PDL;
- 
- 
- # --( Super simple line and symbol plots )--
- 
- # Generate some data - a sine curve
- my $x = sequence(100) / 20;
- my $y = sin($x);
- 
- # Draw x/y pairs. Default x-value are sequential:
- line_plot($y);        line_plot($x, $y);
- circle_plot($y);      circle_plot($x, $y);
- triangle_plot($y);    triangle_plot($x, $y);
- square_plot($y);      square_plot($x, $y);
- diamond_plot($y);     diamond_plot($x, $y);
- X_plot($y);           X_plot($x, $y);
- cross_plot($y);       cross_plot($x, $y);
- asterisk_plot($y);    asterisk_plot($x, $y);
- 
- # Sketch the sine function for x initially from 0 to 10:
- func_plot(0 => 10, \&PDL::sin);
- 
- 
- # --( Super simple histogram )--
- 
- # PDL hist method returns x/y data
- hist_plot($y->hist);
- my ($bin_centers, $heights) = $y->hist;
- hist_plot($bin_centers, $heights);
- # Even simpler, if of limited use:
- hist_plot($heights);
- 
- 
- # --( Super simple matrix plots )--
- 
- # Generate some data - a wavy pattern
- my $image = sin(sequence(100)/10)
-             + sin(sequence(100)/20)->transpose;
- 
- # Generate a greyscale image:
- matrix_plot($image);  # smallest is white
- imag_plot($image);    # smallest is black
- 
- # Set the x and y coordinates for the image boundaries
- #            left, right,  bottom, top
- matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
- imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
- 
- 
- # --( More complex plots )--
- 
- # Use the more general 'plot' function for
- # multiple DataSets and more plotting features:
- my $colors = pal::Rainbow()->apply($x);
- plot(
-     -lines         => ds::Pair($x, $y
-         , plotType => ppair::Lines
-     ),
-     -color_squares => ds::Pair($x, $y + 1
-         , colors   => $colors,
-         , plotType => ppair::Squares(filled => 1)
-     ),
-     
-     x => { label   => 'Time' },
-     y => { label   => 'Sine' },
- );
-
-=head1 WIDGET SYNOPSIS
-
- use PDL;
- use Prima qw(Application);
- use PDL::Graphics::Prima;
- 
- my $t_data = sequence(6) / 0.5 + 1;
- my $y_data = exp($t_data);
- 
- my $wDisplay = Prima::MainWindow->create(
-     text  => 'Graph Test',
-     size  => [300, 300],
- );
- 
- $wDisplay->insert('Plot',
-     -function => ds::Func(\&PDL::exp, color => cl::Blue),
-     -data => ds::Pair($t_data, $y_data, color => cl::Red),
-     pack => { fill => 'both', expand => 1},
- );
- 
- run Prima;
-
-=head1 IF YOU ARE NEW
-
-If you are new to C<PDL::Graphics::Prima>, you should begin by reading the
-documentation for L<PDL::Graphics::Prima::Simple>. This module provides a
-simplified interface for quickly dashing off a few plots and offers stepping
-stones to create more complex plots. Depending on your plotting needs, you may
-not need anything more complicated than L<PDL::Graphics::Prima::Simple>. However,
-C<PDL::Graphics::Prima> offers much greater flexibility and interactivity than
-the options available in the Simple interface, so once you feel comfortable,
-you should come back to this manual page and learn how to create and utilize
-Plot widgets in conjunction with the Prima GUI toolkit.
-
-=head1 DESCRIPTION
-
-PDL::Graphics::Prima is a plotting interface for creating and exploring 2D data
-visualizations. The core of this interace is a Plot widget that can be
-incorporated into Prima applications. 
-
-=cut
-
-# Sets up a default profile for a graph widget
+######################################
+# Name       : profile_default
+# Arguments  : I'm not entirely sure, but it's either the class 
+# Invocation : 
+# Purpose    : Sets up a default profile for a graph widget
+# Returns    : 
+# Throws     : never
+# Comments   : 
 sub profile_default {
 	my %def = %{$_[ 0]-> SUPER::profile_default};
 
@@ -443,19 +354,14 @@ sub get_edge_requirements {
 		$i %= 4;
 	}
 	
-	$requirement[3] += $self->{titleSpace} if $self->{title};
+	$requirement[3] += $self->{titleSpace}
+		if defined $self->{title} and $self->{title} ne '';
 	
 	return @requirement;
 }
 
-=head1 Properties
-
-=head2 title, titleSpace
-
-Sets or gets the string that contains the title and the space allocated for the
-title at the top of the plot.
-
-=cut
+#############################################
+# Name   : 
 
 sub _title {
 	$_[0]->{title} = $_[1];
@@ -482,60 +388,6 @@ sub titleSpace {
 	$_[0]->notify('ChangeTitle');
 }
 
-=head2 x, y
-
-Obtains the object that controls the settings for the x- or
-y-L<axis|PDL::Graphics::Prima::Axis>. For example:
-
- # Set the x-min to -10 and the y-max to auto-scaling
- $plot->x->min(-10);
- $plot->y->max(lm::Auto);
-
-Actually, these accessors are not hard-coded into the plot library. Rather,
-these are the default L<name|Prima::Object>s of the axes. Any object of
-type C<Prima::Component> (which is any object in the Prima object heierarchy)
-that has a name can be accessed from the parent by using the component's
-name as a method on the parent. That is, you can change the name of the
-axis and use the new name:
-
- # Rename the x-axis; be sure it starts with "x", though
- $plot->x->name('xfoo');
- # Change the x-axis' minimum value
- $plot->xfoo->min(-10);
- # This croaks:
- $plot->x->max(20);
-
-This is a L<feature of Prima|Prima::Object/bring>. Eventually, when multiple
-x- and y-axes are allowed, this will allow us to transparently access them by
-name just like we access the single x- and y-axes by name at the moment.
-
-=head2 dataSets
-
-This either sets or returns the
-L<collection|PDL::Graphics::Prima::DataSet/DataSet::Collection> of
-L<DataSet|PDL::Graphics::Prima::DataSet>s. The
-L<DataSet|PDL::Graphics::Prima::DataSet>s are held in a tied
-anonymous hash that you directly manipulate. In order to add a new
-L<DataSet|PDL::Graphics::Prima::DataSet>, you can simply modify the anonymous
-hash in place using standard Perl hash manipulation functions and techniques.
-For example:
-
- # Add a new DataSet
- $plot->dataSets->{new_data} = ds::Pair(
-     $x, $y, plotType => ppair::Squares
- );
- 
- # Remove a DataSet
- delete $plot->dataSets->{model};
- 
- # Clear the DataSets
- %{$plot->dataSets} = ();
-
-Since the hash is actually tied, L<DataSet|PDL::Graphics::Prima::DataSet>s that
-you add will be validated as you add them.
-
-=cut
-
 sub dataSets {
 	# Return the (tied) hash ref if called as a getter:
 	return $_[0]->{dataSets} unless $#_;
@@ -557,12 +409,6 @@ sub dataSets {
 	#$self->notify('ChangeData');
 }
 
-=head2 get_image
-
-Returns a L<Prima::Image> of the plot with same dimensions as the plot widget.
-
-=cut
-
 sub get_image {
 	my $self = shift;
 	
@@ -580,15 +426,6 @@ sub get_image {
 
 use Prima::PS::Drawable;
 use Prima::FileDialog;
-
-=head2 save_to_postscript
-
-Saves the plot with current axis limits to a postscript figure. This method
-takes an optional filename argument. If no filename is specified, it pops-up
-a dialog box to ask the user where and under what name they want to save the
-postscript figure.
-
-=cut
 
 sub save_to_postscript {
 	# Get the filename as an argument, or from the save-as dialog.
@@ -637,15 +474,6 @@ sub save_to_postscript {
 	$ps->end_doc;
 }
 
-=head2 save_to_file
-
-Saves the plot with current axis limits to a raster image file. This method
-takes an optional filename argument, deducing the format (and applicable
-codec) from the filename. If no filename is specified, it creates a dialog
-box asking the user where and under what name they want to save the file.
-
-=cut
-
 # A routine to save the current plot to a rasterized file:
 sub save_to_file {
 	# Get the filename as an argument or from a save-as dialog.
@@ -676,15 +504,6 @@ sub save_to_file {
 		};
 }
 
-=head2 copy_to_clipboard
-
-Copies the plot with current axis limits as a bitmap image to the clipboard.
-The resulting clipboard entry is suitable for pasting into applications that
-know how to handle bitmap images such as LibreOffice or gpaint on Linux,
-Microsoft Office or Windows Paint on Windows.
-
-=cut
-
 sub copy_to_clipboard {
 	my $self = shift;
 	my $image = $self->get_image;
@@ -695,16 +514,6 @@ sub copy_to_clipboard {
 	$clipboard->image($image);
 	$clipboard->close;
 }
-
-=head1 Events
-
-You can send notifications and hook callbacks for the following events:
-
-=head2 ChangeTitle
-
-Called when the title or titleSpace gets changed
-
-=cut
 
 # For a change in title, recompute the autoscaling and issue an immediate
 # repaint. Replotting is not appropriate here as replotting issues a timer
@@ -719,25 +528,12 @@ sub on_changetitle {
 	$::application->yield if defined $::application;
 }
 
-=head2 Replot
-
-Called when the widget needs to replot
-
-=cut
-
 # Sets up a timer in self that eventually calls the paint notification:
 sub on_replot {
 	my ($self) = @_;
 	return if $self->{timer}->get_active;
 	$self->{timer}->start;
 }
-
-=head2 ChangeData
-
-Called when the dataSet container changes (not the datasets themselves, but
-the whole container). 
-
-=cut
 
 # for now, this is a replica of the above:
 *on_changedata = \&on_changetitle;
@@ -1045,6 +841,299 @@ sub on_mouseup {
 
 1;
 
+__END__
+
+=head1 NAME
+
+PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Prima
+
+=head1 SIMPLE SYNOPSIS
+
+ use PDL::Graphics::Prima::Simple;
+ use PDL;
+ 
+ 
+ # --( Super simple line and symbol plots )--
+ 
+ # Generate some data - a sine curve
+ my $x = sequence(100) / 20;
+ my $y = sin($x);
+ 
+ # Draw x/y pairs. Default x-value are sequential:
+ line_plot($y);        line_plot($x, $y);
+ circle_plot($y);      circle_plot($x, $y);
+ triangle_plot($y);    triangle_plot($x, $y);
+ square_plot($y);      square_plot($x, $y);
+ diamond_plot($y);     diamond_plot($x, $y);
+ X_plot($y);           X_plot($x, $y);
+ cross_plot($y);       cross_plot($x, $y);
+ asterisk_plot($y);    asterisk_plot($x, $y);
+ 
+ # Sketch the sine function for x initially from 0 to 10:
+ func_plot(0 => 10, \&PDL::sin);
+ 
+ 
+ # --( Super simple histogram )--
+ 
+ # PDL hist method returns x/y data
+ hist_plot($y->hist);
+ my ($bin_centers, $heights) = $y->hist;
+ hist_plot($bin_centers, $heights);
+ # Even simpler, if of limited use:
+ hist_plot($heights);
+ 
+ 
+ # --( Super simple matrix plots )--
+ 
+ # Generate some data - a wavy pattern
+ my $image = sin(sequence(100)/10)
+             + sin(sequence(100)/20)->transpose;
+ 
+ # Generate a greyscale image:
+ matrix_plot($image);  # smallest is white
+ imag_plot($image);    # smallest is black
+ 
+ # Set the x and y coordinates for the image boundaries
+ #            left, right,  bottom, top
+ matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
+ imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
+ 
+ 
+ # --( More complex plots )--
+ 
+ # Use the more general 'plot' function for
+ # multiple DataSets and more plotting features:
+ my $colors = pal::Rainbow()->apply($x);
+ plot(
+     -lines         => ds::Pair($x, $y
+         , plotType => ppair::Lines
+     ),
+     -color_squares => ds::Pair($x, $y + 1
+         , colors   => $colors,
+         , plotType => ppair::Squares(filled => 1)
+     ),
+     
+     x => { label   => 'Time' },
+     y => { label   => 'Sine' },
+ );
+
+=head1 WIDGET SYNOPSIS
+
+ use PDL;
+ use Prima qw(Application);
+ use PDL::Graphics::Prima;
+ 
+ my $t_data = sequence(6) / 0.5 + 1;
+ my $y_data = exp($t_data);
+ 
+ my $wDisplay = Prima::MainWindow->create(
+     text  => 'Graph Test',
+     size  => [300, 300],
+ );
+ 
+ $wDisplay->insert('Plot',
+     -function => ds::Func(\&PDL::exp, color => cl::Blue),
+     -data => ds::Pair($t_data, $y_data, color => cl::Red),
+     pack => { fill => 'both', expand => 1},
+ );
+ 
+ run Prima;
+
+=head1 IF YOU ARE NEW
+
+If you are new to PDL::Graphics::Prima, you should begin by reading the
+documentation for L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>.
+This module provides a simplified interface for quickly dashing off a few
+plots and offers stepping stones to create more complex plots. Depending on
+your plotting needs, you may not need anything more complicated than
+L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>. However,
+PDL::Graphics::Prima offers much greater flexibility and interactivity than
+the options available in the Simple interface, so once you feel comfortable,
+you should come back to this manual page and learn how to create and utilize
+Plot widgets in conjunction with the L<Prima GUI toolkit|Prima/>.
+
+=head1 DESCRIPTION
+
+PDL::Graphics::Prima is a plotting library for 2D data visualization. The
+core of this library is a Plot widget that can be incorporated into Prima
+applications. Although the library is capable of producing nice looking
+static figures, its killer feature is the GUI environment in which it
+belongs. L<Prima> provides an array of useful interactive widgets and a
+simple but powerful event-based programming model. PDL::Graphics::Prima
+provides a sophisticated plotting library within this GUI framework, letting
+you focus on what you want to visualize rather than the details of how you
+would draw it. These tools allow you to build interactive data
+visualization and analysis applications with sophisticated plotting and
+intuitive user interaction in only a few hundred lines of code.
+
+Like any other widget, a Plot widget can be constructed using the parent
+widget's L<insert method|Prima::Widget/insert>. PDL::Graphics::Prima
+actually defines the bulk of its functionality in the Prima::Plot package,
+so that you can simply say:
+
+ $parent->insert(Plot =>
+     place => {
+         x => 0, relwidth => 0.5, anchor => 'sw',
+         y => 0, relheight => 0.5,
+     },
+     -data => ds::Pair($t_data, $y_data, color => cl::Red),
+     ... etc ...
+ );
+
+Prima::Plot (i.e. PDL::Graphics::Prima) is a descendant of the
+L<Prima::Widget|Prima::Widget/> class, so everything that you can do with
+widgets you can do with plots, including specifying L<event|Prima::Widget/Events>
+L<callbacks|Prima::Object/Events> such as L<mouse|Prima::Widget/Mouse> and
+L<keyboard|Prima::Widget/Keyboard> interaction. You can specify the means
+for placing the plot within a larger parent widget using
+L<basic geometry management|Prima::Widget/Geometry>, or the Tk-like
+L<pack|Prima::Widget::pack/> or L<place|Prima::Widget::place/> specifiers.
+In fact, Prima allows any widget to serve as the container for other widgets,
+so you can insert other widgets (i.e. other plots) into a plot. This serves
+as a simple mechanism for creating sub-plots, though beware: sub-plots are
+not yet correctly rendered in raster or postscript file output.
+
+If you want to add new content to a plot or remove content from a plot, you
+do this by manipulating the L<dataSet collection|/dataSets>. Axis
+L<minima|PDL::Graphics::Prima::Axis/"min, max">,
+L<maxima|PDL::Graphics::Prima::Axis/"min, max">,
+L<scaling|PDL::Graphics::Prima::Axis/scaling>, and
+L<labels|PDL::Graphics::Prima::Axis/label> are handled by
+L<axis objects|PDL::Graphics::Prima::Axis/> which you obtain through the
+L<x and y axis accessors|/"x, y">. You set and manipulate the
+title via the L<title accessor method|/title>.
+
+From the standpoint of basic plot object structure, that's about it!
+
+=head1 Properties
+
+PDL::Graphics::Prima has a number of properties that you can specify in the
+constructor and later change through accessor methods.
+
+=head2 title
+
+Sets or gets the string with the figure's title text. To remove an already
+set title, specify an empty string or the undefined value. Changing this
+issues a L<ChangeTitle> event.
+
+=head2 titleSpace
+
+Sets or gets the number of pixels that would be allocated for the title, if
+the title is set. Changing this issues a L<ChangeTitle> event, even if the
+title text is not presently being displayed.
+
+Note: This is a fairly lame mechanism for specifying the space needed for the
+title. Expect this to change, for the better, in the future. Please drop me
+a note if you use this and need any such changes to be backwards compatible.
+
+=head2 x, y
+
+Obtains the object that controls the settings for the x- or
+y-L<axis|PDL::Graphics::Prima::Axis>. For example:
+
+ # Set the x-min to -10 and the y-max to auto-scaling
+ $plot->x->min(-10);
+ $plot->y->max(lm::Auto);
+
+Actually, these accessors are not hard-coded into the plot library. Rather,
+these are the default L<name|Prima::Object>s of the axes. Any object of
+type Prima::Component (which is any object in the Prima object heierarchy)
+that has a name can be accessed from the parent by using the component's
+name as a method on the parent. That is, you can change the name of the
+axis and use the new name:
+
+ # Rename the x-axis; be sure it starts with "x", though
+ $plot->x->name('xfoo');
+ # Change the x-axis' minimum value
+ $plot->xfoo->min(-10);
+ # This croaks:
+ $plot->x->max(20);
+
+This is a L<feature of Prima|Prima::Object/bring>. Eventually, when multiple
+x- and y-axes are allowed, this will allow us to transparently access them by
+name just like we access the single x- and y-axes by name at the moment.
+
+=head2 dataSets
+
+This is the means by which you add new content to your plot (apart from
+placing sub-figures in there, of course). This either sets or returns the
+L<collection|PDL::Graphics::Prima::DataSet/DataSet::Collection> of
+L<DataSet|PDL::Graphics::Prima::DataSet>s. The
+L<DataSet|PDL::Graphics::Prima::DataSet>s are held in a tied
+anonymous hash that you directly manipulate. In order to add a new
+L<DataSet|PDL::Graphics::Prima::DataSet>, you can simply modify the anonymous
+hash in place using standard Perl hash manipulation functions and techniques.
+For example:
+
+ # Add a new DataSet
+ $plot->dataSets->{new_data} = ds::Pair(
+     $x, $y, plotType => ppair::Squares
+ );
+ 
+ # Remove a DataSet
+ delete $plot->dataSets->{model};
+ 
+ # Clear the DataSets
+ %{$plot->dataSets} = ();
+
+Since the hash is actually tied, L<DataSet|PDL::Graphics::Prima::DataSet>s
+that you add will be validated as you add them.
+
+
+=head1 METHODS
+
+PDL::Graphics::Prima provides a number of methods. Most of these focuse on
+generating images of the plot.
+
+=head2 get_image
+
+Returns a L<Prima::Image> of the plot with same dimensions as the plot widget.
+
+=head2 save_to_postscript
+
+Saves the plot with current axis limits to a postscript figure. This method
+takes an optional filename argument. If no filename is specified, it pops-up
+a dialog box to ask the user where and under what name they want to save the
+postscript figure.
+
+This functionality will likely be merged into save_to_file, though this
+method will remain for backwards compatibility.
+
+=head2 save_to_file
+
+Saves the plot to a raster image file. This method
+takes an optional filename argument, deducing the format (and applicable
+codec) from the filename. If no filename is specified, it creates a dialog
+box asking the user where and under what name they want to save the file.
+
+=head2 copy_to_clipboard
+
+Copies the plot with current axis limits as a bitmap image to the clipboard.
+The resulting clipboard entry is suitable for pasting into applications that
+know how to handle bitmap images such as LibreOffice or gpaint on Linux,
+Microsoft Office or Windows Paint on Windows.
+
+=head1 Events
+
+You can send notifications and hook callbacks for the following events:
+
+=head2 ChangeTitle
+
+Called when the title or titleSpace gets changed
+
+=head2 Replot
+
+Called when the widget needs to replot "real soon", but not immediately.
+Immediate replot requests should go in the form of "Paint" events.
+In order to prevent the system from getting bogged down by too many
+paint requests, replotting kicks off a timer that issues the paint requests
+after a brief period (defaults to 30 milliseconds).
+
+=head2 ChangeData
+
+Called when the dataSet container changes (not the datasets themselves, but
+the whole container). 
+
 =head1 RESPONSIBILITIES
 
 The Plot object itself has to coordinate a number of sub-systems in order to get
@@ -1056,12 +1145,30 @@ author, here is a list of what the plot is responsible for handling.
 =item knowing the plot title
 
 Although the axes are responsible for knowing the axis labels, the plot itself
-is responsible for knowing the plot title.
+is responsible for knowing the plot title and managing the space necessary for
+it.
 
 =item initiating drawing operations
 
 The drawing of the axes, data, and plot title are all coordinated, ultimately,
 by the plot object.
+
+=item managing the dataset container
+
+The plot does not manage the datasets directly, but it owns the dataset
+container that is responsible for providing an API to the container.
+
+=item handling user interaction
+
+All user interaction (which at the moment is limited to mouse interaction) is
+handled by the plot object. Drag and zoom events ultimately lead to changes in
+the axes' minima and maxima (the axes are responsible for these pieces of
+information), but these changes are initiated through the plot object.
+
+=item file generation and clipboard interaction
+
+Requests for raster and postscript output as well as copying the image to
+the clipboard are the responsibility of the plot. 
 
 =item initiating autoscaling
 
@@ -1071,22 +1178,10 @@ Most of the calculations necessary for this operation are performed by the
 dataset and the underlying plotTypes, but they are coordinated and synthesized
 by the plot object.
 
-=item managing the dataset container
-
-The plot does not manage the datasets directly, but it owns the dataset
-container that is responsible for this.
-
-=item handling user interaction
-
-All user interaction (which at the moment is limited to mouse interaction) is
-handled by the plot object. Drag and zoom events ultimately lead to changes in
-the axes' minima and maxima (the axes are responsible for these pieces of
-information), but these changes are initiated through the plot object.
-
 =back
 
 Many things are B<not> the responsiblity of the plot object but are instead
-handled by other objects, usually held as objects within the plot object itself.
+handled by other objects, which are themselves usually held by the plot.
 
 =over
 
@@ -1094,59 +1189,80 @@ handled by other objects, usually held as objects within the plot object itself.
 
 All axis and tick details, including minima and maxima, scaling, tick mark
 locations, axis labels, and conversion from real x and y data values to pixel
-offsets are handled by the axis objects.
+offsets are handled by the axis objects. (The scaling, actually, is managed
+by the scaling object or class that is held by the axis.)
 
 =item managing datasets or plotTypes
 
 The datasets are managed by the dataset collection hashref defined in
 L<PDL::Graphics::Prima::DataSet>. Any access to the datasets (outside of 
 declaring them directly in the constructor, which is a special-case) is managed
-throug the dataSet collection. Any access to the specific plot types are 
+through the dataSet collection. Any access to the specific plot types are 
 themselves handled by the datasets themselves.
 
 =back
 
 =head1 TODO
 
-Idea: set the ability to buffer replot notifications, so that you can fiddle
-with datasets without triggering a replot. That should improve performance when
-multiple datasets are dynamically added and removed. Then again, this is likely
-to be a problem only with very large datasets.
-
 This is not a perfect plotting library. Here are some of the particularly
-annoying issues with it, which I hope to resolve:
+annoying issues with it, which I hope to resolve. This is part warning to
+you, gentle reade, and part task list for me.
 
-adjustable right and bottom margins means mouse scroll-wheel action doesn't
-work exactly as advertised
+Proper drawing of child widgets. Although subplots and insets can be added
+to plot widget, they cannot be drawn to output files like postscript or
+raster formats until this functionality is available.
 
-something's messed up with the x-ticks, and sometimes the left x-tick does not
-line-up with the edge of the horizontal axis line.
+If Prima had an SVG output, I could easily add it as a figure output option.
 
-linear tick scaling can switch the 'natural' major and minor ticks just by
-moving, which makes it seem jittery. The function for determining the major and
-minor ticks should be simplified and based only on the scale of interest.
+I have had it on my list for a while to add the facilities to turn off
+drawing operations,
+temporarily, so that adding a large number of dataSets can be done more
+quickly. This would require some sort of interface such as
 
-singular properties (like C<color>, as opposed to C<colors>) do not Do What You
-Mean. With PlotTypes, they often don't do anything at all. Although I could
-resolve this problem in this library, I would rather address this in
-L<PDL::Drawing::Prima>.
+ $plot->autoupdate(0);
+ ... add datasets ...
+ $plot->autoupdate(1);
 
-Shouldn't singular names => scalars, plural names => piddles be consistent
-across the board? It's not, at least not with the plotTypes.
+I have hit substantial performance problems when B<adding> over 20 datasets. 
+The actual drawing of those datasets and mouse interation is fine, but the
+process of just adding them to the plot can be quite sluggish.
 
-multiple axes. In the constructor, any property that starts with x would be an
+There is essentially no way to tweak the title font, and the means for
+specifying the title space is stupid and nearly useless.
+
+The exact pixel position of the left margin depends on the size of the y-tick
+labels, which can change during the process of zooming in or out. This means
+mouse scroll-wheel action doesn't work exactly as advertised. Well, it does,
+now that I've hedged my advertisement. Still, tracking the previous time of
+a scroll wheel click and the previous x/y location could make it work
+flawlessly.
+
+There is no way to indicate by-hand where the viewport should be. It is
+always calculated from the requirements of the tick labels. There is no way
+to control the padding on the right side of the plot, either; it is fixed.
+All of these should be tweakable.
+
+Singular names => scalars, plural names => piddles is not consistent across
+the board. At least not with all of the plotTypes. This can be fixed by
+changing singular keys to plurals and quietly accepting singulars for
+backwards compatibility, but it hasn't happened yet.
+
+Multiple axes. In the constructor, any property that starts with x would be an
 x-axis (x1, x2, etc). You would have to specify an axes with a dataset, though
 the default would be the first axis when sorted asciibetically. Axes would have
 properties regarding if they are drawn on the top, the bottom, both, etc, and
 whether their tick labels are drawn on the top, bottom, etc.
 
-I am very proud of the automatic scaling. There are two drawbacks. (1) It's
-complicated and not yet well documented. That needs fixing. (2) It could be even
-more awesome. For example, it would be great to be able to specify a minimum 
-pixel padding, as well as an extra pixel padding. This would simply effect how
-collate_min_max_for_many works and should be a snap to implement.
+I am very proud of the automatic scaling. Unfortunately, it's complicated
+and not yet well documented. Also, it could be even more awesome. It needs to
+allow for negative pixel paddings as well as "extra" pixel padding. This
+would simply effect how collate_min_max_for_many works and should be a snap
+to implement. For what it's worth, the collation code should probably be
+rewritten in C.
 
-Handle the titleSpace in a more intelligent way
+Automatic scaling should allow for 'next widest tick' in addition to
+the current super-tight bounds that it calculates. This would make hard-copy
+figures much, much nicer.
 
 =head1 SEE ALSO
 
