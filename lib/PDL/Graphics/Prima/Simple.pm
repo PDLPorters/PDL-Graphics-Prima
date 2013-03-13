@@ -390,15 +390,15 @@ you would want to use a histogram:
 
 Or, you may have an image of data that you want to view.
 
+ use PDL;
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Generate 100 samples with mean 0 and standard deviation 1
+ my $image = rvals(100, 100)
+ matrix_plot($image);
 
-
-
-
-
-
-
-
-
+And you won't be surprised to learn there are many other ways to display x/y
+data, as well. But let's keep moving.
 
 =head2 Adding DataSets
 
@@ -501,40 +501,27 @@ y-label:
      y     => { label => 'displacement (cm)' },
  );
 
-Notice that all arguments to C<plot> are key/value pairs. There is a clean,
-heierarchical structure to the function call, and it is clear simply by
-examining the punctuation which settings go with which piece. For example,
-the L<ppair::Lines|PDL::Graphics::Prima::PlotType/ppair::Lines> argument
-clearly belongs to the L<ds::Pair> 
+Notice that all arguments to L<plot|/"PLOT FUNCTION"> are key/value pairs.
+There is a clean, heierarchical structure to the function call, and it is
+clear simply by examining the punctuation which settings go with which piece.
+For example, the L<ppair::Lines|PDL::Graphics::Prima::PlotType/ppair::Lines>
+argument clearly belongs to the L<ds::Pair>. In this case, we use data
+structures that Perl provides to help convey the structure of the plot we
+are trying to create.
 
-
-
-
-
-
-
-
+=head2 Blocking behavior
 
 Precisely what happens when you call these functions depends on your
-environment and the calling context. When called in void context, these
-functions create a stand-alone window with the plot. In regular Perl scripts,
-the code will block at these function calls until you close the window, but
-when using the PDL shell the functions return immediately, letting you
-peform more calculations or create new plots while keeping other plot windows
-open.
-
-You can only call these functions in scalar context if you are using the pdl
-shell or similar. In that case the return value will be the plot object,
-which will allow you to manipulate it after having invoked the initial plot
-command.
-
-In list context, you get two return values: the window object holding the
-plot and the plot widget. In the PDL shell, the plot window will appear
-immediately, but in Perl scripts, they will not appear until you run the
-Prima event loop or call the C<execute> method on the window.
-
-To make a long story short, you can create interactive plots in a procedural
-mindset instead of a callback/GUI mindset.
+environment. These functions always create a stand-alone window with the plot,
+but they may or may not pause your script or shell while you interact with
+the plot. In regular Perl scripts, the code will block at these function
+calls until you close the window or press 'q' in one of the plot windows. For
+some folks, when using the PDL shell the functions return immediately,
+letting them peform more calculations or create new plots while keeping other
+plot windows open. For other folks, it's possible to go back and forth
+between an active plot and an inactive PDL shell, or an active shell and an
+inactive plot. From the shell, the C<twiddle> function makes the plot active;
+from the plot, pressing 'q' returns focus to the shell.
 
 The main drawback of using the Simple interface instead of the full-blown
 widget interface is that it differs from the normal Prima GUI application
@@ -550,6 +537,9 @@ independent plots in the same window. This is achieved using the full GUI
 toolkit by creating two plot widgets packed into a larger container widget.
 A tutorial for this sort of thing is in the works but hasn't made it into
 the distribution yet. Stay tuned!
+
+Having covered that introductory material, let's cover things a little more
+systematically.
 
 =head1 SIMPLEST FUNCTIONS
 
