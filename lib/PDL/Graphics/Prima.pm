@@ -39,13 +39,13 @@ use PDL::Graphics::Prima::DataSet;
 # Next: use block-comments to describe the purpose of each method.
 
 ######################################
-# Name       : 
-# Arguments  : 
-# Invocation : 
-# Purpose    : 
-# Returns    : 
-# Throws     : 
-# Comments   : 
+# Usage     : ????
+# Purpose   : ????
+# Returns   : ????
+# Arguments : ????
+# Throws    : no exceptions
+# Comments  : none
+# See Also  : n/a
 
 ######################################
 # Name       : profile_default
