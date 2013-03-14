@@ -25,6 +25,9 @@ PDL::Graphics::Prima::Axis - class for axis handling
          scaling => sc::Log,
          # Labels are optional:
          label => 'Time [s]',
+         format_tick => sub {
+            sprintf("%lf", $_)
+         },
      },
      # Details for y-axis:
      y => {
@@ -189,7 +192,9 @@ sub recalculate_edge_requirements {
 	my $largest_width = 0;
 	for (my $i = 0; $i < $Ticks->nelem; $i++) {
 		# Compute its left extent:
-		my $string = sprintf("%1.8g", $Ticks->at($i));
+		my $string = defined $axis->format_tick ?
+                        $axis->format_tick($Ticks->at($i)) :
+                        sprintf("%1.8g", $Ticks->at($i));
 		my $points = $canvas->get_text_box($string);
 		$largest_width = $points->[4] if $points->[4] > $largest_width;
 	}
@@ -705,7 +710,9 @@ sub draw {
 		# Draw all the tick labels
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $x = $Ticks_pixels->at($i);
-			my $string = sprintf("%1.8g", $Ticks->at($i));
+			my $string = defined $axis->format_tick ?
+						$axis->format_tick($Ticks->at($i)) :
+						sprintf("%1.8g", $Ticks->at($i));
 			
 			# Draw the label:
 			$canvas->draw_text($string, $x-80, 0, $x+80, $label_top
@@ -756,7 +763,9 @@ sub draw {
 		my $largest_width = 0;
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $y = $Ticks_pixels->at($i);
-			my $string = sprintf("%1.8g", $Ticks->at($i));
+			my $string = defined $axis->format_tick ?
+						$axis->format_tick($Ticks->at($i)) :
+						sprintf("%1.8g", $Ticks->at($i));
 			
 			# Draw the label:
 			$canvas->draw_text($string
