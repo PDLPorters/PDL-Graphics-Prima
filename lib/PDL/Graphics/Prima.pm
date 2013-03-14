@@ -527,8 +527,9 @@ sub on_changetitle {
 	$self->x->update_edges;
 	$self->y->update_edges;
 	$self->notify('Paint');
-	# Clear the event queue so this hits immediately in the PDL shell
-	$::application->yield if defined $::application;
+	# If running in the PDL shell, clear the event queue so this hits
+	# immediately
+	$::application->yield if defined $PERLDL::TERM;
 }
 
 # Sets up a timer in self that eventually calls the paint notification:
