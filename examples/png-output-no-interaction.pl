@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use PDL;
-use Prima qw(Application noX11);
 use PDL::Graphics::Prima;
 use PDL::NiceSlice;
 
@@ -19,7 +18,6 @@ my $plot = Prima::Plot->create(
 			ppair::Blobs(radius => 4),
 		]
 	),
-	pack => { fill => 'both', expand => 1},
 	x => {
 		label => 'x data',
 	},
@@ -27,8 +25,8 @@ my $plot = Prima::Plot->create(
 		label => 'y data',
 	},
 	title => 'test',
-	width => 300,
-	height => 200,
+	width => 640,
+	height => 480,
 );
 
 $plot->save_to_file('test.png');

@@ -21,11 +21,7 @@ sub import {
 ############################################################################
 
 # Prima
-use Prima;
-use Prima::ImageDialog;
-use Prima::MsgBox;
-use Prima::Utils;
-
+use Prima qw(noX11 Application ImageDialog MsgBox Utils);
 use base 'Prima::Widget';
 
 # Error reporting
@@ -416,6 +412,7 @@ sub get_image {
 	my $image = Prima::Image->create(
 		height => $self->height,
 		width => $self->width,
+		font => $self->font,
 		backColor => $self->backColor,
 	) or die "Can't create an image!\n";
 	$image->begin_paint or die "Can't draw on image";
@@ -446,17 +443,23 @@ sub save_to_postscript {
 	}
 	unlink $filename if -f $filename;
 	
+	# Calculate width and height using the (hopefully standard) rule that
+	# 100px = 72pt = 1in. This doesn't quite work right, still. Compare the
+	# output of the pathological-sizing.pl script to the original raster window.
+	my $scaling_ratio = 72 / 100;
+	my $width = $self->width * $scaling_ratio;
+	my $height = $self->height * $scaling_ratio;
 	# Create the postscript canvas and plot to it:
 	my $ps = Prima::PS::Drawable-> create( onSpool => sub {
 			open my $fh, ">>", $filename;
 			print $fh $_[1];
 			close $fh;
 		},
-		pageSize => [$self->size],
+		pageSize => [$width, $height],
 		pageMargins => [0, 0, 0, 0],
 	);
 	$ps->resolution($self->resolution);
-	$ps->font(size => 16);
+	$ps->font(size => $self->font->{size});
 	
 	$ps->begin_doc
 		or do {

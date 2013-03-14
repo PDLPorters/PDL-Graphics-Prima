@@ -4,11 +4,20 @@ order, i.e. oldest at the top
 
 0.14 DAY, MTH ##, 2013
 
-  * Yet to be written...
-  
   [ENHANCEMENTS]
   
   * Added a Changes file.
+  
+  * Made file output *much* more robust. Postscript and raster file outputs now
+    give results that look nearly identical or identical compared with the
+    figure in the original plot window. Also, a window is not created
+    unnecessarily if the script only uses Prima to create the images.
+  
+  [BUG FIXES]
+  
+  * Fixed png and ps example scripts. These spuriously called PDL::IO::Pic due
+    some experiments I was running. These changes never should have gone into
+    the distribution. Oops.
 
 0.13 Wed, Mar 13, 2013
 
