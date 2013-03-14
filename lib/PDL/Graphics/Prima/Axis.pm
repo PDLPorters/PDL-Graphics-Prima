@@ -25,6 +25,9 @@ PDL::Graphics::Prima::Axis - class for axis handling
          scaling => sc::Log,
          # Labels are optional:
          label => 'Time [s]',
+         format_tick => sub {
+            sprintf("%lf", $_[0])
+         },
      },
      # Details for y-axis:
      y => {
@@ -98,6 +101,10 @@ our @ISA = qw(Prima::Component);
 # Default Profile #
 ###################
 
+sub default_tick_format {
+	return sprintf("%1.8g", $_[0]);
+}
+
 sub profile_default {
 	my %def = %{$_[ 0]-> SUPER::profile_default};
 
@@ -108,6 +115,7 @@ sub profile_default {
 		min => lm::Auto,
 		max => lm::Auto,
 		label => '',
+		format_tick => \&default_tick_format,
 	};
 }
 
@@ -138,6 +146,15 @@ sub init {
 	}
 	# 're'set the label to force the last set of calculations:
 	$self->_label($profile{label});
+	# verify if format_tick is really a subref if it is defined
+	if (defined $profile{format_tick}) {
+		if (ref($profile{format_tick}) eq ref(sub{})) {
+			$self->{format_tick} = $profile{format_tick};
+		}
+		else {
+			croak ("format_tick must be a sub-routine");
+		}
+	}
 	
 	# Process the minima and maxima.
 	if ($profile{min} == lm::Auto) {
@@ -189,7 +206,7 @@ sub recalculate_edge_requirements {
 	my $largest_width = 0;
 	for (my $i = 0; $i < $Ticks->nelem; $i++) {
 		# Compute its left extent:
-		my $string = sprintf("%1.8g", $Ticks->at($i));
+		my $string = $axis->{format_tick}->($Ticks->at($i));
 		my $points = $canvas->get_text_box($string);
 		$largest_width = $points->[4] if $points->[4] > $largest_width;
 	}
@@ -705,7 +722,7 @@ sub draw {
 		# Draw all the tick labels
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $x = $Ticks_pixels->at($i);
-			my $string = sprintf("%1.8g", $Ticks->at($i));
+			my $string = $axis->{format_tick}->($Ticks->at($i));
 			
 			# Draw the label:
 			$canvas->draw_text($string, $x-80, 0, $x+80, $label_top
@@ -756,7 +773,7 @@ sub draw {
 		my $largest_width = 0;
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $y = $Ticks_pixels->at($i);
-			my $string = sprintf("%1.8g", $Ticks->at($i));
+			my $string = $axis->{format_tick}->($Ticks->at($i));
 			
 			# Draw the label:
 			$canvas->draw_text($string
