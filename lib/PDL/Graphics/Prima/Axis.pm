@@ -515,8 +515,10 @@ user or other interaction.
 sub repaint_parent {
 	my $axis = shift;
 	$axis->owner->notify('Paint');
-	# Clear the event queue so this hits immediately in the PDL shell
-	$::application->yield if defined $::application;
+	
+	# If running in the PDL shell, clear the event queue so this hits
+	# immediately
+	$::application->yield if defined $PERLDL::TERM;
 }
 *on_changebounds = \&repaint_parent;
 *on_changescaling = \&repaint_parent;
