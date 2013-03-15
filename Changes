@@ -19,9 +19,13 @@ order, i.e. oldest at the top
     some experiments I was running. These changes never should have gone into
     the distribution. Oops.
 
+
+
 0.13 Wed, Mar 13, 2013
 
   XXX WORKING HERE
+
+
 
 0.12 Mon, Jan 21, 2013
 
@@ -29,13 +33,25 @@ order, i.e. oldest at the top
   
   * Included PDL::Graphics::Prima::ReadLine in the MANIFEST file.
 
+
+
 0.11 Sun, Jan 20, 2013
 
-  XXX WORKING HERE
+  [BUG FIXES]
+  
+  * Inherited autoscaling now works with Callback plot type.
+  
+  [ENHANCEMENTS]
+  
+  * We now have usable postscript output, though it's not perfect.
+
+
 
 0.10 ** SKIPPED **
 
   * Another version bump gone awry.
+
+
 
 0.09 Mon, Aug 6, 2012
 
@@ -51,6 +67,8 @@ order, i.e. oldest at the top
     allowed me to simplify the canvas property handling in PDL::Graphics::Prima.
     It also means that singular properties Just Work now! :-D
 
+
+
 0.08 Sun, Jul 1, 2012
 
   [ENHANCEMENTS]
@@ -59,6 +77,8 @@ order, i.e. oldest at the top
   
   * Super-simple pairwise api functions now accept single piddles as arguments,
     taking them as y-values and creating sequential x-values.
+
+
 
 0.07 Mon, Jun 25, 2012
 
@@ -85,21 +105,31 @@ order, i.e. oldest at the top
   
   * Added image_plot to the Simple interface.
 
+
+
 0.06 ** SKIPPED **
 
   * I hadn't realized that I had already incremented the version number. Oops.
+
+
 
 0.05 Thu, Mar 15, 2012
 
   * Minor docs typo fixes and bug fixes
 
+
+
 0.04 Wed, Feb 29, 2012
 
   * Added dependency on Prima in the Build.PL file
 
+
+
 0.03 Tue, Feb 28, 2012
 
   * Added dependency on PDL in the Build.PL file
+
+
 
 0.02 Sun, Feb 26, 2012
 
@@ -133,7 +163,10 @@ order, i.e. oldest at the top
   
   * Preliminary postscript output.
   
-Entries below are in reverse chronological order, newest first
+
+
+Entries below are in reverse chronological order, newest first, with significant
+dates noted for historical reasons.
 
 0.01 Thu, Dec 22, 2011
 
@@ -148,13 +181,13 @@ Entries below are in reverse chronological order, newest first
   
   * Postscript and clipboard output added.
 
-0.00 Tue, Oct 25, 2011
+Tue, Oct 25, 2011
 
   * Windows is now preliminarily supported.
   
   * DataSets are now plotted in asciibetical order, by name.
 
-0.00 Wed, Oct 19, 2011
+Wed, Oct 19, 2011
 
   * Added PDL::Graphics::Prima::Simple and PDL::Graphics::Prima::Palette.
   
@@ -162,7 +195,7 @@ Entries below are in reverse chronological order, newest first
   
   * Implemented collation-based autoscaling.
 
-0.00 Tue, Sep 20, 2011
+Tue, Sep 20, 2011
 
   * Added pt::Spikes, pt::CallBack, pt::ErrorBars, pt::ColorGrid
   
@@ -175,7 +208,7 @@ Entries below are in reverse chronological order, newest first
   
   * Added logarithmic scaling
 
-0.00 Thu, Feb 3, 2011
+Thu, Feb 3, 2011
 
   * First realization as a widget is completed under the name Prima::Ex::Graph.
     The primary components of the library included Axis.pm, DataSet.pm,
@@ -185,7 +218,7 @@ Entries below are in reverse chronological order, newest first
   
   * Scaling.pm included linear scaling, but not yet logarithmic.
 
-0.00 Thu, Jan 20, 2011
+Thu, Jan 20, 2011
 
   * Basic line plotting, histogram binning and drawing, and axes scaling and
     tick drawing were prototyped in per-widget onDraw callbacks. These callbacks
@@ -194,7 +227,7 @@ Entries below are in reverse chronological order, newest first
   * Very first plotting interface was a Prima::Drawable method called graph(),
     followed shortly by an additional Drawable method called bin()
 
-0.00 Wed, Jan 15, 2011
+Wed, Jan 15, 2011
 
   * Initially conceived as PDL::PrimaPoly, a set of PDL bindings to Prima's
     polyline method. This would eventually grow into PDL::Drawing::Prima.
