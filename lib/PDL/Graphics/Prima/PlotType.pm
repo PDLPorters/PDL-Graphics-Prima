@@ -133,7 +133,7 @@ However, threading like points has one major drawback, which is that it does
 not properly handle line styles. For example, if you wanted a dashed curve,
 you would specify
 
- ppair::Lines(..., lineStyles => lp::Dash)
+ ppair::Lines(..., linePattern => lp::Dash)
 
 When you thread like points, each line segment is treated as a seperate line.
 That mis-applies your dashing style. For large datasets (more than a million
