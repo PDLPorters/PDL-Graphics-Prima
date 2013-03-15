@@ -4,6 +4,13 @@ order, i.e. oldest at the top
 
 0.14 DAY, MTH ##, 2013
 
+  [NEW FEATURES]
+  
+  * Added tick labeling callback (thanks Vikas!). Now users can specify an
+    arbitrary tick labeling function that will be called for each tick that 
+    needs to be labeled, allowing the user to return a string with the desired 
+    label.
+  
   [ENHANCEMENTS]
   
   * Added a Changes file.
