@@ -446,7 +446,7 @@ sub save_to_postscript {
 	# Calculate width and height using the (hopefully standard) rule that
 	# 100px = 72pt = 1in. This doesn't quite work right, still. Compare the
 	# output of the pathological-sizing.pl script to the original raster window.
-	my $scaling_ratio = 72 / 100;
+	my $scaling_ratio = 72.27 / 100;
 	my $width = $self->width * $scaling_ratio;
 	my $height = $self->height * $scaling_ratio;
 	# Create the postscript canvas and plot to it:
