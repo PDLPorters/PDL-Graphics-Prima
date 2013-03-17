@@ -1764,6 +1764,8 @@ sub default_plot {
 		my (undef, $key) = @_;
 		$is_twiddling = 0 if chr($key) =~ /q/i;
 	});
+	# make sure it shows up on top.
+	$window->bring_to_front;
 	
 	# Twiddle, then return. Note that twiddling (defined below) may be a
 	# no-op for configurations where the application loop is already running.
