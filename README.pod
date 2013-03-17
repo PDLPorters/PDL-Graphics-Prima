@@ -21,7 +21,7 @@ L<http://www.youtube.com/watch?v=IE-vnnRWiOg&feature=plcp>.
 
 =head1 INSTALLATION
 
-There are a number of ways to install this module. The simplest is to
+There are a number of ways to install this distribution. The simplest is to
 install it using CPAN:
 
   cpan PDL::Graphics::Prima
@@ -31,7 +31,7 @@ or using cpanm:
   cpanm PDL::Graphics::Prima
 
 If you have your hands on the actual source code (from the git repository
-listed below, or by C<look>ing at this module from the CPAN shell), you
+listed below, or by C<look>ing at this distribution from the CPAN shell), you
 would do the following:
 
   # Unix-like systems       Windows systems
@@ -41,9 +41,9 @@ would do the following:
   ./Build install           Build install
 
 Users of Unix-like systems may need to invoke superuser privileges for the
-installation phase if you install the module to your system Perl. Most Perl
-folks these days avoid tinkering with their system Perl by using L<local::lib>
-or L<App::perlbrew>.
+installation phase if you install the distribution to your system Perl. Most
+Perl folks these days avoid tinkering with their system Perl by using
+L<local::lib> or L<App::perlbrew>.
 
 Note that there are almost no tests for this distribution at the moment.
 Frankly, I'm not sure exactly how to go about testing this sort of
@@ -55,9 +55,9 @@ in the source distribution if you want to take the library for a spin.
 
 =head1 DEPENDENCIES
 
-This module depends on L<PDL::Drawing::Prima>, which has an important and
-nontrivial list of dependencies. However, if you have that module installed,
-this module should work.
+This distribution depends on L<PDL::Drawing::Prima>, which has an important and
+nontrivial list of dependencies. However, if you have that distribution
+installed, this one should work.
 
 L<PDL::Graphics::Prima> requires Perl 5.8. If you don't have that version of
 Perl, I recommend installing Strawberry Perl if you're on Windows, or using
@@ -82,20 +82,20 @@ follow it on Github and contribute your thoughts as it progresses.
 
 =head1 COPYRIGHT AND LICENCE
 
-Portions of this module's code are copyright (c) 2011 The Board of Trustees at
-the University of Illinois.
+Unless otherwise stated, all contributions in code and documentation are
+copyright (c) their respective authors, all rights reserved.
 
-Portions of this module's code are copyright (c) 2011-2012 Northwestern
+Portions of this distribution's code are copyright (c) 2011 The Board of
+Trustees at the University of Illinois.
+
+Portions of this distribution's code are copyright (c) 2011-2013 Northwestern
 University.
 
-This module's documentation are copyright (c) 2011-2012 David Mertens.
+Portions of this distribution's documentation are copyright (c) 2011-2013 David
+Mertens.
 
-All rights reserved.
-
-This module is free software; you can redistribute it and/or
+This distribution is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
-Author: David Mertens <dcmertens.perl.csharp@gmail.com>
+Primary Author: David Mertens <dcmertens.perl@gmail.com>
 
-Note that my email is intentionally obfuscated. Knowing that I am a
-Perl programmer, you can probably remove the part that does not belong.

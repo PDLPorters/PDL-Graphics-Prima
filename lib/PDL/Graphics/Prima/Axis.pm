@@ -944,6 +944,17 @@ correctly.
 When drawing, I need to have the axes query the Scaling to see if any special
 drawing needs to happen. I am thinking at the moment about broken axes.
 
+=item better high-zoom handling
+
+Right now when a user zooms in very narrowly on some nonzero region, the tick
+labels get longer and longer. It would be nice to have some graceful way of
+only displaying the significant digits. For example, rather than tick labels
+of 12.279850. 12.279855, 12.279860, 12.279865, and 12.279870, perhaps the *axis*
+label could say "<thing> as 12.2798xx <units>" and then the tick labels would
+just be 50, 55, 60, 65, and 70. This, again, would require some interaction with
+the scaling to know what to do. Also, it would be difficult to get this to play
+nicely with the format_tick capabilities just added.
+
 =back
 
 =head1 AUTHOR
@@ -998,15 +1009,17 @@ plots
 
 =head1 LICENSE AND COPYRIGHT
 
+Unless otherwise stated, all contributions in code and documentation are
+copyright (c) their respective authors, all rights reserved.
+
 Portions of this module's code are copyright (c) 2011 The Board of Trustees at
 the University of Illinois.
 
 Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-This module's documentation are copyright (c) 2011-2013 David Mertens.
-
-All rights reserved.
+Portions of this module's documentation are copyright (c) 2011-2013 David
+Mertens.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

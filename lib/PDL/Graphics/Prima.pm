@@ -39,13 +39,13 @@ use PDL::Graphics::Prima::DataSet;
 # Next: use block-comments to describe the purpose of each method.
 
 ######################################
-# Name       : 
-# Arguments  : 
-# Invocation : 
-# Purpose    : 
-# Returns    : 
-# Throws     : 
-# Comments   : 
+# Usage     : ????
+# Purpose   : ????
+# Returns   : ????
+# Arguments : ????
+# Throws    : no exceptions
+# Comments  : none
+# See Also  : n/a
 
 ######################################
 # Name       : profile_default
@@ -446,7 +446,7 @@ sub save_to_postscript {
 	# Calculate width and height using the (hopefully standard) rule that
 	# 100px = 72pt = 1in. This doesn't quite work right, still. Compare the
 	# output of the pathological-sizing.pl script to the original raster window.
-	my $scaling_ratio = 72 / 100;
+	my $scaling_ratio = 72.27 / 100;
 	my $width = $self->width * $scaling_ratio;
 	my $height = $self->height * $scaling_ratio;
 	# Create the postscript canvas and plot to it:
@@ -1337,15 +1337,17 @@ plots
 
 =head1 LICENSE AND COPYRIGHT
 
+Unless otherwise stated, all contributions in code and documentation are
+copyright (c) their respective authors, all rights reserved.
+
 Portions of this module's code are copyright (c) 2011 The Board of Trustees at
 the University of Illinois.
 
 Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-This module's documentation are copyright (c) 2011-2013 David Mertens.
-
-All rights reserved.
+Portions of this module's documentation are copyright (c) 2011-2013 David
+Mertens.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
