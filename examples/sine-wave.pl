@@ -14,11 +14,16 @@ plot(
 	},
 );
 
+#my $to_tick = 'a' x 5;
+my $to_tick = 0;
+use Time::Piece;
 plot(
 	-data => ds::Pair($x, cos $x),
 	title => 'Cosine Wave',
 	x => {
 		scaling => sc::Log,
+#		format_tick => sub { return gmtime($_[0])->hms },
+		format_tick => sub { $to_tick++ },
 	},
 	onKeyUp => sub {
 		print "You pressed a key!\n";
