@@ -220,12 +220,29 @@ in the C<pal> namespace.
 
 =item pal::Rainbow
 
-Runs from red->orange->yellow->green->blue->purple->red in ascending order.
+Runs from red->orange->yellow->green->blue->purple in ascending order.
 
 =cut
 
 sub pal::Rainbow {
-	return PDL::Graphics::Prima::Palette::HSVrange->new;
+	return pal::RainbowSV(1, 1);
+}
+
+=item pal::RainbowSV
+
+Runs from red->orange->yellow->green->blue->purple in ascending order. The two
+arguments it accepts are the saturation and value, which it holds uniformly.
+This makes it much easier to create palettes that can be easily seen against a
+white background. For example, the yellow from this palette is much eaiser to
+see against a white background than the yellow from pal::Rainbow:
+
+ pal::RainbowSV(1, 0.8)
+
+=cut
+
+sub pal::RainbowSV {
+	croak("You must supply a saturation and a value") unless @_ == 2;
+	return pal::HSVrange([0, @_] => [300, @_]);
 }
 
 =item pal::BlackToWhite
@@ -330,7 +347,7 @@ and final hue, saturation and value.
 For example, this creates a palette that runs from red (H=360) to blue
 (H=240):
 
- my $blue_to_red = pal::HSVrange([1, 1, 360] => [1, 1, 240]);
+ my $blue_to_red = pal::HSVrange([360, 1, 1] => [240, 1, 1]);
 
 If you know the L<Prima name of your color|Prima::Const/cl>, you can use the
 conversion functions provided by

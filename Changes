@@ -1,15 +1,25 @@
-Put changes under the appropriate header. Headers can include API CHANGES, BUG
-FIXES, ENHANCEMENTS, NEW FEATURES, and OTHER. Entries should be in chronological
-order, i.e. oldest at the top
+Put changes under the appropriate header. Headers can include API CHANGES, 
+DIFFERENT BEHAVIOR, BUG FIXES, ENHANCEMENTS, NEW FEATURES, and OTHER. Entries
+should be in chronological order, i.e. oldest at the top
 
 0.14 DAY, MTH ##, 2013
 
+  [DIFFERENT BEHAVIOR]
+  
+  * The rainbow palette now runs for hue values from 0 to 300 instead of 0 to
+    360. The problem with the original behavior is that the smallest and largest
+    values were nearly identical, and indistinguishable. However, it also
+    removes a sixth of the color spectrum from the palette.
+  
   [NEW FEATURES]
   
   * Added tick labeling callback (thanks Vikas!). Now users can specify an
     arbitrary tick labeling function that will be called for each tick that 
     needs to be labeled, allowing the user to return a string with the desired 
     label.
+  
+  * Added pal::RainbowSV to make less-than-bright rainbow palettes eaiser to
+    create.
   
   [ENHANCEMENTS]
   
