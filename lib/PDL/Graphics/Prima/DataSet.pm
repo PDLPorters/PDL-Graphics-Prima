@@ -639,10 +639,17 @@ In this case, normalization means that the "integral" of the histogram is
 sub bin_by_data {
 	my ($data, $bounds, $min, $max, $drop_extremes) = @_;
 	
-	my $is_within_bounds = ($min <= $data) & ($data <= $max);
+	# Find the bin indices to increment. If the bad value flag is set, vsearch
+	# gives us an annoying warning; however, the bad value itself is very likely
+	# to be outside the min and max, so we will temporarily turn it off for the
+	# vsearch and restore it when we're done.
+	my $orig_bad_flag = $data->badflag;
+	$data->badflag(0);
 	my $idx = vsearch($data, $bounds);
+	$data->badflag($orig_bad_flag);
 	
 	# Safety guard so indadd doesn't choke
+	my $is_within_bounds = ($min <= $data) & ($data <= $max);
 	$idx->where(!$is_within_bounds) .= 1;
 	# The actual minimum value will have idx 0, all others will be offest
 	# by 1, so adjust:
