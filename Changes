@@ -30,6 +30,10 @@ should be in chronological order, i.e. oldest at the top
     figure in the original plot window. Also, a window is not created
     unnecessarily if the script only uses Prima to create the images.
   
+  * Added proper handling of weird/bad values for annotation positions. Now, if
+    you specify a position that includes 'bad, 'inf', or 'nan', the annotation
+    machinery will Just Work, by skipping the annotation drawing.
+  
   [BUG FIXES]
   
   * Fixed png and ps example scripts. These spuriously called PDL::IO::Pic due

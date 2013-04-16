@@ -1730,17 +1730,16 @@ use Carp;
 
 This method standardizes and typo-checks position specifications. The
 specification can be either a string or an anonymous hash; the return value
-is an anonymous hash. If you pass in a bad spec, the method croaks. You call
-it like any other method:
+is an anonymous hash. If you pass in a malformed spec, the method croaks. You
+call it like any other method:
 
  $hash = $note_obj->parse_position($spec);
 
-A position
-specification is a powerful and flexible means for specifying a location on
-a plot widget as a combination of data values, pixel offsets, multiples of
-the current width of the letter C<M>, and a percentage of the current plot
-portion of the widget. I think best in terms of examples, so here are a
-couple that hopefully illustrate how this works.
+A position specification is a powerful and flexible means for specifying a
+location on a plot widget as a combination of data values, pixel offsets,
+multiples of the current width of the letter C<M>, and a percentage of the
+current plot portion of the widget. I think best in terms of examples, so here
+are a couple that hopefully illustrate how this works.
 
 If passed as a y-specification, i.e. top or bottom specification, this will
 pick a location that is one M-width below the upper axis. If passed as an
@@ -1790,12 +1789,19 @@ reason, C<parse_position> assumes that if you specified your position by
 hand with a hash rather than with a specification string, you know what
 you are doing.
 
+One final note: if the specification string includes weird or bad values, it
+returns a hash with the "bad" key set to true, i.e. C<{bad => 1}>, and nothing
+else. This is interpreted by C<compute_position> as a bad value. Strings that
+will trip bad value handling include "bad", "nan", and "inf". Presently, a
+warning is issued every time such a value is encountered; the issuance of the
+warning may become a configurable option some day.
+
 To translate the resulting hash into a pixel position on the plot widget,
 use C<compute_position>.
 
 =cut
 
-my %allowed_entries = map {$_ => 1} qw(em pct px raw);
+my %allowed_entries = map {$_ => 1} qw(em pct px raw bad);
 my $float_point_regex = qr/[-+]?([0-9]*\.?[0-9]+|[0-9]+\.[0-9]*)([eE][-+]?[0-9]+)?/;
 sub parse_position {
 	my ($self, $spec) = @_;
@@ -1814,6 +1820,13 @@ sub parse_position {
 		$spec = lc $spec;
 		
 		my %hash;
+		
+		# Handle special/annoying values. Warnings for this need to be more
+		# configurable.
+		if ($spec =~ m/[+-]?(bad|nan|inf)/) {
+			warn "Found $1 in position spec; ignoring position\n";
+			return { bad => 1 };
+		}
 		
 		# Pull out the different parts, one at a time
 		if ($spec =~ s/($float_point_regex)em//) {
@@ -1867,6 +1880,9 @@ Prima's drawing operations. If any of the values in the position hash are
 piddles, the result will be a piddle of positions that can be sent to the
 drawing operations provided by L<PDL::Drawing::Prima>.
 
+This value has special handling for bad values. If the bad key is set in the
+position hash, a piddle with a lone bad value is returned.
+
 This method expects a position hash of the form built (or verified) by
 C<parse_position>.
 
@@ -1874,6 +1890,9 @@ C<parse_position>.
 
 sub compute_position {
 	my ($self, $position_hash, $axis, $ratio) = @_;
+	
+	# Special-case weird value handling
+	return pdl(1)->setvaltobad(1) if $position_hash->{bad};
 	
 	# Start with the raw data, or undef
 	my $rel_position;
@@ -2199,6 +2218,12 @@ sub compute_collated_min_max_for {
 sub draw {
 	my ($self, $canvas, $ratio) = @_;
 	
+	# Parse the position and back out if it's bad
+	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
+	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
+	return if PDL::Core::topdl($x)->isbad->all
+		or PDL::Core::topdl($x)->isbad->all;
+	
 	# Back up the clip rectangle
 	my @clip_rect = $canvas->clipRect;
 	
@@ -2213,9 +2238,6 @@ sub draw {
 	elsif (lc $clipRect ne 'normal') {
 		croak('Text Annotation clipRect must be "normal", "canvas", or a four-element array');
 	}
-	
-	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
-	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
 	
 	# Set the properties for the text drawing operation and back up the old
 	# properties
