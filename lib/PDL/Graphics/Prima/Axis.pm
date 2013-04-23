@@ -682,6 +682,8 @@ sub draw {
 	# of the viewable area so that we can do fancy tick labeling that slides
 	# off the edge
 	my ($em_width, $em_height) = $axis->em_dims;
+	$em_width *= $ratio;
+	$em_height *= $ratio;
 	my ($Ticks, $ticks) = $axis->get_Ticks_and_ticks($ratio);
 	
 	# Rescale to pixels:
@@ -701,7 +703,12 @@ sub draw {
 	
 	if ($axis->name =~ /^x/) {
 		# Ensure the tick marks are exactly clipped:
-		$canvas->clipRect($clip_left, 0, $clip_right, $canvas->height);
+		$canvas->clipRect($clip_left-0.5, 0, $clip_right, $canvas->height);
+		
+		# Tweak for postscript output (though perhaps this should be applied to
+		# all vector formats)
+		$canvas->clipRect($clip_left-1.8, 0, $clip_right+0.3, $canvas->height)
+			if $canvas->isa('Prima::PS::Drawable');
 
 		# Draw the minor tick marks:
 		$canvas->pdl_lines($ticks_pixels, $top_bottom, $ticks_pixels, $top_bottom + $tick_size
@@ -709,8 +716,9 @@ sub draw {
 		# Draw the major tick marks:
 		$canvas->pdl_lines($Ticks_pixels, $top_bottom, $Ticks_pixels, $top_bottom + $Tick_size
 				, lineWidth => 2);
-		# Draw lines on the top/bottom:
-		$canvas->pdl_lines($left_right->at(0,0), $top_bottom, $left_right->at(0,1), $top_bottom
+		# Draw lines on the top/bottom, drawing wider so that the edges are
+		# correctly handled by the clipping
+		$canvas->pdl_lines($left_right->at(0,0)-3, $top_bottom, $left_right->at(0,1)+1, $top_bottom
 				, lineWidth => 2);
 		
 		# Figure out the top of the axis labels:
@@ -775,6 +783,7 @@ sub draw {
 		my $largest_width = 0;
 		for (my $i = 0; $i < $Ticks->nelem; $i++) {
 			my $y = $Ticks_pixels->at($i);
+			$y += $em_height/6 if $canvas->isa('Prima::PS::Drawable');
 			my $string = $axis->{format_tick}->($Ticks->at($i));
 			
 			# Draw the label:
