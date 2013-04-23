@@ -707,7 +707,7 @@ sub draw {
 		
 		# Tweak for postscript output (though perhaps this should be applied to
 		# all vector formats)
-		$canvas->clipRect($clip_left-1.8, 0, $clip_right+0.3, $canvas->height)
+		$canvas->clipRect($clip_left-1.75, 0, $clip_right+0.3, $canvas->height)
 			if $canvas->isa('Prima::PS::Drawable');
 
 		# Draw the minor tick marks:
