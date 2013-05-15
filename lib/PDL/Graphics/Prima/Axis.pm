@@ -282,9 +282,15 @@ indicating whether or not the Auto flag is set.
 sub _min {
 	my ($self, $new_value) = @_;
 	my ($value, $is_auto) = ($self->{minValue}, $self->{minAuto});
-
+	
 	if (not defined $new_value) {
-		# do nothing
+		# Handle the case of degenerate min/max in the getter. I suppose I
+		# should always correct the value, since I return the original value
+		# both in the getter and the setter, but I want to avoid unnecessary
+		# logic in the setter if I can get away with it. See also _max and
+		# minmax.
+		($value) = $self->scaling->min_max_for_degenerate($value)
+			if $self->{minValue} == $self->{maxValue};
 	}
 	elsif ($new_value == lm::Auto) {
 		$self->{minAuto} = 1;
@@ -300,7 +306,13 @@ sub _min {
 		$self->{minAuto} = 0;
 		croak("Invalid minimum value: $@")
 			unless ($self->{scaling}->is_valid_extremum($new_value));
-		$self->{minValue} = $new_value;
+		# Check for degeneracy
+		if ($self->_max == $new_value) {
+			my ($min, $max) = $self->owner->compute_min_max_for($self->name);
+		}
+		else {
+			$self->{minValue} = $new_value;
+		}
 	}
 	
 	return $value unless wantarray;
@@ -324,7 +336,13 @@ sub _max {
 	my ($value, $is_auto) = ($self->{maxValue}, $self->{maxAuto});
 	
 	if (not defined $new_value) {
-		# do nothing
+		# Handle the case of degenerate min/max in the getter. I suppose I
+		# should always correct the value, since I return the original value
+		# both in the getter and the setter, but I want to avoid unnecessary
+		# logic in the setter if I can get away with it. See also _min and
+		# minmax.
+		(undef, $value) = $self->scaling->min_max_for_degenerate($value)
+			if $self->{minValue} == $self->{maxValue};
 	}
 	elsif ($new_value == lm::Auto) {
 		$self->{maxAuto} = 1;
@@ -378,16 +396,17 @@ followed by max(lm::Auto).
 
 =cut
 
-# working here - eventually, cache the min and max calculations
-
 {
 	# Create the minmax function without issuing a redefinition warning
 	no warnings 'redefine';
 
 	sub minmax {
-		my @minmax = ($_[0]->{minValue}, $_[0]->{maxValue});
-		if (@_ > 1) {
-			my ($self, $min, $max) = @_;
+		my $self = shift;
+		my @minmax = ($self->{minValue}, $self->{maxValue});
+		@minmax = $self->scaling->min_max_for_degenerate($minmax[0])
+			if $minmax[0] == $minmax[1];
+		if (@_ > 0) {
+			my ($min, $max) = @_;
 			# Handle autoscaling specially. When both autoscale, the
 			# recompute should only happen once:
 			if ($min == lm::Auto and $max == lm::Auto) {
@@ -579,6 +598,8 @@ sub reals_to_relatives {
 	my ($axis, $dataset, $min, $max) = @_;
 	$min = $axis->{minValue} unless defined $min;
 	$max = $axis->{maxValue} unless defined $max;
+	($min, $max) = $axis->scaling->min_max_for_degenerate($min)
+		if $min == $max;
 	return $axis->{scaling}->transform($min, $max, $dataset);
 }
 
@@ -586,6 +607,8 @@ sub relatives_to_reals {
 	my ($axis, $dataset, $min, $max) = @_;
 	$min = $axis->{minValue} unless defined $min;
 	$max = $axis->{maxValue} unless defined $max;
+	($min, $max) = $axis->scaling->min_max_for_degenerate($min)
+		if $min == $max;
 	return $axis->{scaling}->inv_transform($min, $max, $dataset);
 }
 
