@@ -1802,12 +1802,17 @@ sub auto_twiddle {
 
 # Make twiddling a no-op if we're in the perldl shell and have event_loop
 # support:
+use Scalar::Util qw(refaddr);
 if (PDL::Graphics::Prima::ReadLine->is_setup) {
 	*twiddle = sub {};
 }
 # Otherwise, make it run the event loop:
 else {
 	*twiddle = sub {
+		# twiddling should be a no-op if the plot function is not default_plot,
+		# which is the case for App::Prima::REPL
+		return if refaddr(\&plot) != refaddr(\&default_plot);
+		
 		# No event looping if we don't have any open windows. Otherwise,
 		# they won't be able to exit the loop!
 		print "No open plots\n" and return if $N_windows == 0;

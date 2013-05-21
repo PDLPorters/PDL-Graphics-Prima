@@ -39,6 +39,11 @@ should be in chronological order, i.e. oldest at the top
   * Fixed png and ps example scripts. These spuriously called PDL::IO::Pic due
     some experiments I was running. These changes never should have gone into
     the distribution. Oops.
+  
+  * The twiddle() method of Simple now does nothing if Simple's plot() method is
+    overwritten. Overwriting the plot() method is supported, but code that
+    called twiddle() after calling said overwritten plot() would cause the
+    script to hang with now way to exit the event loop.
 
 
 
