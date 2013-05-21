@@ -43,7 +43,7 @@ should be in chronological order, i.e. oldest at the top
   * The twiddle() method of Simple now does nothing if Simple's plot() method is
     overwritten. Overwriting the plot() method is supported, but code that
     called twiddle() after calling said overwritten plot() would cause the
-    script to hang with now way to exit the event loop.
+    script to hang with no way to exit the event loop.
 
 
 
