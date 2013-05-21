@@ -27,9 +27,10 @@ sub setup {
 				. "This is provided in Term::ReadLine v1.09 or newer");
 	}
 	
-	# Weird, we must call the import method for this to work, even though
-	# I don't need any functions imported (because we call yield by its fully
-	# qualified name).
+	# We must call the import method for this to work, even though we don't need
+	# need any functions imported. The reason is that Prima sets up the
+	# application object during the import if it hasn't already been set up (by
+	# a previous call to Prima::Application::import).
 	require Prima::Application;
 	Prima::Application->import;
 	
