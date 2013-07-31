@@ -44,6 +44,9 @@ should be in chronological order, i.e. oldest at the top
     overwritten. Overwriting the plot() method is supported, but code that
     called twiddle() after calling said overwritten plot() would cause the
     script to hang with no way to exit the event loop.
+  
+  * The default apply() method in PDL::Graphics::Prima::Palette now correctly
+    supplies its arguments to the supplied subref.
 
 
 

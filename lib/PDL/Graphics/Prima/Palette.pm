@@ -105,7 +105,7 @@ returns a piddle of Prima color values given a piddle of scalar values.
 # A basic palette knows how to apply itself to a set of data. The basic
 # palette invokes the subroutine reference supplied in the apply key:
 sub apply {
-	my ($self, $data) = shift;
+	my ($self, $data) = @_;
 	return $self->{apply}->($data);
 }
 
