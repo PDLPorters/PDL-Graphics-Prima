@@ -1,6 +1,6 @@
 Put changes under the appropriate header. Headers can include API CHANGES, 
-DIFFERENT BEHAVIOR, BUG FIXES, ENHANCEMENTS, NEW FEATURES, and OTHER. Entries
-should be in chronological order, i.e. oldest at the top
+DIFFERENT BEHAVIOR, BUG FIXES, DEPENDENCIES, ENHANCEMENTS, NEW FEATURES, and
+OTHER. Entries should be in chronological order, i.e. oldest at the top
 
 0.14 DAY, MTH ##, 2013
 
@@ -52,7 +52,53 @@ should be in chronological order, i.e. oldest at the top
 
 0.13 Wed, Mar 13, 2013
 
-  XXX WORKING HERE
+  [API CHANGES]
+  
+  * Deprecated lm::Hold to make way for a new limit, lm::NextTick, to be
+    developed in the future.
+  
+  * Renamed ds::Set to ds::Dist.
+  
+  * Removed pset::CDF; see ds::Dist.
+  
+  [DIFFERENT BEHAVIOR]
+  
+  * Slightly repositioned the x-axis label so that tails on letters like 'y'
+    are no longer clipped with postscript output.
+  
+  [ENHANCEMENTS]
+  
+  * Made palettes much more robust.
+  
+  * Numerous property handling improvements.
+  
+  * Reduced the number of circular dependencies (and therefore memory leaks).
+    I'm sure there are other circular references, but at least a good many of
+    them were removed.
+  
+  * Made annotation datasets more robust.
+  
+  * Axis Component objects can now have arbitrary names.
+  
+  * Improved ReadLine detection and integration, and added support for twiddling.
+  
+  * Improved binning behavior for ppair::Histogram when bin boundaries are
+    not identical.
+  
+  * Lots of documentation updates.
+  
+  [BUG FIXES]
+  
+  * Fixed non-functioning matrix_plot and imag_plot, which had been broken
+    since December of 2011!
+  
+  [NEW FEATURES]
+  
+  * Added bin types for ds::Dist, including bt::CDF, bt::Linear, bt::Log,
+    and bt::StrictLog.
+  
+  * Created ds::Dist, which inherits from ds::Pair and can use all plot types
+    from that distribution type.
 
 
 
