@@ -605,7 +605,7 @@ sub on_paint {
 	$self->y->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top, $ratio);
 	
 	# Draw the title:
-	if ($self->{titleSpace}) {
+	if (defined $self->{title} and $self->{title} ne '' and $self->{titleSpace}) {
 		my ($width, $height) = $canvas->size;
 		# Set up the font characteristics:
 		my $font_height = $canvas->font->height;
