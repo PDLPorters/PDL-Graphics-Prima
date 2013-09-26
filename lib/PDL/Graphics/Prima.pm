@@ -64,15 +64,22 @@ sub profile_default {
 
 	return {
 		%def,
-		# default properties go here
+		# default properties follow
+		
+		# Title basics
 		title => '',
-		titleSpace => 80,
+		titleSpace => '2lines',
+		titleFont => { height => '1.5x', style => fs::Bold },
+		
 		backColor => cl::White,
+		
 		# replot duration in milliseconds
 		replotDuration => 30,
 		# Blank profiles for the axes:
 		x => {},
 		y => {},
+		
+		# Other important and basic settings
 		selectable => 1,
 		buffered => 1,
 	};
@@ -99,9 +106,10 @@ sub init {
 	my $self = shift;
 	my %profile = $self->SUPER::init(@_);
 	
-	# Set the labels and title:
-	$self->{title} = $profile{title};
-	$self->{titleSpace} = $profile{titleSpace};
+	# Set the title properties
+	$self->_title($profile{title});
+	$self->_titleSpace($profile{titleSpace});
+	$self->_titleFont(%{$profile{titleFont}});
 	
 	# Create the x- and y-axis objects, overriding the owner and axis name
 	# properties if they are set in the profile.
@@ -130,8 +138,6 @@ sub init {
 			$self->repaint;
 		}
 	);
-	
-	$self->{log} = 'test';
 	
 	# Create an empty dataset array and tie it to the DataSetHash class:
 	my %datasets;
@@ -372,7 +378,7 @@ sub get_edge_requirements {
 		$i %= 4;
 	}
 	
-	$requirement[3] += $self->{titleSpace}
+	$requirement[3] += $self->titleSpace
 		if defined $self->{title} and $self->{title} ne '';
 	
 	return @requirement;
@@ -387,9 +393,11 @@ sub get_edge_requirements {
 # Arguments    : $self
 #              : an optional title string, or an optional undef
 # Returns      : In get mode, the title; in set mode, the newly set title.
-# Side Effects : Issues a ChangeTitle notification.
+# Side Effects : Issues a ChangeTitle notification, which will cause the
+#              : y-extent of the graph to change when the title goes from unset
+#              : to set, or set to unset.
 # Throws       : never
-# Comments     : 
+# Comments     : None
 # See Also     : titleSpace, on_changetitle, on_paint, ChangeTitle
 
 sub _title {
@@ -403,19 +411,160 @@ sub title {
 	return $_[0]->{title};
 }
 
+sub _titleFont {
+	my $self = shift;
+	
+	# Return a copy of the current font hash if this is a getter
+	return %{$self->{titleFont}} if @_ == 0;
+	
+	# Otherwise store the provided font hash, overwriting the previous one
+	$self->{titleFont} = { @_ };
+}
+
+sub titleFont {
+	$_[0]->notify('ChangeTitle') if @_ > 1;
+	goto \&_titleFont;
+}
+
+# Assumes that begin_paint or begin_paint_info have already been called.
+sub _set_title_font {
+	my ($self, $canvas) = (shift, shift);
+	
+	# Get a copy of the title font hash and process any relative sizes
+	my %title_font_hash = $self->_titleFont;
+	SETTING: for my $setting ( qw(height width size) ) {
+		next SETTING unless exists $title_font_hash{$setting};
+		if ($title_font_hash{$setting} =~ /(.*)\%width/) {
+			$title_font_hash{$setting} = $canvas->width * $1 / 100;
+		}
+		elsif ($title_font_hash{$setting} =~ /(.*)\%height/) {
+			$title_font_hash{$setting} = $canvas->height * $1 / 100;
+		}
+		elsif ($title_font_hash{$setting} =~ /(.*)x/) {
+			$title_font_hash{$setting} = $canvas->font->{$setting} * $1;
+		}
+	}
+	
+	# Set it
+	$canvas->font(%title_font_hash);
+}
+
+sub _title_font_height {
+	my ($self, $canvas) = (shift, shift);
+	# Set up the paint info state. This will fail if we're already in paint
+	# info state, in which case we will not want to clear it at the end:
+	my $will_clear_paint_info = $canvas->begin_paint_info;
+	
+	# Backup the font, change to the title font, and compute
+	my $font = $canvas->font;
+	$self->_set_title_font($canvas);
+	my $height = $canvas->font->height;
+	
+	# Restore the widget to the previous state
+	$canvas->font($font);
+	$canvas->end_paint_info if $will_clear_paint_info;
+	
+	# All done
+	return $height;
+}
+
+######################################
+# Usage        : my $title_space = $plot->titleSpace; # get
+#              : $plot->titleSpace(40);               # set
+#              : $plot->titleSpace('10% - 5px');      # set
+#              : $plot->title(0);                     # hide
+#              : $plot->title(undef);                 # hide
+# Purpose      : Gets or sets the plot's titleSpace.
+# Arguments    : $self
+#              : an optional title height in pixels
+# Returns      : In get mode, the titleSpace; in set mode, the new height
+# Side Effects : Issues a ChangeTitle notification, which will cause the
+#              : y-extent of the graph to change.
+# Throws       : when the new titleSpace is not a nonnegative integer
+# Comments     : An argument of undef is treated as zero, and stored as such.
+#              : Note that this mechanism is not very powerful at the moment.
+#              : It is likely to be extended to allow for specification in terms
+#              : of canvas height or width, em-width, and other parameters. See
+#              : PDL::Graphics::Prima::PlotType::Annotation's spec_string
+#              : handling to get an idea for what I have in mind.
+# See Also     : title, on_changetitle, on_paint, ChangeTitle
+
+my %allowed_entries = map {$_ => 1} qw(pixels canvas_pct lines);
+my $float_point_regex = qr/[-+]?([0-9]*\.?[0-9]+|[0-9]+\.[0-9]*)([eE][-+]?[0-9]+)?/;
 sub _titleSpace {
 	my ($self, $new_space) = @_;
-	croak("titleSpace must be a positive integer")
-		unless $new_space =~ /^\d+$/;
+	$new_space = 0 if not defined $new_space;
 	
-	# working here - tie in to sizeMin, sizeMax, and other things
-	$self->{titleSpace} = $new_space;
+	# special-cases for a subref or nonnegative integer: just set it
+	if (ref($new_space) eq ref(sub{})
+		or ref($new_space) eq ref('scalar') and $new_space =~ /^\d+$/
+	) {
+		$self->{titleSpace} = $new_space;
+		return;
+	}
+	# Special case for hashref: check and set if it passes
+	if (ref($new_space) eq 'HASH') {
+		# Make sure the entries are valid
+		for my $key (keys %$new_space) {
+			croak("titleSpace hash has invalid key $key")
+				unless $allowed_entries{$key};
+		}
+		# Good to go; set it
+		$self->{titleSpace} = $new_space;
+		return;
+	}
+	
+	# Otherwise we have a height spec to parse
+	my $spec = {};
+	$new_space =~ s/\s+//g;
+	$new_space = lc $new_space;
+
+	if ($new_space =~ s/($float_point_regex)lines?//) {
+		$spec->{lines} = $1;
+	}
+	if ($new_space =~ s/($float_point_regex)\%//) {
+		$spec->{canvas_pct} = $1 / 100;
+	}
+	if ($new_space =~ s/($float_point_regex)px//) {
+		$spec->{pixels} = $1;
+	}
+	if (length($new_space) > 0) {
+		croak("Unknown fragment in titleSpace specification: $new_space");
+	}
+	
+	# All done parsing.
+	$self->{titleSpace} = $spec;
 }
 
 sub titleSpace {
-	return $_[0]->{titleSpace} unless $#_;
-	$_[0]->_titleSpace($_[1]);
-	$_[0]->notify('ChangeTitle');
+	my $self = shift;
+	
+	# Handle the setter case
+	if (@_) {
+		$self->_titleSpace(@_);
+		$self->notify('ChangeTitle');
+		return $self->titleSpace;
+	}
+	
+	# OK, the rest of this is for the getter code
+	
+	# First the simple one: a plain number
+	return $self->{titleSpace} unless ref($self->{titleSpace});
+	
+	# Next the subref, which requires an invocation:
+	return $self->titleSpace->($self)
+		if ref($self->{titleSpace}) eq ref(sub{});
+	
+	# We can only reach here if we have a hashref, which requires calculation
+	my $spec_hash = $self->{titleSpace};
+	my $titleSpace = 0;
+	$titleSpace += $spec_hash->{pixels} if exists $spec_hash->{pixels};
+	$titleSpace += $spec_hash->{canvas_pct} * $self->height
+		if exists $spec_hash->{canvas_pct};
+	$titleSpace += $self->_title_font_height($self) * $spec_hash->{lines}
+		if exists $spec_hash->{lines};
+	
+	return $titleSpace;
 }
 
 sub dataSets {
@@ -639,23 +788,22 @@ sub on_paint {
 	$self->y->draw($canvas, $clip_left, $clip_bottom, $clip_right, $clip_top, $ratio);
 	
 	# Draw the title:
-	if (defined $self->{title} and $self->{title} ne '' and $self->{titleSpace}) {
+	if (defined $self->{title} and $self->{title} ne '') {
+		my $backup_font = $canvas->font;
 		my ($width, $height) = $canvas->size;
-		# Set up the font characteristics:
-		my $font_height = $canvas->font->height;
-		$canvas->font->height($font_height * 1.5);
-		my $style = $canvas->font->style;
-		$canvas->font->style(fs::Bold);
+		# Compute the titleSpace before changing anything
+		my $titleSpace = $self->titleSpace;
+		# Set up the title font
+		$self->_set_title_font($canvas);
 		
 		# Draw the title:
-		$canvas->draw_text($self->{title}, 0, $height - $self->{titleSpace} * $ratio
+		$canvas->draw_text($self->{title}, 0, $height - $titleSpace * $ratio
 				, $width, $height
 				, dt::Center | dt::VCenter | dt::NewLineBreak | dt::NoWordWrap
 				| dt::UseExternalLeading);
 		
 		# Reset the font characteristics:
-		$canvas->font->height($font_height);
-		$canvas->font->style($style);
+		$canvas->font($backup_font);
 	}
 }
 
