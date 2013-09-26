@@ -245,7 +245,9 @@ sub update_edges {
 	return unless $self->{minAuto} or $self->{maxAuto};
 	my ($min, $max) = $self->owner->compute_min_max_for($self->name);
 	
-	# Weird but important edge case: do nothing if undef was returned:
+	# Important edge case: when there is no data, or no displayable data (all
+	# bad values or something), we will get undef. We need to be careful to not
+	# be thrown off by that possible return value.
 	if (defined $min and defined $max) {
 		$self->{minValue} = $min if $self->{minAuto};
 		$self->{maxValue} = $max if $self->{maxAuto};

@@ -6,12 +6,31 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
 
   [DIFFERENT BEHAVIOR]
   
+  * As mentioned in the NEW FEATURES, it is now possible to specify the title
+    font specification with much greater precision. I have never been very happy
+    with the default title font or spacing, so with this change I have taken the
+    liberty of updating it. The font height now scales with the size of the plot
+    widget, and the title space now scales with the font size, making the title
+    size and spacing much more sensible for user interaction (i.e. resizing).
+    This is expected to have negative impacts for animations if not handled
+    carefully, but those impacts have not been benchmarked yet.
+  
   * The rainbow palette now runs for hue values from 0 to 300 instead of 0 to
     360. The problem with the original behavior is that the smallest and largest
     values were nearly identical, and indistinguishable. However, it also
     removes a sixth of the color spectrum from the palette.
   
   [NEW FEATURES]
+  
+  * There is a new property for setting the title's font, called titleFont. In
+    addition to the normal settings, you can also indicate that the font size,
+    width, and/or height should be percentages of the canvas's width or height,
+    or a multiple of the canvas's font's feature.
+  
+  * The titleSpace property is now much more flexible. In additon to the integer
+    number of pixels for the title space, the property now accepts either a
+    subref that is expected to compute the titleSpace (in pixels) or a specially
+    formatted string for a set of pre-canned calculations.
   
   * Added tick labeling callback (thanks Vikas!). Now users can specify an
     arbitrary tick labeling function that will be called for each tick that 

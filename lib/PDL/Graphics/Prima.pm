@@ -68,8 +68,8 @@ sub profile_default {
 		
 		# Title basics
 		title => '',
-		titleSpace => '2lines',
-		titleFont => { height => '1.5x', style => fs::Bold },
+		titleSpace => '1line',
+		titleFont => { height => '10%height' },
 		
 		backColor => cl::White,
 		
@@ -186,7 +186,7 @@ sub compute_min_max_for {
 	
 	# Special handling for x-axis stuff:
 	my (undef, $y_max_is_auto) = $self->y->max;
-	if ($axis_name eq 'x' and $y_max_is_auto) {
+	if ($axis_name =~ /x/ and $y_max_is_auto) {
 		# First perform all of this on y so that the edge requirements are
 		# correctly computed for x-calculations later.
 		
@@ -649,7 +649,7 @@ sub save_to_postscript {
 			my $message = "Error generating Postscript output: $@";
 			if (defined $::application) {
 				Prima::MsgBox::message($message, mb::Ok);
-				carp $message;
+				carp($message);
 			}
 			else {
 				croak($message);
@@ -682,7 +682,7 @@ sub save_to_file {
 			my $message = "Error generating figure output: $@";
 			if (defined $::application) {
 				Prima::MsgBox::message($message, mb::Ok);
-				carp $message;
+				carp($message);
 			}
 			else {
 				croak($message);
@@ -744,9 +744,15 @@ sub on_replot {
 
 sub on_paint {
 	my ($self, $canvas) = @_;
+	$canvas = $self if not defined $canvas;
+	
+	# Ensure we are in a paint state. I thought that the Paint notification
+	# always took care of this, but apparently not. :-(
+	my $previous_paint_state = $canvas->get_paint_state;
+	$canvas->end_paint_info if $previous_paint_state == 2;
+	$canvas->begin_paint if $previous_paint_state != 1;
 	
 	# Clear the canvas:
-	$canvas = $self if not defined $canvas;
 	$canvas->clear;
 	
 	# Get the clipping rectangle for the actual drawing space:
@@ -805,6 +811,9 @@ sub on_paint {
 		# Reset the font characteristics:
 		$canvas->font($backup_font);
 	}
+	
+	$canvas->end_paint if $previous_paint_state != 1;
+	$canvas->begin_paint_info if $previous_paint_state == 2;
 }
 
 # working here - the InputLine widget uses Prima::MouseScroller from IntUtils
@@ -1014,8 +1023,8 @@ sub on_mouseup {
 						)->start;
 					}],
 					['~Autoscale' => sub {
-							$self->x->minmax(lm::Auto, lm::Auto);
-							$self->y->minmax(lm::Auto, lm::Auto);
+						$self->x->minmax(lm::Auto, lm::Auto);
+						$self->y->minmax(lm::Auto, lm::Auto);
 					}],
 				],
 			));
@@ -1202,15 +1211,98 @@ Sets or gets the string with the figure's title text. To remove an already
 set title, specify an empty string or the undefined value. Changing this
 issues a L<ChangeTitle> event.
 
+=head2 titleFont
+
+Sets or gets a set of key/value pairs that indicate how the title font should
+differ from the widget's font. For example, if you want to have your plot title
+rendered in Arial but have all other font properties the same, you could say
+
+ $plot->titleFont( name => 'Arial' );
+
+If you later want to set the style to underlined, you could say this:
+
+ $plot->titleFont( $plot->titleFont, style => fs::Underlined );
+
+Notice that I call C<< $plot->titleFont >> as an I<argument> to the method.
+This ensures that the font formatting I have already specified (the Arial font
+name) is not wiped out with the font update.
+
+In addition to the normal font properties (as discussed in L<the Fonts section
+of Prima::Drawable|Prima::Drawable/Fonts>, there are also a couple of important
+extensions for sizes that I have implemented explicitly for title fonts. You can
+specify dynamic font height, size, and width using strings with special
+suffixes. These suffixes include:
+
+ <number>%height
+ <number>%width
+ <number>x
+
+The C<%height> suffix will compute the height, width, or size to be a percentage
+of the widget's height, so if you widget is 100 pixels tall, a height
+specification of C<10%height> will cause your font height to be 10 pixels. If
+you resize your widget to 200 pixels, the title height will automatically scale
+to 20 pixels. The third specification specifies a multiple of the widget's font
+value, so a height of C<1.5x> will be 1.5 times higher than the widget's default
+font size. This way, if you change the size of the font (and therefore the axis
+label and tick label sizes), your title font will automatically adjust, too.
+
+The default titleFont is C<< height => '10%height' >>.
+
+Note that Prima's font system does not allow for arbitrary font sizes, so if you
+pick a font size of 18 pixels, it only be able to find a means for rendering the
+font as 19 pixels. But usually, Prima can get pretty close.
+
 =head2 titleSpace
 
-Sets or gets the number of pixels that would be allocated for the title, if
-the title is set. Changing this issues a L<ChangeTitle> event, even if the
-title text is not presently being displayed.
+Sets or gets the titleSpace property for the plot widget. You can set the
+titleSpace property with an integer, a subref, a string, or a hashref. The
+string will be parsed into a hashref, so the return value when you query this
+property as a getter is going to be an integer, a subref, or a hashref.
 
-Note: This is a fairly lame mechanism for specifying the space needed for the
-title. Expect this to change, for the better, in the future. Please drop me
-a note if you use this and need any such changes to be backwards compatible.
+If you specify an integer, that will be the number of pixels used to display
+the title. This requres the fewest calculations when rendering, and makes sense
+if you set the font's height or size to an explicit value rather than a dynamic
+one. But this is also the least adaptable way to specify the titleSpace. You
+could use this as
+
+ $plot->titleSpace(50);
+
+On the other extreme, you can specify a subref. The subref should accept the
+widget as its sole argument and compute and return the titleSpace dynamically.
+For example:
+
+ # Set the titleSpace to be the square root of the widget height
+ $plot->titleSpace( sub {
+     my $widget = shift;
+     return sqrt($widget->height);
+ });
+
+In the middle, you can specify a dynamic titleSpace with a string representing
+a sum of values with special units. An example of such a string looks like this:
+
+ $plot->titleSpace('5% + 1line - 10pixels')
+
+This would lead to a dynamic height of 5% of the canvas height plus the font
+height less 10 pixels. You could also specify this with a hashref of
+
+ $plot->titleSpace({
+     canvas_percent => 0.05,
+     lines          => 1,
+     pixels         => -10,
+ });
+
+Notice that negative and positive values are allowed, and it is quite possible
+that your dynamic calculation will end up with a net negative value (which is
+not allowed if you specify a bare integer number of pixels). So, if your title
+is just not visible, it may be because you have a faulty titleSpace
+specification.
+
+The default titleSpace is C<1line>.
+
+Note that although string speficifications are parsed only once (into a hashref
+representation), these dynamic sizes lead to more calculations than a bare pixel
+height or subref. If your goal is to have a title with fast rendering times, you
+should probably avoid dynamic sizes.
 
 =head2 x, y
 
