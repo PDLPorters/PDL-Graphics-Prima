@@ -39,22 +39,26 @@ use PDL::Graphics::Prima::DataSet;
 # Next: use block-comments to describe the purpose of each method.
 
 ######################################
-# Usage     : ????
-# Purpose   : ????
-# Returns   : ????
-# Arguments : ????
-# Throws    : no exceptions
-# Comments  : none
-# See Also  : n/a
+# Usage        : ????
+# Purpose      : ????
+# Arguments    : ????
+# Returns      : ????
+# Side Effects : none
+# Throws       : no exceptions
+# Comments     : none
+# See Also     : n/a
 
 ######################################
-# Name       : profile_default
-# Arguments  : I'm not entirely sure, but it's either the class 
-# Invocation : 
-# Purpose    : Sets up a default profile for a graph widget
-# Returns    : 
-# Throws     : never
-# Comments   : 
+# Usage        : Not used directly; this is invoked by Prima's inherited
+#              : constructor.
+# Purpose      : Sets up a default profile for a graph widget
+# Arguments    : The (completely uninitialized) object
+# Returns      : a hashref
+# Side Effects : none
+# Throws       : never
+# Comments     : none
+# See Also     : init
+
 sub profile_default {
 	my %def = %{$_[ 0]-> SUPER::profile_default};
 
@@ -74,7 +78,23 @@ sub profile_default {
 	};
 }
 
-# This initializes self's data from the profile:
+######################################
+# Usage        : Not used directly; this is invoked by Prima's inherited
+#              : constructor.
+# Purpose      : Initializes self's data from the profile.
+# Arguments    : $self, as yet uninitialized
+#              : a list of key => value pairs corresponding to the list of
+#              : arguments provided to the constructor, merged with the default
+#              : profile.
+# Returns      : A list of key => value pairs suitable for a profile hash.
+# Side Effects : none
+# Throws       : if unable to initialize the x/y axes from their associated
+#              : constructor hashrefs
+# Comments     : This has a lot of logic for setting defaults. It might not be
+#              : a bad idea to refactor some of this out, so that a Plot widget
+#              : can be reset to a default state.
+# See Also     : profile_default
+
 sub init {
 	my $self = shift;
 	my %profile = $self->SUPER::init(@_);
@@ -134,6 +154,8 @@ sub init {
 	# Turn the axis autoscaling back on:
 	$self->{x}->{initializing} = 0;
 	$self->{y}->{initializing} = 0;
+	
+	return %profile;
 }
 
 # This is key: *this* is what triggers autoscaling for the first time
@@ -356,8 +378,19 @@ sub get_edge_requirements {
 	return @requirement;
 }
 
-#############################################
-# Name   : 
+######################################
+# Usage        : my $title_string = $plot->title; # get
+#              : $plot->title('new title');       # set
+#              : $plot->title(undef);             # clear
+#              : $plot->title('');                # clear
+# Purpose      : Gets, sets, or clears the plot's title.
+# Arguments    : $self
+#              : an optional title string, or an optional undef
+# Returns      : In get mode, the title; in set mode, the newly set title.
+# Side Effects : Issues a ChangeTitle notification.
+# Throws       : never
+# Comments     : 
+# See Also     : titleSpace, on_changetitle, on_paint, ChangeTitle
 
 sub _title {
 	$_[0]->{title} = $_[1];
@@ -367,6 +400,7 @@ sub title {
 	return $_[0]->{title} unless $#_;
 	$_[0]->_title($_[1]);
 	$_[0]->notify('ChangeTitle');
+	return $_[0]->{title};
 }
 
 sub _titleSpace {
