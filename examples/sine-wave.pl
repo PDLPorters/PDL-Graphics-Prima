@@ -22,8 +22,6 @@ plot(
 	title => 'Cosine Wave',
 	x => {
 		scaling => sc::Log,
-#		format_tick => sub { return gmtime($_[0])->hms },
-		format_tick => sub { $to_tick++ },
 	},
 	onKeyUp => sub {
 		print "You pressed a key!\n";
