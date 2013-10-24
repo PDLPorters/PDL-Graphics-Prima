@@ -748,9 +748,11 @@ sub on_paint {
 	
 	# Ensure we are in a paint state. I thought that the Paint notification
 	# always took care of this, but apparently not. :-(
-	my $previous_paint_state = $canvas->get_paint_state;
-	$canvas->end_paint_info if $previous_paint_state == 2;
-	$canvas->begin_paint if $previous_paint_state != 1;
+#	my $previous_paint_state = $canvas->get_paint_state;
+#	$| = 1;
+#	print "\rPaint state is $previous_paint_state";
+#	$canvas->end_paint_info if $previous_paint_state == 2;
+#	$canvas->begin_paint if $previous_paint_state != 1;
 	
 	# Clear the canvas:
 	$canvas->clear;
@@ -811,14 +813,16 @@ sub on_paint {
 		# Reset the font characteristics:
 		$canvas->font($backup_font);
 	}
-	
-	$canvas->end_paint if $previous_paint_state != 1;
-	$canvas->begin_paint_info if $previous_paint_state == 2;
+	else {
+		# UGLY HACK to get clean, non-flickering canvas redrawing. Setting and
+		# clearing the paint or paint info state causes flicker, and not setting
+		# and clearing the paint or paint info state leads to no plot updates.
+		# However, setting the font seems to fix the problem!!
+		$canvas->font($canvas->font);
+	}
+#	$canvas->end_paint if $previous_paint_state != 1;
+#	$canvas->begin_paint_info if $previous_paint_state == 2;
 }
-
-# working here - the InputLine widget uses Prima::MouseScroller from IntUtils
-# to handle things, and it appears to work. Maybe this can give me something
-# that works better cross-platform.
 
 # For mousewheel events, we zoom in or out. However, if they're over the axes,
 # only zoom in or out for that axis.
