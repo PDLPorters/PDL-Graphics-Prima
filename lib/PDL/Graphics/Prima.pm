@@ -398,7 +398,7 @@ sub get_edge_requirements {
 #              : to set, or set to unset.
 # Throws       : never
 # Comments     : None
-# See Also     : titleSpace, on_changetitle, on_paint, ChangeTitle
+# See Also     : titleSpace, on_changetitle, draw_plot, ChangeTitle
 
 sub _title {
 	$_[0]->{title} = $_[1];
@@ -487,7 +487,7 @@ sub _title_font_height {
 #              : of canvas height or width, em-width, and other parameters. See
 #              : PDL::Graphics::Prima::PlotType::Annotation's spec_string
 #              : handling to get an idea for what I have in mind.
-# See Also     : title, on_changetitle, on_paint, ChangeTitle
+# See Also     : title, on_changetitle, draw_plot, ChangeTitle
 
 my %allowed_entries = map {$_ => 1} qw(pixels canvas_pct lines);
 my $float_point_regex = qr/[-+]?([0-9]*\.?[0-9]+|[0-9]+\.[0-9]*)([eE][-+]?[0-9]+)?/;
@@ -599,7 +599,7 @@ sub get_image {
 		backColor => $self->backColor,
 	) or die "Can't create an image!\n";
 	$image->begin_paint or die "Can't draw on image";
-	$self->on_paint($image);
+	$self->draw_plot($image);
 	$image->end_paint;
 	return $image;
 }
@@ -656,7 +656,7 @@ sub save_to_postscript {
 			}
 		};
 	
-	$self->on_paint($ps);
+	$self->draw_plot($ps);
 	$ps->end_doc;
 }
 
@@ -743,19 +743,28 @@ sub on_replot {
 }
 
 sub on_paint {
+	my $self = shift;
+	
+	# If the paint state is not enabled, issue a repaint, which will ultimately
+	# re-invoke this method, but in a paint-enabled state. This achieves the
+	# same purpose as something like this:
+	#   $self->begin_paint;
+	#   $self->on_paint;
+	#   $self->end_paint
+	# but it does not flicker the way that the above code does.
+	return $self->repaint if $self->get_paint_state != 1;
+	
+	# Otherwise, clear the canvas and invoke our plot drawing routine on ourself
+	$self->clear;
+	$self->draw_plot($self);
+}
+
+# This is the actual functionality for drawing on the canvas. This was once part
+# of on_paint, but was pulled out so that it can be overridden by subclasses
+# without having to deal with the vagaries of getting the paint state right.
+# Again, this is *meant* to be overridden. :-)
+sub draw_plot {
 	my ($self, $canvas) = @_;
-	$canvas = $self if not defined $canvas;
-	
-	# Ensure we are in a paint state. I thought that the Paint notification
-	# always took care of this, but apparently not. :-(
-#	my $previous_paint_state = $canvas->get_paint_state;
-#	$| = 1;
-#	print "\rPaint state is $previous_paint_state";
-#	$canvas->end_paint_info if $previous_paint_state == 2;
-#	$canvas->begin_paint if $previous_paint_state != 1;
-	
-	# Clear the canvas:
-	$canvas->clear;
 	
 	# Get the clipping rectangle for the actual drawing space:
 	my ($clip_left, $clip_bottom, $right_edge, $top_edge)
@@ -813,15 +822,6 @@ sub on_paint {
 		# Reset the font characteristics:
 		$canvas->font($backup_font);
 	}
-	else {
-		# UGLY HACK to get clean, non-flickering canvas redrawing. Setting and
-		# clearing the paint or paint info state causes flicker, and not setting
-		# and clearing the paint or paint info state leads to no plot updates.
-		# However, setting the font seems to fix the problem!!
-		$canvas->font($canvas->font);
-	}
-#	$canvas->end_paint if $previous_paint_state != 1;
-#	$canvas->begin_paint_info if $previous_paint_state == 2;
 }
 
 # For mousewheel events, we zoom in or out. However, if they're over the axes,

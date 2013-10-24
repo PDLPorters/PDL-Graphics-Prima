@@ -4,6 +4,14 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
 
 0.14 DAY, MTH ##, 2013
 
+  [API CHANGES]
+  
+  * Meaningful drawing now happens in the draw_plot method. Changes in the title 
+    drawing revealed a subtle bug in the on_paint method. This bug is most 
+    easily solved by factoring the plot drawing code into its own function. 
+    Subclasses of Prima::Plot that wish to modify how the widget implements its 
+    drawing should override draw_plot, not on_paint.
+  
   [DIFFERENT BEHAVIOR]
   
   * As mentioned in the NEW FEATURES, it is now possible to specify the title
