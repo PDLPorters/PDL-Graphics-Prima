@@ -599,6 +599,7 @@ sub get_image {
 		backColor => $self->backColor,
 	) or die "Can't create an image!\n";
 	$image->begin_paint or die "Can't draw on image";
+	$image->clear;
 	$self->draw_plot($image);
 	$image->end_paint;
 	return $image;
