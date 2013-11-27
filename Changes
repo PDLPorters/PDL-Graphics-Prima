@@ -50,6 +50,9 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   
   [ENHANCEMENTS]
   
+  * Different means for renderinging a plot on a raster image are now documented
+    and tested.
+  
   * Added a Changes file.
   
   * Made file output *much* more robust. Postscript and raster file outputs now

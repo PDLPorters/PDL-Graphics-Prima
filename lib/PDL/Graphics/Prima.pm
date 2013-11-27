@@ -4,7 +4,7 @@ use warnings;
 ############################################################################
                        package PDL::Graphics::Prima;
 ############################################################################
-our $VERSION = 0.13_01;
+our $VERSION = 0.13_02;
 
 # Add automatic support for PDL terminal interactivity
 use PDL::Graphics::Prima::ReadLine;
@@ -744,7 +744,16 @@ sub on_replot {
 }
 
 sub on_paint {
-	my $self = shift;
+	my ($self, $canvas) = @_;
+	
+	# We need to handle the case of this canvas not being this widget.
+	if (defined $canvas and $canvas != $self) {
+		$canvas->begin_paint;
+		$canvas->clear;
+		$self->draw_plot($canvas);
+		$canvas->end_paint;
+		return;
+	}
 	
 	# If the paint state is not enabled, issue a repaint, which will ultimately
 	# re-invoke this method, but in a paint-enabled state. This achieves the
@@ -1416,6 +1425,75 @@ after a brief period (defaults to 30 milliseconds).
 
 Called when the dataSet container changes (not the datasets themselves, but
 the whole container). 
+
+=head1 DRAWING A PLOT TO AN IMAGE
+
+Most L<methods|PDL::Graphics::Prima/METHODS> that are not properties provide
+means for generating images from a plot. Sometimes it is useful to draw a plot
+on a pre-formed image. Let's look at the different machanisms for doing this.
+
+For a point of comparison, if you simply want a L<raster image|Prima::Image/>
+object from a plot, you should simply obtain it from the plot object with
+the L<get_image|PDL::Graphics::Prima/get_image> method:
+
+ my $image = $plot->get_image;
+
+However, what if you already have an L<image object|Prima::Image/> upon which
+you want to draw your plot? There are at least two circumstances when you might
+want to do this: first if you are creating many raster images from plots and
+want to avoid memory re-allocations, and second if you have in image with some
+annotations on it already. (Beware the first reason: it is likely a premature
+optimization.) To draw the plot on an already-formed image, you can use the
+L<draw_image|PDL::Graphics::Prima/draw_image> method like so:
+
+ $some_image->begin_paint;
+ $some_image->clear;
+ ... other painting here ...
+ $plot->draw_image($some_image);
+ ... more painting ...
+ $some_image->end_paint;
+
+The L<draw_image|PDL::Graphics::Prima/draw_image> method is the preferred way to
+drawn a plot onto a pre-existing image. It gives you a bit more control of how
+the painting is invoked: for example, it does not clear the canvas for you. But
+with the increased control comes increased manual manipulation: you need to set
+the image in the paint-enabled state before invoking it, and you need to clear
+the canvas before getting started.
+
+There is one more means for rendering a plot on an image, which arises if you
+are invoking the L<Paint Event|Prima::Widget/Paint> from an arbitrary widget
+into a canvas. In that case, you should be able to say this:
+
+ $some_widget->notify('Paint', $some_image);
+ # This will set up a notification, which will not proces
+ # until the next tick in the event loop. If you need the
+ # image to be updated immediately, invoke a tick:
+ $::application->yield;
+
+Painting on an image by invoking the L<Paint Event|Prima::Widget/Paint> is
+similar to the L<draw_image|PDL::Graphics::Prima/draw_image> method, but it
+also forces your image into a paint-enabled state, clears the canvas, and
+returns the image in a paint-disabled state. This is usually what you want and
+expect when invoking the Paint event on a canvas.
+
+=head2 Caveat: Fonts
+
+Font handling is one of the areas in PDL::Graphics::Prima that is slated to see
+some improvement. Until that happens, you will notice that the font size in your
+output image is probably not quite what you expect, and if you change the font
+face, that may not match, either. To fix the font issues for now, you can set
+your image's font attributes based on the widget's, either at image construction
+time:
+
+ $image = Prima::Image->new(
+   width => $width,
+   height => $height,
+   font => $plot->font,
+ );
+
+or later with the font setter:
+
+ $image->font($plot->font);
 
 =head1 RESPONSIBILITIES
 
