@@ -936,7 +936,9 @@ sub ppair::Crosses {
 
 Draws a histogram. The bin-centers that are approximated from the x-values
 and the bin heights are set as the data's y-values. Both positive and
-negative y-values are allowed.
+negative y-values are allowed. The border of the histogram bars are drawn
+using the applicable C<color> and the histograms are filled with the
+applicable C<backColor>.
 
 Histogram computes the inter-point bin edges as the mid-point between each
 (sequential) pair of x-values. For the first and last bins, the outer edge
@@ -1136,9 +1138,6 @@ sub draw {
 	my $dataset = $self->dataset;
 	my $widget = $self->widget;
 	
-	# Assemble the various properties from the plot-type object and the dataset
-	my %properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
-	
 	# Get the edges and skip out if we have an empty case
 	my $edges = $self->get_bin_edges($dataset, $widget);
 	return unless defined $edges;
@@ -1148,6 +1147,22 @@ sub draw {
 	my $pixel_bottom = $widget->y->reals_to_pixels($self->{baseline}, $ratio);
 	my $ys = $widget->y->reals_to_pixels($dataset->get_ys, $ratio);
 	
+	# For drawing the filled background, we need to temporarily isolate the
+	# backGround color from the regular color.
+	my %properties = $self->generate_properties(@PDL::Drawing::Prima::bars_props);
+	delete $properties{color};
+	delete $properties{colors};
+	$properties{color} = $properties{backColor} if exists $properties{backColor};
+	$properties{colors} = $properties{backColors} if exists $properties{backColors};
+	# If we have a backColor, set our foreground color; otherwise skip
+	if (exists $properties{color} or exists $properties{colors}) {
+		$canvas->pdl_bars($pixel_edges(0:-2), $pixel_bottom
+			, $pixel_edges(1:-1), $ys, %properties);
+	}
+	
+	# Assemble the various properties from the plot-type object and the
+	# dataset, and plot the rectangles.
+	%properties = $self->generate_properties(@PDL::Drawing::Prima::rectangles_props);
 	$canvas->pdl_rectangles($pixel_edges(0:-2), $pixel_bottom
 			, $pixel_edges(1:-1), $ys, %properties);
 }

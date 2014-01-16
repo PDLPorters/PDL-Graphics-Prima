@@ -2,7 +2,7 @@ Put changes under the appropriate header. Headers can include API CHANGES,
 DIFFERENT BEHAVIOR, BUG FIXES, DEPENDENCIES, ENHANCEMENTS, NEW FEATURES, and
 OTHER. Entries should be in chronological order, i.e. oldest at the top
 
-0.14 DAY, MTH ##, 2013
+0.14 DAY, MTH ##, 2014
 
   [API CHANGES]
   
@@ -13,6 +13,11 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     drawing should override draw_plot, not on_paint.
   
   [DIFFERENT BEHAVIOR]
+  
+  * You can now specify the fill color for the ppair::Histogram plot type via
+    the backColor or backColors property. Normal rectangles do not appear to
+    pay any attention to this property, so now a set of bars are drawn with
+    the backColor before the rectangles are rendered.
   
   * As mentioned in the NEW FEATURES, it is now possible to specify the title
     font specification with much greater precision. I have never been very happy
