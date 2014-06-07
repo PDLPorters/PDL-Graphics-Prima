@@ -21,7 +21,8 @@ sub import {
 ############################################################################
 
 # Prima
-use Prima qw(noX11 Application ImageDialog MsgBox Utils);
+use Prima qw(noX11 Application ImageDialog MsgBox Utils Buttons InputLine
+			Label);
 use base 'Prima::Widget';
 
 # Error reporting
@@ -1040,12 +1041,186 @@ sub on_mouseup {
 						$self->x->minmax(lm::Auto, lm::Auto);
 						$self->y->minmax(lm::Auto, lm::Auto);
 					}],
+					['~Properties' => sub {
+						$self->set_properties_dialog;
+					}],
 				],
 			));
 		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
+}
+
+use Scalar::Util qw(looks_like_number);
+
+sub insert_minmax_input {
+	my ($group_box, $method, $axis, $y_pos) = @_;
+	$group_box->insert(Label =>
+		place => { x => 45, y => $y_pos, height => 25, width => 60, anchor => 'sw' },
+		height => 30,
+		text => ucfirst($method) . ':',
+	);
+	my ($init_val, $is_auto) = $axis->$method;
+	$group_box->insert(InputLine =>
+		place => { x => 110, y => $y_pos, height => 30, width => 380, anchor => 'sw' },
+		height => 30,
+		text => ($is_auto ? "Auto: $init_val" : $init_val),
+		color => ($is_auto ? cl::LightGray : cl::Black),
+		onEnter => sub {
+			$_[0]->selection(0, 0) if $is_auto;
+		},
+		onMouseDown => sub {
+			if ($is_auto) {
+				my $self = shift;
+				$self->clear_event;
+				$self->selection(0, 0);
+			}
+		},
+		onMouseUp => sub {
+			if ($is_auto) {
+				my $self = shift;
+				$self->clear_event;
+				$self->selection(0, 0);
+			}
+		},
+		onKeyDown => sub {
+			my ($self, $code, $key) = @_;
+			# Make sure that they can't move the cursor if autoscaling
+			$self->clear_event
+				if $is_auto and ($key == kb::Right or $key == kb::Left);
+			# Only check typed codes, in which case code >= 32
+			return if $code < 32;
+			# Screen what they typed for being a correct numerical entry
+			my $char = chr($code);
+			if ($char =~ /[\d.+\-e]/i) {
+				if ($is_auto) {
+					$self->text('');
+					$self->color(cl::Black);
+					$is_auto = 0;
+				}
+			}
+			else {
+				$self->clear_event();
+			}
+		},
+		onKeyUp => sub {
+			my ($self, $code, $key) = @_;
+			return if $code < 32 && $key != kb::Backspace && $key != kb::Delete;
+			my $new_val = $self->text;
+			if ($new_val eq '') {
+				$axis->$method(lm::Auto);
+				my $min_value = scalar($axis->$method);
+				$self->text("Auto: $min_value");
+				$self->color(cl::LightGray);
+				$is_auto = 1;
+			}
+			elsif (looks_like_number($new_val)) {
+				$axis->$method($new_val);
+			}
+		},
+	);
+}
+
+sub insert_label_input {
+	my ($group_box, $axis) = @_;
+	$group_box->insert(Label =>
+		place => { x => 45, y => 5, height => 25, width => 60, anchor => 'sw' },
+		height => 30,
+		text => 'Label:',
+	);
+	my $label_text = $axis->label || '';
+	$group_box->insert(InputLine =>
+		text => $label_text,
+		place => { x => 110, y => 5, height => 30, width => 380, anchor => 'sw' },
+		height => 30,
+		onKeyUp => sub {
+			my $new_label = shift->text;
+			if ($new_label ne $label_text) {
+				$label_text = $new_label;
+				$axis->label($new_label);
+			}
+		},
+	);
+}
+# Builds a modal window to set plotting properties
+sub set_properties_dialog {
+	my $self = shift;
+	my $total_height = 0;
+	my $prop_win = Prima::Window->new(
+		text => 'Plot Properties', width => 500, height => 380
+	);
+	$prop_win->insert(Widget =>
+		pack => { side => 'top', fill => 'x' },
+		height => 10,
+	);
+	
+	# Title input
+	my $title_box = $prop_win->insert(GroupBox =>
+		pack => { side => 'top', fill => 'x', padx => 10 },
+		height => 50,
+		text => 'Title',
+	);
+	my $title_text = $self->title || '';
+	$title_box->insert(InputLine =>
+		text => $title_text,
+		place => {
+			x => 5, y => 5,
+			relwidth => 1,
+			width => -10,
+			anchor => 'sw',
+		},
+		onKeyUp => sub {
+			my $new_title = shift->text;
+			if ($new_title ne $title_text) {
+				$title_text = $new_title;
+				$self->title($new_title);
+			}
+		},
+	);
+	
+	# x axis input
+	$prop_win->insert(Widget =>
+		pack => { side => 'top', fill => 'x' },
+		height => 10,
+	);
+	my $x_box = $prop_win->insert(GroupBox =>
+		pack => { side => 'top', fill => 'x' },
+		height => 125,
+		text => 'X Axis',
+	);
+	insert_minmax_input($x_box, 'min', $self->x, 75);
+	insert_minmax_input($x_box, 'max', $self->x, 40);
+	insert_label_input($x_box, $self->x);
+	
+	# y axis input
+	$prop_win->insert(Widget =>
+		pack => { side => 'top', fill => 'x' },
+		height => 10,
+	);
+	my $y_box = $prop_win->insert(GroupBox =>
+		pack => { side => 'top', fill => 'x' },
+		height => 125,
+		text => 'Y Axis',
+	);
+	insert_minmax_input($y_box, 'min', $self->y, 75);
+	insert_minmax_input($y_box, 'max', $self->y, 40);
+	insert_label_input($y_box, $self->y);
+	
+	# Close buton
+	$prop_win->insert(Widget =>
+		pack => { side => 'top', fill => 'x' },
+		height => 10,
+	);
+	my $close_button = $prop_win->insert(Button =>
+		text => 'Close',
+		onClick => sub { $prop_win->close },
+		pack => { side => 'right' }
+	);
+	
+	$prop_win->height(10 + 50 + 10 + 125 + 10 + 125 + 10 + $close_button->height);
+	
+	$prop_win->execute;
 }
 
 1;

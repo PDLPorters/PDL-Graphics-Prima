@@ -53,9 +53,12 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   * Added pal::RainbowSV to make less-than-bright rainbow palettes eaiser to
     create.
   
+  * Added a new Propeties entry to the pop-up menu. This starts a dialog that
+    lets the user set or modify the title, axis labels, and axis extrema.
+  
   [ENHANCEMENTS]
   
-  * Different means for renderinging a plot on a raster image are now documented
+  * Different means for rendering a plot on a raster image are now documented
     and tested.
   
   * Added a Changes file.
