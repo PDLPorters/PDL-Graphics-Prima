@@ -708,7 +708,8 @@ sub Linear {
 		my $hist = bin_by_data($data => $bounds, $min, $max, $opts{drop_extremes});
 		
 		# Mark empties as bad, if requested
-		$hist = $hist->setvaltobad(0) if $opts{mark_empty_as} eq 'bad';
+		$hist = $hist->setvaltobad(0)
+			if $opts{mark_empty_as} eq 'bad' and any $hist == 0;
 		
 		if ($opts{normalize}) {
 			# Normalize by count
