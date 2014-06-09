@@ -648,7 +648,7 @@ sub save_to_postscript {
 		isEPS => 1,
 	);
 	$ps->resolution($self->resolution);
-	$ps->font(size => $self->font->{size});
+	$ps->font(height => $self->font->{height});
 	
 	$ps->begin_doc
 		or do {
