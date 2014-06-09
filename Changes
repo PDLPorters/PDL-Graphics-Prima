@@ -39,6 +39,12 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     values were nearly identical, and indistinguishable. However, it also
     removes a sixth of the color spectrum from the palette.
   
+  * The save-as-postscript dialog now refers to Encapsulated Postscript
+    files, with the file extension .eps. A default file extension is
+    appended if the .eps extension is missing. This usually Does What You
+    Mean, but also means that users cannot use their own file extension when
+    using the save-as-postscript dialog.
+  
   [NEW FEATURES]
   
   * There is a new property for setting the title's font, called titleFont. In

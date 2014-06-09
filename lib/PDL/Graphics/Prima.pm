@@ -615,9 +615,9 @@ sub save_to_postscript {
 	
 	unless ($filename) {
 		my $save_dialog = Prima::SaveDialog-> new(
-			defaultExt => 'ps',
+			defaultExt => 'eps',
 			filter => [
-				['Postscript files' => '*.ps'],
+				['Encapsulated Postscript files' => '*.eps'],
 				['All files' => '*'],
 			],
 		);
@@ -625,6 +625,8 @@ sub save_to_postscript {
 		return unless $save_dialog->execute;
 		# Otherwise get the filename:
 		$filename = $save_dialog->fileName;
+		# Provide a default extension
+		$filename .= '.eps' unless $filename =~ /\.eps$/;
 	}
 	unlink $filename if -f $filename;
 	
