@@ -663,9 +663,8 @@ sub save_to_postscript {
 		};
 	
 	if ($ENV{USE_PRIMA_SUBCANVAS}) {
-		$ps->begin_paint;
+		print "Using subcanvas\n";
 		$self->paint_with_widgets($ps);
-		$ps->end_paint;
 	}
 	else {
 		$self->draw_plot($ps);
@@ -761,7 +760,7 @@ sub on_paint {
 	
 	# We need to handle the case of this canvas not being this widget.
 	if (defined $canvas and $canvas != $self) {
-		my $setup_paint = ($canvas->get_paint_state == ps::Enabled);
+		my $setup_paint = ($canvas->get_paint_state != ps::Enabled);
 		$canvas->begin_paint if $setup_paint;
 		$canvas->clear;
 		$self->draw_plot($canvas);
