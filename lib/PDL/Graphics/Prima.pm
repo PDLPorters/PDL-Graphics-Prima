@@ -608,6 +608,7 @@ sub get_image {
 
 use Prima::PS::Drawable;
 use Prima::FileDialog;
+use Prima::Drawable::Subcanvas;
 
 sub save_to_postscript {
 	# Get the filename as an argument, or from the save-as dialog.
@@ -661,7 +662,15 @@ sub save_to_postscript {
 			}
 		};
 	
-	$self->draw_plot($ps);
+	if ($ENV{USE_PRIMA_SUBCANVAS}) {
+		$ps->begin_paint;
+		$self->paint_with_widgets($ps);
+		$ps->end_paint;
+	}
+	else {
+		$self->draw_plot($ps);
+	}
+	
 	$ps->end_doc;
 }
 
