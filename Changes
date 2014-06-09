@@ -12,6 +12,12 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     Subclasses of Prima::Plot that wish to modify how the widget implements its 
     drawing should override draw_plot, not on_paint.
   
+  [DEPENDENCIES]
+  
+  * The latest version of Prima, v1.40, provides Prima::Drawable::Subcanvas.
+    This is needed to get proper subfigure drawing for postscript output, as
+    well as proper EPS output format.
+  
   [DIFFERENT BEHAVIOR]
   
   * You can now specify the fill color for the ppair::Histogram plot type via
@@ -71,6 +77,10 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   * Added proper handling of weird/bad values for annotation positions. Now, if
     you specify a position that includes 'bad, 'inf', or 'nan', the annotation
     machinery will Just Work, by skipping the annotation drawing.
+  
+  * Postscript output uses a feature of Prima v1.40 to set the postscript
+    output as EPS. This is important for proper rendering through LaTeX and
+    on Mac Preview.
   
   [BUG FIXES]
   

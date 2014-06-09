@@ -642,6 +642,7 @@ sub save_to_postscript {
 		},
 		pageSize => [$width, $height],
 		pageMargins => [0, 0, 0, 0],
+		isEPS => 1,
 	);
 	$ps->resolution($self->resolution);
 	$ps->font(size => $self->font->{size});

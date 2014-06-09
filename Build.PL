@@ -15,7 +15,7 @@ my $build = Module::Build->new(
 		perl					=> '5.8.0',
 		'PDL::Drawing::Prima'	=> 0.07,
 		PDL						=> '2.4.0',
-		Prima					=> 1.32,
+		Prima					=> 1.40,
 		# Needed for event_loop
 #		'Term::ReadLine'       => '1.09',
 	},
