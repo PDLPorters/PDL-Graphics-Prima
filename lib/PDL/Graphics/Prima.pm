@@ -752,10 +752,11 @@ sub on_paint {
 	
 	# We need to handle the case of this canvas not being this widget.
 	if (defined $canvas and $canvas != $self) {
-		$canvas->begin_paint;
+		my $setup_paint = ($canvas->get_paint_state == ps::Enabled);
+		$canvas->begin_paint if $setup_paint;
 		$canvas->clear;
 		$self->draw_plot($canvas);
-		$canvas->end_paint;
+		$canvas->end_paint if $setup_paint;
 		return;
 	}
 	
