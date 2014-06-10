@@ -1079,7 +1079,6 @@ sub insert_minmax_input {
 	);
 	my ($auto_button, $inline);
 	my ($init_val, $is_auto) = $axis->$method;
-	$group_box->{"${method}_is_auto"} = $is_auto;
 	my $val_is_good = $method eq 'min'
 		? sub { $_[0] < $axis->max }
 		: sub { $_[0] > $axis->min };
@@ -1088,19 +1087,18 @@ sub insert_minmax_input {
 		height => 30,
 		text => ($is_auto ? "Auto: $init_val" : $init_val),
 		color => ($is_auto ? cl::LightGray : cl::Black),
-		name => "${method}_input",
 		onEnter => sub {
-			$_[0]->selection(0, 0) if $group_box->{"${method}_is_auto"};
+			$_[0]->selection(0, 0) if $is_auto;
 		},
 		onMouseDown => sub {
-			if ($group_box->{"${method}_is_auto"}) {
+			if ($is_auto) {
 				my $self = shift;
 				$self->clear_event;
 				$self->selection(0, 0);
 			}
 		},
 		onMouseUp => sub {
-			if ($group_box->{"${method}_is_auto"}) {
+			if ($is_auto) {
 				my $self = shift;
 				$self->clear_event;
 				$self->selection(0, 0);
@@ -1110,18 +1108,17 @@ sub insert_minmax_input {
 			my ($self, $code, $key) = @_;
 			# Make sure that they can't move the cursor if autoscaling
 			$self->clear_event
-				if $group_box->{"${method}_is_auto"}
-					and ($key == kb::Right or $key == kb::Left);
+				if $is_auto and ($key == kb::Right or $key == kb::Left);
 			# Only check typed codes, in which case code >= 32
 			return if $code < 32;
 			# Screen what they typed for being a correct numerical entry
 			my $char = chr($code);
 			if ($char =~ /[\d.+\-e]/i) {
-				if ($group_box->{"${method}_is_auto"}) {
+				if ($is_auto) {
 					$self->text('');
 					$self->color(cl::Black);
 					$self->font->style(fs::Normal);
-					$group_box->{"${method}_is_auto"} = 0;
+					$is_auto = 0;
 					$auto_button->enabled(1);
 				}
 			}
@@ -1141,7 +1138,7 @@ sub insert_minmax_input {
 				$self->text("Auto: $min_value");
 				$self->font->style(fs::Italic);
 				$self->color(cl::LightGray);
-				$group_box->{"${method}_is_auto"} = 1;
+				$is_auto = 1;
 				$auto_button->enabled(0);
 			}
 			elsif (looks_like_number($new_val) and $val_is_good->($new_val)
@@ -1163,7 +1160,6 @@ sub insert_minmax_input {
 		text => 'Autoscale',
 		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw' },
 		height => 30,
-		name => "${method}_auto_btn",
 		onClick => sub {
 			$inline->text('');
 			# simulate a keystroke that'll kick the rest of this into gear
