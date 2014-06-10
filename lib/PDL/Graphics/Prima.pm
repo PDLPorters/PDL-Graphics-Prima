@@ -850,6 +850,7 @@ sub draw_plot {
 # For mousewheel events, we zoom in or out. However, if they're over the axes,
 # only zoom in or out for that axis.
 sub on_mousewheel {
+	return unless $_[0]->enabled;
 	my ($self, $mods, $x, $y, $dir) = @_;
 	my ($width, $height) = $self->size;
 	
@@ -907,6 +908,7 @@ sub get_min_max_for {
 }
 
 sub on_mousedown {
+	return unless $_[0]->enabled;
 	my ($self, $down_button, undef, $x, $y) = @_;
 	# Store the relative click locations:
 	$x = $self->x->pixels_to_relatives($x);
@@ -918,6 +920,7 @@ sub on_mousedown {
 }
 
 sub on_mousemove {
+	return unless $_[0]->enabled;
 	my ($self, $drag_button, $x_stop_pixel, $y_stop_pixel) = @_;
 	
 	# Compute the relative and real final mouse locations
@@ -991,6 +994,7 @@ sub on_mousemove {
 }
 
 sub on_mouseup {
+	return unless $_[0]->enabled;
 	my ($self, $up_button, $up_mods, $x_stop_pixel, $y_stop_pixel) = @_;
 	
 	# Remove the previous button record for left and middle buttons:
@@ -1261,7 +1265,9 @@ sub set_properties_dialog {
 	
 	$prop_win->height(10 + 50 + 10 + 125 + 10 + 125 + 10 + $close_button->height);
 	
+	$self->enabled(0);
 	$prop_win->execute;
+	$self->enabled(1);
 }
 
 1;
