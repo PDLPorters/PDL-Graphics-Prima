@@ -1088,109 +1088,59 @@ sub insert_minmax_input {
 		# get the new min or max
 		(my $curr_val, $is_auto) = $axis->$method;
 		
-		if ($update_inline) {
-			# Move cursor to the start of the input line
-			$inline->selection(0, 0);
-			# Change the value to something the system knows how to process
-			if ($is_auto) {
-				$inline->text('');
-			}
-			else {
-				$inline->text($curr_val);
-			}
-			# Simulate a keystroke that'll kick off the series of events
-			# to update the inline
-			$inline->key_down(kb::Backspace, kb::Backspace);
-			$inline->key_up(kb::Backspace, kb::Backspace);
-		}
+		$inline->text($curr_val . ($is_auto ? ' (Auto)' : ''))
+			if $update_inline;
 		$auto_button->enabled(!$is_auto);
 	});
 	
+	no PDL::NiceSlice;
 	my $val_is_good = $method eq 'min'	? sub { $_[0] < $axis->max }
 										: sub { $_[0] > $axis->min };
 	$inline = $group_box->insert(InputLine =>
 		place => { x => 110, y => $y_pos, height => 30, width => 280, anchor => 'sw' },
 		height => 30,
-		text => ($is_auto ? "Auto: $init_val" : $init_val),
-		color => ($is_auto ? cl::LightGray : cl::Black),
+		text => ($is_auto ? "$init_val (Auto)" : $init_val),
 		onEnter => sub {
-			$_[0]->selection(0, 0) if $is_auto;
-		},
-		onMouseDown => sub {
 			if ($is_auto) {
-				my $self = shift;
-				$self->clear_event;
-				$self->selection(0, 0);
+				$_[0]->text(scalar($axis->$method));
 			}
 		},
-		onMouseUp => sub {
+		onLeave => sub {
 			if ($is_auto) {
-				my $self = shift;
-				$self->clear_event;
-				$self->selection(0, 0);
+				my $value = $axis->$method;
+				$_[0]->text("$value (Auto)");
 			}
 		},
 		onKeyDown => sub {
 			my ($self, $code, $key) = @_;
-			# Make sure that they can't move the cursor if autoscaling
-			$self->clear_event
-				if $is_auto and ($key == kb::Right or $key == kb::Left);
 			# Only check typed codes, in which case code >= 32
 			return if $code < 32;
 			# Screen what they typed for being a correct numerical entry
-			my $char = chr($code);
-			if ($char =~ /[\d.+\-e]/i) {
-				if ($is_auto) {
-					$self->text('');
-					$is_auto = 0;
-				}
-			}
-			else {
-				$self->clear_event();
-			}
+			$self->clear_event() unless chr($code) =~ /[\d.+\-e]/i;
 		},
 		onKeyUp => sub {
 			my ($self, $code, $key) = @_;
 			return if $code < 32 && $key != kb::Backspace && $key != kb::Delete;
 			my $new_val = $self->text;
-			no PDL::NiceSlice;
-			if ($new_val eq '') {
-				$new_val = lm::Auto;
-				$is_auto = 1;
-				
-				# Update style and coloring to reflect autoscaling
-				$self->backColor(cl::White);
-				$self->font->style(fs::Italic);
-				$self->color(cl::LightGray);
-				
-				# Update the input line's text
-				my $min_value = scalar($axis->$method);
-				$self->text("Auto: $min_value");
-			}
-			elsif (looks_like_number($new_val) and $val_is_good->($new_val)
+			if (looks_like_number($new_val) and $val_is_good->($new_val)
 				and $axis->scaling->is_valid_extremum($new_val)
 			) {
-				# Most of the style was already fixed during onKeyDown. Only
-				# the color needs to be updated to reflect good input
+				# Change the actual axis value
+				$update_inline = 0;
+				$axis->$method($new_val) if defined $new_val;
+				$update_inline = 1;
+				
+				# Update the color to notify a good entry value
 				$self->backColor(cl::White);
-				$self->color(cl::Black);
-				$self->font->style(fs::Normal);
-				$auto_button->enabled(1);
 			}
 			else {
 				$self->backColor(0xffdcdc);
 				undef($new_val);
 			}
 			
-			# Change the actual axis value
-			$update_inline = 0;
-			$axis->$method($new_val) if defined $new_val;
-			$update_inline = 1;
-			
-			use PDL::NiceSlice;
 		},
 	);
-	$inline->font->style(fs::Italic) if $is_auto;
+	use PDL::NiceSlice;
 	
 	$auto_button = $group_box->insert(Button =>
 		text => 'Autoscale',
