@@ -1381,6 +1381,9 @@ sub set_properties_dialog {
 		$self->x->remove_notification($_) foreach (@x_notifications);
 		$self->y->remove_notification($_) foreach (@y_notifications);
 		delete $self->{prop_window};
+		# Bring the figure back to the foreground
+		$self->select;
+		$self->bring_to_front;
 	});
 	
 	# Having finished building it, show the window
