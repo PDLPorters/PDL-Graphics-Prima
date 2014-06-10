@@ -65,8 +65,11 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   * Added pal::RainbowSV to make less-than-bright rainbow palettes eaiser to
     create.
   
-  * Added a new Propeties entry to the pop-up menu. This starts a dialog that
-    lets the user set or modify the title, axis labels, and axis extrema.
+  * Added a new Propeties dialog box and associated entry to the pop-up menu.
+    The dialog box lets the user set the title, axis labels, axis extrema,
+    and axis scaling type. Furthermore, the user can continue manipulating
+    the plot with their mouse, and the properties will automatically update
+    to the currently displayed values.
   
   [ENHANCEMENTS]
   
