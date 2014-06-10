@@ -1093,7 +1093,6 @@ sub insert_minmax_input {
 	# Attach an event listener to the axis min/max methods to keep is_auto
 	# up-to-date, and ensure that the input line is accurate
 	my $notification_idx = $axis->add_notification(ChangeBounds => sub {
-		print "Changed axis bounds\n";
 		# get the new min or max
 		(my $curr_val, $is_auto) = $axis->$method;
 		
