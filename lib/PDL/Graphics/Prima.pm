@@ -1300,7 +1300,8 @@ sub set_properties_dialog {
 	
 	my $total_height = 0;
 	$self->{prop_window} = my $prop_win = Prima::Window->new(
-		text => 'Plot Properties', width => 500, height => 380
+		text => 'Plot Properties', width => 500, height => 380,
+		visible => 0,
 	);
 	$prop_win->insert(Widget =>
 		pack => { side => 'top', fill => 'x' },
@@ -1381,6 +1382,9 @@ sub set_properties_dialog {
 		$self->y->remove_notification($_) foreach (@y_notifications);
 		delete $self->{prop_window};
 	});
+	
+	# Having finished building it, show the window
+	$prop_win->visible(1);
 }
 
 1;
