@@ -1228,6 +1228,7 @@ sub insert_label_input {
 sub insert_scaling_radios {
 	my ($group_box, $axis) = @_;
 	my $update_radios = 1;
+	my ($init_min, $init_max) = $axis->minmax;
 	my $linear_radio = $group_box->insert(Radio =>
 		place => { x => 80, y => 5, height => 30, width => 30, anchor => 'sw' },
 		height => 30,
@@ -1253,6 +1254,7 @@ sub insert_scaling_radios {
 		text => 'Logarithmic Scaling',
 		checked => $axis->scaling eq sc::Log ? 1 : 0,
 	);
+	$log_radio->enabled(0) unless $init_max > 0 && $init_min > 0;
 	
 	my $bounds_notification = $axis->add_notification(ChangeBounds => sub {
 		# Can't go negative if log scaling is enabled, so negative means
