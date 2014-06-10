@@ -1073,9 +1073,13 @@ sub insert_minmax_input {
 		height => 30,
 		text => ucfirst($method) . ':',
 	);
+	my ($auto_button, $inline);
 	my ($init_val, $is_auto) = $axis->$method;
-	$group_box->insert(InputLine =>
-		place => { x => 110, y => $y_pos, height => 30, width => 380, anchor => 'sw' },
+	my $val_is_good = $method eq 'min'
+		? sub { $_[0] < $axis->max }
+		: sub { $_[0] > $axis->min };
+	$inline = $group_box->insert(InputLine =>
+		place => { x => 110, y => $y_pos, height => 30, width => 280, anchor => 'sw' },
 		height => 30,
 		text => ($is_auto ? "Auto: $init_val" : $init_val),
 		color => ($is_auto ? cl::LightGray : cl::Black),
@@ -1109,7 +1113,9 @@ sub insert_minmax_input {
 				if ($is_auto) {
 					$self->text('');
 					$self->color(cl::Black);
+					$self->font->style(fs::Normal);
 					$is_auto = 0;
+					$auto_button->enabled(1);
 				}
 			}
 			else {
@@ -1120,18 +1126,41 @@ sub insert_minmax_input {
 			my ($self, $code, $key) = @_;
 			return if $code < 32 && $key != kb::Backspace && $key != kb::Delete;
 			my $new_val = $self->text;
+			no PDL::NiceSlice;
 			if ($new_val eq '') {
+				$self->backColor(cl::White);
 				$axis->$method(lm::Auto);
 				my $min_value = scalar($axis->$method);
 				$self->text("Auto: $min_value");
+				$self->font->style(fs::Italic);
 				$self->color(cl::LightGray);
 				$is_auto = 1;
+				$auto_button->enabled(0);
 			}
-			elsif (looks_like_number($new_val)) {
+			elsif (looks_like_number($new_val) and $val_is_good->($new_val) ) {
+				$self->backColor(cl::White);
 				$axis->$method($new_val);
 			}
+			else {
+				$self->font->style(fs::Normal);
+				$self->backColor(0xffdcdc);
+			}
+			use PDL::NiceSlice;
 		},
 	);
+	$inline->font->style(fs::Italic) if $is_auto;
+	
+	$auto_button = $group_box->insert(Button =>
+		text => 'Autoscale',
+		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw' },
+		height => 30,
+		onClick => sub {
+			$inline->text('');
+			# simulate a keystroke that'll kick the rest of this into gear
+			$inline->key_up(kb::Delete, kb::Delete);
+		},
+	);
+	$auto_button->enabled(!$is_auto);
 }
 
 sub insert_label_input {
