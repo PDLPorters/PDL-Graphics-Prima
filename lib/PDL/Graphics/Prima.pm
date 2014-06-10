@@ -1206,14 +1206,14 @@ sub insert_minmax_input {
 sub insert_label_input {
 	my ($group_box, $axis) = @_;
 	$group_box->insert(Label =>
-		place => { x => 45, y => 5, height => 25, width => 60, anchor => 'sw' },
+		place => { x => 45, y => 40, height => 25, width => 60, anchor => 'sw' },
 		height => 30,
 		text => 'Label:',
 	);
 	my $label_text = $axis->label || '';
 	$group_box->insert(InputLine =>
 		text => $label_text,
-		place => { x => 110, y => 5, height => 30, width => 380, anchor => 'sw' },
+		place => { x => 110, y => 40, height => 30, width => 380, anchor => 'sw' },
 		height => 30,
 		onKeyUp => sub {
 			my $new_label = shift->text;
@@ -1224,6 +1224,69 @@ sub insert_label_input {
 		},
 	);
 }
+
+sub insert_scaling_radios {
+	my ($group_box, $axis) = @_;
+	my $update_radios = 1;
+	my $linear_radio = $group_box->insert(Radio =>
+		place => { x => 80, y => 5, height => 30, width => 30, anchor => 'sw' },
+		height => 30,
+		onCheck => sub {
+			return unless $update_radios;
+			$update_radios = 0;
+			$axis->scaling(sc::Linear);
+			$update_radios = 1;
+		},
+		text => 'Linear Scaling',
+		checked => $axis->scaling eq sc::Linear ? 1 : 0,
+	);
+	
+	my $log_radio = $group_box->insert(Radio =>
+		place => { x => 275, y => 5, height => 30, width => 30, anchor => 'sw' },
+		height => 30,
+		onCheck => sub {
+			return unless $update_radios;
+			$update_radios = 0;
+			$axis->scaling(sc::Log);
+			$update_radios = 1;
+		},
+		text => 'Logarithmic Scaling',
+		checked => $axis->scaling eq sc::Log ? 1 : 0,
+	);
+	
+	my $bounds_notification = $axis->add_notification(ChangeBounds => sub {
+		# Can't go negative if log scaling is enabled, so negative means
+		# we must have linear scaling. As such, only enable/disable the
+		# log radio based on negative signs, don't change the radios
+		my ($min, $max) = $axis->minmax;
+		if ($min <= 0 or $max <= 0) {
+			$update_radios = 0;
+			$log_radio->enabled(0);
+			$update_radios = 1;
+		}
+		else {
+			$update_radios = 0;
+			$log_radio->enabled(1);
+			$update_radios = 1;
+		}
+	});
+	my $scaling_notification = $axis->add_notification(ChangeScaling => sub {
+		return unless $update_radios;
+		if ($axis->scaling eq sc::Linear) {
+			$update_radios = 0;
+			$linear_radio->check;
+			$update_radios = 1;
+		}
+		else {
+			$update_radios = 0;
+			$log_radio->check;
+			$update_radios = 1;
+		}
+	});
+	
+	return ($bounds_notification, $scaling_notification);
+}
+
 # Builds a modal window to set plotting properties
 sub set_properties_dialog {
 	my $self = shift;
@@ -1268,6 +1331,8 @@ sub set_properties_dialog {
 		},
 	);
 	
+	my (@x_notifications, @y_notifications);
+	
 	# x axis input
 	$prop_win->insert(Widget =>
 		pack => { side => 'top', fill => 'x' },
@@ -1275,12 +1340,13 @@ sub set_properties_dialog {
 	);
 	my $x_box = $prop_win->insert(GroupBox =>
 		pack => { side => 'top', fill => 'x' },
-		height => 125,
+		height => 160,
 		text => 'X Axis',
 	);
-	my $x_min_notification = insert_minmax_input($x_box, 'min', $self->x, 75);
-	my $x_max_notification = insert_minmax_input($x_box, 'max', $self->x, 40);
+	push @x_notifications, insert_minmax_input($x_box, 'min', $self->x, 110);
+	push @x_notifications, insert_minmax_input($x_box, 'max', $self->x, 75);
 	insert_label_input($x_box, $self->x);
+	push @x_notifications, insert_scaling_radios($x_box, $self->x);
 	
 	# y axis input
 	$prop_win->insert(Widget =>
@@ -1289,12 +1355,13 @@ sub set_properties_dialog {
 	);
 	my $y_box = $prop_win->insert(GroupBox =>
 		pack => { side => 'top', fill => 'x' },
-		height => 125,
+		height => 160,
 		text => 'Y Axis',
 	);
-	my $y_min_notification = insert_minmax_input($y_box, 'min', $self->y, 75);
-	my $y_max_notification = insert_minmax_input($y_box, 'max', $self->y, 40);
+	push @y_notifications, insert_minmax_input($y_box, 'min', $self->y, 110);
+	push @y_notifications, insert_minmax_input($y_box, 'max', $self->y, 75);
 	insert_label_input($y_box, $self->y);
+	push @y_notifications, insert_scaling_radios($y_box, $self->y);
 	
 	# Close button
 	$prop_win->insert(Widget =>
@@ -1307,15 +1374,11 @@ sub set_properties_dialog {
 		pack => { side => 'right' }
 	);
 	
-	$prop_win->height(10 + 50 + 10 + 125 + 10 + 125 + 10 + $close_button->height);
+	$prop_win->height(10 + 50 + 10 + 160 + 10 + 160 + 10 + $close_button->height);
 	
-	$prop_win->onDestroy(sub {
-		if ($self->alive) {
-			$self->x->remove_notification($x_min_notification);
-			$self->x->remove_notification($x_max_notification);
-			$self->y->remove_notification($y_min_notification);
-			$self->y->remove_notification($y_max_notification);
-		}
+	$prop_win->onClose(sub {
+		$self->x->remove_notification($_) foreach (@x_notifications);
+		$self->y->remove_notification($_) foreach (@y_notifications);
 		delete $self->{prop_window};
 	});
 }
