@@ -165,6 +165,11 @@ sub init {
 	return %profile;
 }
 
+sub on_destroy {
+	my $self = shift;
+	$self->{prop_window}->destroy if exists $self->{prop_window};
+}
+
 # This is key: *this* is what triggers autoscaling for the first time
 # working here, consider setting sizeMin, sizeMax
 
@@ -1077,11 +1082,41 @@ sub insert_minmax_input {
 		height => 30,
 		text => ucfirst($method) . ':',
 	);
+	# the widgets we are about to add
 	my ($auto_button, $inline);
+	# lexical state variable to bypass updates if the input line triggered
+	# the update
+	my $update_inline = 1;
+	# initial value and autoscaling state of the axis
 	my ($init_val, $is_auto) = $axis->$method;
-	my $val_is_good = $method eq 'min'
-		? sub { $_[0] < $axis->max }
-		: sub { $_[0] > $axis->min };
+	
+	# Attach an event listener to the axis min/max methods to keep is_auto
+	# up-to-date, and ensure that the input line is accurate
+	my $notification_idx = $axis->add_notification(ChangeBounds => sub {
+		print "Changed axis bounds\n";
+		# get the new min or max
+		(my $curr_val, $is_auto) = $axis->$method;
+		
+		if ($update_inline) {
+			# Move cursor to the start of the input line
+			$inline->selection(0, 0);
+			# Change the value to something the system knows how to process
+			if ($is_auto) {
+				$inline->text('');
+			}
+			else {
+				$inline->text($curr_val);
+			}
+			# Simulate a keystroke that'll kick off the series of events
+			# to update the inline
+			$inline->key_down(kb::Backspace, kb::Backspace);
+			$inline->key_up(kb::Backspace, kb::Backspace);
+		}
+		$auto_button->enabled(!$is_auto);
+	});
+	
+	my $val_is_good = $method eq 'min'	? sub { $_[0] < $axis->max }
+										: sub { $_[0] > $axis->min };
 	$inline = $group_box->insert(InputLine =>
 		place => { x => 110, y => $y_pos, height => 30, width => 280, anchor => 'sw' },
 		height => 30,
@@ -1132,26 +1167,39 @@ sub insert_minmax_input {
 			my $new_val = $self->text;
 			no PDL::NiceSlice;
 			if ($new_val eq '') {
+				$new_val = lm::Auto;
+				$is_auto = 1;
+				
+				# Update style and coloring to reflect autoscaling
 				$self->backColor(cl::White);
-				$axis->$method(lm::Auto);
-				my $min_value = scalar($axis->$method);
-				$self->text("Auto: $min_value");
 				$self->font->style(fs::Italic);
 				$self->color(cl::LightGray);
-				$is_auto = 1;
-				$auto_button->enabled(0);
+				
+				# Update the input line's text
+				my $min_value = scalar($axis->$method);
+				$self->text("Auto: $min_value");
 			}
 			elsif (looks_like_number($new_val) and $val_is_good->($new_val)
 				and $axis->scaling->is_valid_extremum($new_val)
 			) {
+				# Most of the style was already fixed during onKeyDown. Only
+				# the color needs to be updated to reflect good input
 				$self->backColor(cl::White);
-				$axis->$method($new_val);
 			}
 			else {
-				$self->font->style(fs::Normal);
 				$self->backColor(0xffdcdc);
+				undef($new_val);
 			}
+			
+			# Change the actual axis value
+			$update_inline = 0;
+			$axis->$method($new_val) if defined $new_val;
+			$update_inline = 1;
+			
 			use PDL::NiceSlice;
+		},
+		onDestroy => sub {
+			print "Destroying $method input line\n";
 		},
 	);
 	$inline->font->style(fs::Italic) if $is_auto;
@@ -1160,13 +1208,14 @@ sub insert_minmax_input {
 		text => 'Autoscale',
 		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw' },
 		height => 30,
-		onClick => sub {
-			$inline->text('');
-			# simulate a keystroke that'll kick the rest of this into gear
-			$inline->key_up(kb::Delete, kb::Delete);
+		onClick => sub { $axis->$method(lm::Auto) },
+		onDestroy => sub {
+			print "Dstroying $method auto button\n";
 		},
 	);
 	$auto_button->enabled(!$is_auto);
+	
+	return $notification_idx;
 }
 
 sub insert_label_input {
@@ -1193,8 +1242,16 @@ sub insert_label_input {
 # Builds a modal window to set plotting properties
 sub set_properties_dialog {
 	my $self = shift;
+	
+	# If one already exists, bring it back to the front
+	if (exists $self->{prop_window}) {
+		$self->{prop_window}->select;
+		$self->{prop_window}->bring_to_front;
+		return;
+	}
+	
 	my $total_height = 0;
-	my $prop_win = Prima::Window->new(
+	$self->{prop_window} = my $prop_win = Prima::Window->new(
 		text => 'Plot Properties', width => 500, height => 380
 	);
 	$prop_win->insert(Widget =>
@@ -1236,8 +1293,8 @@ sub set_properties_dialog {
 		height => 125,
 		text => 'X Axis',
 	);
-	insert_minmax_input($x_box, 'min', $self->x, 75);
-	insert_minmax_input($x_box, 'max', $self->x, 40);
+	my $x_min_notification = insert_minmax_input($x_box, 'min', $self->x, 75);
+	my $x_max_notification = insert_minmax_input($x_box, 'max', $self->x, 40);
 	insert_label_input($x_box, $self->x);
 	
 	# y axis input
@@ -1250,8 +1307,8 @@ sub set_properties_dialog {
 		height => 125,
 		text => 'Y Axis',
 	);
-	insert_minmax_input($y_box, 'min', $self->y, 75);
-	insert_minmax_input($y_box, 'max', $self->y, 40);
+	my $y_min_notification = insert_minmax_input($y_box, 'min', $self->y, 75);
+	my $y_max_notification = insert_minmax_input($y_box, 'max', $self->y, 40);
 	insert_label_input($y_box, $self->y);
 	
 	# Close buton
@@ -1267,9 +1324,15 @@ sub set_properties_dialog {
 	
 	$prop_win->height(10 + 50 + 10 + 125 + 10 + 125 + 10 + $close_button->height);
 	
-	$self->enabled(0);
-	$prop_win->execute;
-	$self->enabled(1);
+	$prop_win->onDestroy(sub {
+		if ($self->alive) {
+			$self->x->remove_notification($x_min_notification);
+			$self->x->remove_notification($x_max_notification);
+			$self->y->remove_notification($y_min_notification);
+			$self->y->remove_notification($y_max_notification);
+		}
+		delete $self->{prop_window};
+	});
 }
 
 1;
