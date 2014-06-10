@@ -1144,7 +1144,9 @@ sub insert_minmax_input {
 				$group_box->{"${method}_is_auto"} = 1;
 				$auto_button->enabled(0);
 			}
-			elsif (looks_like_number($new_val) and $val_is_good->($new_val) ) {
+			elsif (looks_like_number($new_val) and $val_is_good->($new_val)
+				and $axis->scaling->is_valid_extremum($new_val)
+			) {
 				$self->backColor(cl::White);
 				$axis->$method($new_val);
 			}
