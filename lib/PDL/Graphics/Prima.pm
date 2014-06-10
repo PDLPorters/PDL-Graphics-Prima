@@ -1375,7 +1375,7 @@ sub set_properties_dialog {
 		pack => { side => 'right' }
 	);
 	
-	$prop_win->height(10 + 50 + 10 + 160 + 10 + 160 + 10 + $close_button->height);
+	$prop_win->height(10 + 50 + 10 + 160 + 10 + 160 + 10 + 30);
 	
 	$prop_win->onClose(sub {
 		$self->x->remove_notification($_) foreach (@x_notifications);
