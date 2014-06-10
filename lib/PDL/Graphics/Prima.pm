@@ -1142,10 +1142,7 @@ sub insert_minmax_input {
 			if ($char =~ /[\d.+\-e]/i) {
 				if ($is_auto) {
 					$self->text('');
-					$self->color(cl::Black);
-					$self->font->style(fs::Normal);
 					$is_auto = 0;
-					$auto_button->enabled(1);
 				}
 			}
 			else {
@@ -1176,6 +1173,9 @@ sub insert_minmax_input {
 				# Most of the style was already fixed during onKeyDown. Only
 				# the color needs to be updated to reflect good input
 				$self->backColor(cl::White);
+				$self->color(cl::Black);
+				$self->font->style(fs::Normal);
+				$auto_button->enabled(1);
 			}
 			else {
 				$self->backColor(0xffdcdc);
