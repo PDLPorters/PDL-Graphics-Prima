@@ -1189,9 +1189,6 @@ sub insert_minmax_input {
 			
 			use PDL::NiceSlice;
 		},
-		onDestroy => sub {
-			print "Destroying $method input line\n";
-		},
 	);
 	$inline->font->style(fs::Italic) if $is_auto;
 	
@@ -1200,9 +1197,6 @@ sub insert_minmax_input {
 		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw' },
 		height => 30,
 		onClick => sub { $axis->$method(lm::Auto) },
-		onDestroy => sub {
-			print "Dstroying $method auto button\n";
-		},
 	);
 	$auto_button->enabled(!$is_auto);
 	
@@ -1302,7 +1296,7 @@ sub set_properties_dialog {
 	my $y_max_notification = insert_minmax_input($y_box, 'max', $self->y, 40);
 	insert_label_input($y_box, $self->y);
 	
-	# Close buton
+	# Close button
 	$prop_win->insert(Widget =>
 		pack => { side => 'top', fill => 'x' },
 		height => 10,
