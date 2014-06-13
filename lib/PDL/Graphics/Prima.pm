@@ -651,9 +651,10 @@ sub save_to_postscript {
 		pageSize => [$width, $height],
 		pageMargins => [0, 0, 0, 0],
 		isEPS => 1,
+		useDeviceFontsOnly => 1,
 	);
 	$ps->resolution($self->resolution);
-	$ps->font(height => $self->font->{height});
+	$ps->font(height => $self->font->height);
 	
 	$ps->begin_doc
 		or do {
