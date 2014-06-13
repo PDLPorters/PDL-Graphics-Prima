@@ -104,6 +104,8 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   
   * The default apply() method in PDL::Graphics::Prima::Palette now correctly
     supplies its arguments to the supplied subref.
+  
+  * Logarithmic scaling detection works for ds::Grid (fixed assignment typo).
 
 
 

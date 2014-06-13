@@ -1293,7 +1293,7 @@ sub compute_edges {
 		$results(-1) .= $data(-1) + $spacing / 2;
 	}
 	elsif ($type eq 'log') {
-		$results(0:-2) = $data / sqrt($spacing);
+		$results(0:-2) .= $data / sqrt($spacing);
 		$results(-1) .= $data(-1) * sqrt($spacing);
 	}
 	else {
