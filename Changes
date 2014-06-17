@@ -71,6 +71,9 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     the plot with their mouse, and the properties will automatically update
     to the currently displayed values.
   
+  * If you simply want to specify an axis label, you can now specify it as
+    x => $x_label rather than x => { label => $x_label }
+  
   [ENHANCEMENTS]
   
   * Different means for rendering a plot on a raster image are now documented

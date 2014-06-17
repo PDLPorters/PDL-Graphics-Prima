@@ -127,6 +127,14 @@ sub init {
 				, name => $_
 			);
 		}
+		elsif (not ref($profile{$_})) {
+			# No ref means scalar; assume it's a label name
+			$self->{$_} = PDL::Graphics::Prima::Axis->create(
+				label => $profile{$_}
+				, owner => $self
+				, name => $_
+			);
+		}
 		else {
 			croak("Unable to create $_-axis from $profile{$_}");
 		}
@@ -1360,7 +1368,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  # --( Super simple line and symbol plots )--
  
  # Generate some data - a sine curve
- my $x = sequence(100) / 20;
+ my $x = sequence(100) / 20 + 1;
  my $y = sin($x);
  
  # Draw x/y pairs. Default x-value are sequential:
@@ -1409,16 +1417,19 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
  plot(
-     -lines         => ds::Pair($x, $y
-         , plotType => ppair::Lines
+     -lines       => ds::Pair($x, $y,
+         plotType => ppair::Lines
      ),
-     -color_squares => ds::Pair($x, $y + 1
-         , colors   => $colors,
-         , plotType => ppair::Squares(filled => 1)
+     -color_squares => ds::Pair($x, $y + 1,
+         colors   => $colors,
+         plotType => ppair::Squares(filled => 1),
      ),
      
-     x => { label   => 'Time' },
-     y => { label   => 'Sine' },
+     x => 'Time',
+     y => {
+         label   => 'Sine',
+         scaling => sc::Log,
+     },
  );
 
 =head1 WIDGET SYNOPSIS

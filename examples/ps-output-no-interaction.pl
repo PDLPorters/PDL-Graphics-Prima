@@ -18,12 +18,8 @@ my $plot = Prima::Plot->create(
 			ppair::Blobs(radius => 4),
 		]
 	),
-	x => {
-		label => 'x data',
-	},
-	y => {
-		label => 'y data',
-	},
+	x => 'x data',
+	y => 'y data',
 	title => 'test',
 	size => [640, 480],
 );
