@@ -1459,21 +1459,23 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
 If you are new to PDL::Graphics::Prima, you should begin by reading the
 documentation for L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>.
 This module provides a simplified interface for quickly dashing off a few
-plots and offers stepping stones to create more complex plots. Depending on
-your plotting needs, you may not need anything more complicated than
-L<PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/>. However,
-PDL::Graphics::Prima offers much greater flexibility and interactivity than
-the options available in the Simple interface, so once you feel comfortable,
-you should come back to this manual page and learn how to create and utilize
-Plot widgets in conjunction with the L<Prima GUI toolkit|Prima/>.
+plots and offers stepping stones to create more complex plots. Often, the
+simple interface is sufficient for my simple plotting needs. However,
+PDL::Graphics::Prima is actually a widget in the L<Prima GUI toolkit|Prima/>.
+If you find that you need to interact more directly with your data and its
+visualization, you can build stand-alone GUI applications with the necessary
+interaction.
+
+The documentation in this file explains how to use PDL::Graphics::Prima as a
+plotting widget.
 
 =head1 DESCRIPTION
 
 PDL::Graphics::Prima is a plotting library for 2D data visualization. The
 core of this library is a Plot widget that can be incorporated into Prima
-applications. Although the library is capable of producing nice looking
-static figures, its killer feature is the GUI environment in which it
-belongs. L<Prima> provides an array of useful interactive widgets and a
+applications. The library produces publication quality static figures, but
+its true potential lies in using it as a component in a GUI application.
+L<Prima> provides an array of useful interactive widgets and a
 simple but powerful event-based programming model. PDL::Graphics::Prima
 provides a sophisticated plotting library within this GUI framework, letting
 you focus on what you want to visualize rather than the details of how you
@@ -1504,9 +1506,8 @@ for placing the plot within a larger parent widget using
 L<basic geometry management|Prima::Widget/Geometry>, or the Tk-like
 L<pack|Prima::Widget::pack/> or L<place|Prima::Widget::place/> specifiers.
 In fact, Prima allows any widget to serve as the container for other widgets,
-so you can insert other widgets (i.e. other plots) into a plot. This serves
-as a simple mechanism for creating sub-plots, though beware: sub-plots are
-not yet correctly rendered in raster or postscript file output.
+so you can insert other widgets (i.e. other plots) into a plot. This is how
+you create figure insets.
 
 If you want to add new content to a plot or remove content from a plot, you
 do this by manipulating the L<dataSet collection|/dataSets>. Axis
@@ -1569,7 +1570,7 @@ label and tick label sizes), your title font will automatically adjust, too.
 The default titleFont is C<< height => '10%height' >>.
 
 Note that Prima's font system does not allow for arbitrary font sizes, so if you
-pick a font size of 18 pixels, it only be able to find a means for rendering the
+pick a font size of 18 pixels, it may only be able to find a means for rendering the
 font as 19 pixels. But usually, Prima can get pretty close.
 
 =head2 titleSpace
@@ -1621,8 +1622,8 @@ The default titleSpace is C<1line>.
 
 Note that although string speficifications are parsed only once (into a hashref
 representation), these dynamic sizes lead to more calculations than a bare pixel
-height or subref. If your goal is to have a title with fast rendering times, you
-should probably avoid dynamic sizes.
+height or subref. If your goal is to have a title with fast rendering times,
+which can be important for animations, you should probably avoid dynamic sizes.
 
 =head2 x, y
 
@@ -1648,8 +1649,8 @@ axis and use the new name:
  $plot->x->max(20);
 
 This is a L<feature of Prima|Prima::Object/bring>. Eventually, when multiple
-x- and y-axes are allowed, this will allow us to transparently access them by
-name just like we access the single x- and y-axes by name at the moment.
+x- and y-axes are allowed, this will allow you to transparently access them by
+name just like you can access the single x- and y-axes by name at the moment.
 
 =head2 dataSets
 
@@ -1689,10 +1690,10 @@ Returns a L<Prima::Image> of the plot with same dimensions as the plot widget.
 
 =head2 save_to_postscript
 
-Saves the plot with current axis limits to a postscript figure. This method
-takes an optional filename argument. If no filename is specified, it pops-up
-a dialog box to ask the user where and under what name they want to save the
-postscript figure.
+Saves the plot with current axis limits to an encapsulated postscript figure.
+This method takes an optional filename argument. If no filename is specified,
+it pops-up a dialog box to ask the user where and under what name they want
+to save the postscript figure.
 
 This functionality will likely be merged into save_to_file, though this
 method will remain for backwards compatibility.
@@ -1760,7 +1761,7 @@ L<draw_image|PDL::Graphics::Prima/draw_image> method like so:
  $some_image->end_paint;
 
 The L<draw_image|PDL::Graphics::Prima/draw_image> method is the preferred way to
-drawn a plot onto a pre-existing image. It gives you a bit more control of how
+draw a plot onto a pre-existing image. It gives you a bit more control on how
 the painting is invoked: for example, it does not clear the canvas for you. But
 with the increased control comes increased manual manipulation: you need to set
 the image in the paint-enabled state before invoking it, and you need to clear
@@ -1778,9 +1779,10 @@ into a canvas. In that case, you should be able to say this:
 
 Painting on an image by invoking the L<Paint Event|Prima::Widget/Paint> is
 similar to the L<draw_image|PDL::Graphics::Prima/draw_image> method, but it
-also forces your image into a paint-enabled state, clears the canvas, and
-returns the image in a paint-disabled state. This is usually what you want and
-expect when invoking the Paint event on a canvas.
+also ensures that your image is in a paint-enabled state, clears the canvas,
+and returns the image in a paint-disabled state if that's how it started.
+This is usually what you want and expect when invoking the Paint event on a
+canvas.
 
 =head2 Caveat: Fonts
 
@@ -1801,83 +1803,11 @@ or later with the font setter:
 
  $image->font($plot->font);
 
-=head1 RESPONSIBILITIES
-
-The Plot object itself has to coordinate a number of sub-systems in order to get
-a functioning plot. As these responsiblities are not always clear even to their
-author, here is a list of what the plot is responsible for handling.
-
-=over
-
-=item knowing the plot title
-
-Although the axes are responsible for knowing the axis labels, the plot itself
-is responsible for knowing the plot title and managing the space necessary for
-it.
-
-=item initiating drawing operations
-
-The drawing of the axes, data, and plot title are all coordinated, ultimately,
-by the plot object.
-
-=item managing the dataset container
-
-The plot does not manage the datasets directly, but it owns the dataset
-container that is responsible for providing an API to the container.
-
-=item handling user interaction
-
-All user interaction (which at the moment is limited to mouse interaction) is
-handled by the plot object. Drag and zoom events ultimately lead to changes in
-the axes' minima and maxima (the axes are responsible for these pieces of
-information), but these changes are initiated through the plot object.
-
-=item file generation and clipboard interaction
-
-Requests for raster and postscript output as well as copying the image to
-the clipboard are the responsibility of the plot. 
-
-=item initiating autoscaling
-
-Autoscaling for either of the axes is initiated by a call to the plot object's
-C<compute_min_max_for>, which computes the minima and maxima for a given axis.
-Most of the calculations necessary for this operation are performed by the
-dataset and the underlying plotTypes, but they are coordinated and synthesized
-by the plot object.
-
-=back
-
-Many things are B<not> the responsiblity of the plot object but are instead
-handled by other objects, which are themselves usually held by the plot.
-
-=over
-
-=item tick and axis details
-
-All axis and tick details, including minima and maxima, scaling, tick mark
-locations, axis labels, and conversion from real x and y data values to pixel
-offsets are handled by the axis objects. (The scaling, actually, is managed
-by the scaling object or class that is held by the axis.)
-
-=item managing datasets or plotTypes
-
-The datasets are managed by the dataset collection hashref defined in
-L<PDL::Graphics::Prima::DataSet>. Any access to the datasets (outside of 
-declaring them directly in the constructor, which is a special-case) is managed
-through the dataSet collection. Any access to the specific plot types are 
-themselves handled by the datasets themselves.
-
-=back
-
 =head1 TODO
 
 This is not a perfect plotting library. Here are some of the particularly
 annoying issues with it, which I hope to resolve. This is part warning to
-you, gentle reade, and part task list for me.
-
-Proper drawing of child widgets. Although subplots and insets can be added
-to plot widget, they cannot be drawn to output files like postscript or
-raster formats until this functionality is available.
+you, gentle reader, and part task list for me.
 
 If Prima had an SVG output, I could easily add it as a figure output option.
 
@@ -1893,9 +1823,6 @@ quickly. This would require some sort of interface such as
 I have hit substantial performance problems when B<adding> over 20 datasets. 
 The actual drawing of those datasets and mouse interation is fine, but the
 process of just adding them to the plot can be quite sluggish.
-
-There is essentially no way to tweak the title font, and the means for
-specifying the title space is stupid and nearly useless.
 
 The exact pixel position of the left margin depends on the size of the y-tick
 labels, which can change during the process of zooming in or out. This means
