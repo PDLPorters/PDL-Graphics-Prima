@@ -7,88 +7,6 @@ use PDL::Graphics::Prima::Limits;
 # Here's a package to handle the axes for me:
 package PDL::Graphics::Prima::Axis;
 
-=head1 NAME
-
-PDL::Graphics::Prima::Axis - class for axis handling
-
-=head1 SYNOPSIS
-
- use PDL::Graphics::Prima::Simple;
- 
- # Specify details for an axis during plot construction:
- plot(
-     -data => ds::Pair($x, $y),
-     
-     # Details for x-axis:
-     x => {
-         # Scaling can be either sc::Log or sc::Linear (the default)
-         scaling => sc::Log,
-         # Labels are optional:
-         label => 'Time [s]',
-         format_tick => sub {
-            sprintf("%lf", $_[0])
-         },
-     },
-     # Details for y-axis:
-     y => {
-         # explicitly specify min/max if you like
-         min => 0,
-         max => 100,
-         onChangeLabel => sub {
-             my $self = shift;
-             print "You changed the label to ", $self->label, "\n";
-         },
-     },
- );
- 
- # Get the current x-min:
- my $x_min = $plot->x->min;
- # Get the x-max and inquire if it's autoscaling:
- my ($x_min, $is_auto) = $plot->x->min;
- # Set the current y-min to -5:
- $plot->y->min(-5);
- # Turn on x min autoscaling:
- $plot->x->min(lm::Auto);
- # Stop autoscaling, use the current max (deprecated):
- $plot->x->max($plot->x->max);
- 
- # Note: All changes to min/max values
- # fire the ChangeBounds notification
- 
- # Get the x-label:
- my $x_label = $plot->x->label;
- # Set the x-label:
- $plot->x->label($new_label);
- 
- # Note: All changes to the label
- # fire the ChangeLabel notification
- 
- # Conversion among real, relative, and pixel positions,
- # useful for plotType drawing operations
- $x_rels = $plot->x->reals_to_relatives($xs);
- $xs = $plot->x->relatives_to_reals($x_rels);
- $x_pixels = $plot->x->relatives_to_pixels($x_rels);
- $x_rels = $plot->x->pixels_to_relatives($x_pixels);
- $x_pixels = $plot->x->reals_to_pixels($xs);
- $xs = $plot->x->pixels_to_reals($x_pixels);
- 
- # Get the current scaling object/class:
- $x_scaling = $plot->x->scaling;
- # Set the current scaling object/class:
- $plot->x->scaling(sc::Log);
-
- # Note: All changes to the scaling
- # fire the ChangeScaling notification
-
-=head1 DESCRIPTION
-
-C<PDL::Graphics::Prima> handles the axes with full Prima objects for both the
-x- and the y-axes. Although the current implementation is not terribly
-flexible, it is still quite useful and poweful, and ripe for extensions and
-improvements.
-
-=cut
-
 use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Scaling;
 use Carp;
@@ -184,16 +102,6 @@ sub get_edge_requirements {
 	return @{$_[0]->{edge_requirements}};
 }
 
-=head2 recalculate_edge_requirements
-
-Calculates the edge requirements to draw tick labels based on the current
-min/max. This B<does not> initiate an autoscaling recalculation, precisely
-because it is meant to be used B<within> that calculation. An identical
-calculation is performed during drawing operations (though that may change
-in the future).
-
-=cut
-
 sub recalculate_edge_requirements {
 	my ($axis, $canvas) = @_;
 	
@@ -214,18 +122,6 @@ sub recalculate_edge_requirements {
 	$axis->{edge_requirements}->[0] += $em_height * 1.5
 		if (defined $axis->{label} and $axis->{label} ne '');
 }
-
-=head2 update_edges
-
-Updates the cached edge data and initiates a recomputation
-of the autoscaling, if appropriate. This is usually triggered by a window
-resize, a new or modified dataset, or a label change, and it does not change
-
-This function's semantics (or even its presence) is likely to
-change in the future, so do not depend on its behavior unless you are willing
-to keep on top of updates to this library.
-
-=cut
 
 sub update_edges {
 	my ($self) = @_;
@@ -265,18 +161,6 @@ sub update_edges {
 		$self->{edgeWidth} = $self->owner->height - $edges[3] - $edges[1];
 	}
 }
-
-=head1 Properties
-
-=head2 min, max
-
-Gets/sets the the individual extrema. The return value depends upon the calling
-context. If requested in scalar context, you simply get the current calculated
-extreme value. If requested in list context, you get two return values,
-the first being the extremum and the second being a boolean value
-indicating whether or not the Auto flag is set.
-
-=cut
 
 # Accessor functions. There are a bunch of private functions that do
 # exactly what the public functions would have done, except that they
@@ -380,24 +264,6 @@ sub _max {
 	}
 }
 
-=head2 minmax
-
-Pair accessor. You can set the min/max values in one shot with this function,
-and you will get a two-element list if you call it as a getter. For example:
-
- my $piddle = get_data;
- $graph_widget->x->minmax($piddle->minmax);
- 
- # ...
- 
- print "The x min/max values are ", join(', ', $graph_widget->x->minmax), "\n";
-
-Note that if you are setting both the min and the max to autoscaling, 
-calling minmax(lm::Auto, lm::Auto) is faster than calling min(lm::Auto)
-followed by max(lm::Auto).
-
-=cut
-
 {
 	# Create the minmax function without issuing a redefinition warning
 	no warnings 'redefine';
@@ -427,24 +293,6 @@ followed by max(lm::Auto).
 	}
 }
 
-=head2 scaling
-
-Gets or returns the axis' scaling object. You can change the scaling using
-this example with something like this:
-
- # Switch to logarithmic scaling:
- $widget->x->scaling(sc::Log);
-
-Note, however, that some scalings allow values that are not permissible in
-others. For example, Linear scaling allows negative values but Logarithmic
-scaling does not. At the moment, if you try to switch to Logarithmic scaling
-without ensuring that the current min and max are positive, this will die
-telling you that negative values are not allowed.
-
-For more details about scaling, see L<PDL::Graphics::Prima::Scaling>.
-
-=cut
-
 sub scaling {
 	return $_[0]->{scaling} unless $#_;
 	# working here - what if the old limits are invalid with the new scaling,
@@ -452,15 +300,6 @@ sub scaling {
 	$_[0]->{scaling} = $_[1];
 	$_[0]->notify('ChangeScaling');
 }
-
-=head2 label
-
-Gets or sets the axis' label. You can remove the label by passing an empty
-string or by explicitly passing an undefined value. Adding a label will cause
-the viewing rectangle to shrink so that your widget can accomodate the label
-dimensions.
-
-=cut
 
 # low-level setter; does not notify
 sub _label {
@@ -511,13 +350,6 @@ sub label {
 	$self->notify('ChangeLabel');
 }
 
-=head1 NOTIFICATIONS
-
-Axis widgets provide a handful of notifications that are useful for handling
-user or other interaction.
-
-=cut
-
 #################
 # Notifications #
 #################
@@ -549,53 +381,6 @@ sub on_changelabel {
 	$self->repaint_parent;
 }
 
-=head2 ChangeBounds
-
-This event is fired immediately after the bounds are changed, whether the
-change is due to the user's mouse interaction or by a setter call of L</min>,
-L</max>, or L</minmax>.
-
-=head2 ChangeScaling
-
-This event is fired immediately after the axis' scaling type is changed
-(i.e. from linear to logarithmic).
-
-=head2 ChangeLabel
-
-This event is fired immediately after setting, changing, or removing the
-axis' label.
-
-=head1 METHODS
-
-=head2 reals_to_relatives, relatives_to_reals
-
-=for sig
-
- Signature: $axis->reals_to_relatives($data, [$min, $max])
-
-Converts real values (i.e. numbers in the set of reals, as opposed to the set
-of complex numbers, or integers) to their relative pixel positions within the
-plot window, where by relative, I mean the result is a number between 0 and 1.
-This takes the scaling (logarithmic, linear, etc) into account. The min and
-the max are optional and the axis's min and max values will be used if a min
-and max are not supplied.
-
-Actually, it can be less than 0 or greater than 1. If you have a real number
-that is less than the plot's minimum value, it will have a negative relative
-value, and if you have a real number that is greater than the plot's maximum
-value, it will have a relative number greater than 1. This is probably better
-understood through a few examples.
-
-Suppose your graph has a min/max of 0 and 100. For linear scaling, a value
-of 50 would have a relative position of 0.5, a value of 10 would have a relative
-position of 0.1, 200 would have a relative position of 2, and -10 would have a
-relative position of -0.1.
-
-If you do not provide a min or a max value, the axis's current min and max
-are used by default.
-
-=cut
-
 sub reals_to_relatives {
 	my ($axis, $dataset, $min, $max) = @_;
 	$min = $axis->{minValue} unless defined $min;
@@ -614,14 +399,6 @@ sub relatives_to_reals {
 	return $axis->{scaling}->inv_transform($min, $max, $dataset);
 }
 
-=head2 pixels_to_relatives, relatives_to_pixels
-
-Converts relative plot positions to their on-widget pixel locations. The
-widget's pixel origin is taken to be zero at the lower left corner of the
-widget, so this both rescales the numbers and includes the appropriate offset.
-
-=cut
-
 sub pixels_to_relatives {
 	my ($axis, $dataset, $ratio) = @_;
 	$ratio = 1 unless defined $ratio;
@@ -638,13 +415,6 @@ sub relatives_to_pixels {
 	return ($ratio * $axis->{edgeWidth}) * $dataset + ($ratio * $axis->{lowerEdge});
 }
 
-=head2 reals_to_pixels, pixels_to_reals
-
-A convenience function to convert real values directly to on-widget pixel
-locations. This simply combines the previous two documented functions.
-
-=cut
-
 sub reals_to_pixels {
 	my ($axis, $dataset, $ratio, @args) = @_;
 	$ratio = 1 unless defined $ratio;
@@ -656,12 +426,6 @@ sub pixels_to_reals {
 	$ratio = 1 unless defined $ratio;
 	return $axis->relatives_to_reals($axis->pixels_to_relatives($dataset, $ratio), @args);
 }
-
-=head2 draw
-
-Draws the axis, including the bounding box, ticks, and tick labels
-
-=cut
 
 sub get_Ticks_and_ticks {
 	my ($axis, $ratio) = @_;
@@ -860,58 +624,234 @@ sub draw {
 
 1;
 
-=head2 RESPONSIBILITIES
+__END__
 
-The axes of a plot are responsible for knowing and doing the following:
+=head1 NAME
 
-=over
+PDL::Graphics::Prima::Axis - class for axis handling
 
-=item knowing min/max
+=head1 SYNOPSIS
 
-Axes know the min and max values, and whether or not the plot is autoscaling in
-their axis.
+ use PDL::Graphics::Prima::Simple;
+ 
+ # Specify details for an axis during plot construction:
+ plot(
+     -data => ds::Pair($x, $y),
+     
+     # Details for x-axis:
+     x => {
+         # Scaling can be either sc::Log or sc::Linear (the default)
+         scaling => sc::Log,
+         # Labels are optional:
+         label => 'Time [s]',
+         format_tick => sub {
+            sprintf("%lf", $_[0])
+         },
+     },
+     # Details for y-axis:
+     y => {
+         # explicitly specify min/max if you like
+         min => 0,
+         max => 100,
+         onChangeLabel => sub {
+             my $self = shift;
+             print "You changed the label to ", $self->label, "\n";
+         },
+     },
+ );
+ 
+ # Get the current x-min:
+ my $x_min = $plot->x->min;
+ # Get the x-max and inquire if it's autoscaling:
+ my ($x_min, $is_auto) = $plot->x->min;
+ # Set the current y-min to -5:
+ $plot->y->min(-5);
+ # Turn on x min autoscaling:
+ $plot->x->min(lm::Auto);
+ # Stop autoscaling, use the current max (deprecated):
+ $plot->x->max($plot->x->max);
+ 
+ # Note: All changes to min/max values
+ # fire the ChangeBounds notification
+ 
+ # Get the x-label:
+ my $x_label = $plot->x->label;
+ # Set the x-label:
+ $plot->x->label($new_label);
+ 
+ # Note: All changes to the label
+ # fire the ChangeLabel notification
+ 
+ # Conversion among real, relative, and pixel positions,
+ # useful for plotType drawing operations
+ $x_rels = $plot->x->reals_to_relatives($xs);
+ $xs = $plot->x->relatives_to_reals($x_rels);
+ $x_pixels = $plot->x->relatives_to_pixels($x_rels);
+ $x_rels = $plot->x->pixels_to_relatives($x_pixels);
+ $x_pixels = $plot->x->reals_to_pixels($xs);
+ $xs = $plot->x->pixels_to_reals($x_pixels);
+ 
+ # Get the current scaling object/class:
+ $x_scaling = $plot->x->scaling;
+ # Set the current scaling object/class:
+ $plot->x->scaling(sc::Log);
 
-=item knowing axis labels
+ # Note: All changes to the scaling
+ # fire the ChangeScaling notification
 
-Axis labels are the property of the axis, not the plot. This is important for
-the next item...
+=head1 DESCRIPTION
 
-=item reporting the space it needs for tick and axis labels
+C<PDL::Graphics::Prima> handles the axes with full Prima objects for both the
+x- and the y-axes. Although the current implementation is not terribly
+flexible, it is still quite useful and poweful, and ripe for extensions and
+improvements.
 
-Both tick labels and axis labels (descriptions) are known to the axis, so it
-is responsible for determining and reporting (upon request) the amount of space
-it needs to draw these items.
+The axis objects manage a number of different functions and capabilities.
+They keep track of their own minimum and maximum values, for example, as
+well as the axis labels. They are also responsible for drawing tick marks,
+tick labels, and axis labels during plot drawing operations. It should be
+noted, however, that the L<scaling object or class|PDL::Graphics::Prima::Scaling/>
+is responsible for determining the tick locations.
 
-=item tracking 
+Axes provide the mechanism for converting data coordinates to pixel
+coordinates, and vice versa.
 
-=item converting data <-> pixels
+One of the more subtle issues involved with axes is that they are responsible
+for reporting the space they need for their tick and axis labels. These
+calculations help ensure that numbers do not get clipped simply because they
+do not have enough space (although the functionality could be improved).
 
-Utilizing the Scaling object/class and knowing the data's min and max, the
-axis can coordinate the calculation of data values to relative positions to
-pixel offsets, and back, important for drawing operations and for autoscaling
-calculations.
+=head1 Properties
 
-=item drawing tick marks
+=head2 min, max
 
-Although the Scaling object/class determines the tick mark locations, the
-axis itself is responsible for drawing them.
+Gets/sets the the individual extrema. The return value depends upon the calling
+context. If requested in scalar context, you simply get the current calculated
+extreme value. If requested in list context, you get two return values,
+the first being the extremum and the second being a boolean value
+indicating whether or not the Auto flag is set.
 
-=back
+=head2 minmax
 
-The axes of a plot are B<not> responsible for knowing or doing the following:
+Pair accessor. You can set the min/max values in one shot with this function,
+and you will get a two-element list if you call it as a getter. For example:
 
-=over
+ my $piddle = get_data;
+ $graph_widget->x->minmax($piddle->minmax);
+ 
+ # ...
+ 
+ print "The x min/max values are ", join(', ', $graph_widget->x->minmax), "\n";
 
-=item mouse interaction
+Note that if you are setting both the min and the max to autoscaling, 
+calling minmax(lm::Auto, lm::Auto) is faster than calling min(lm::Auto)
+followed by max(lm::Auto).
 
-All user interaction with the mouse is handled by the plot object itself
+=head2 scaling
 
-=item calculating tick mark locations
+Gets or returns the axis' scaling object. You can change the scaling using
+this example with something like this:
 
-The Scaling object or class that is held by the axis is responsible for
-calculating the locations of the tick marks
+ # Switch to logarithmic scaling:
+ $widget->x->scaling(sc::Log);
 
-=back
+Note, however, that some scalings allow values that are not permissible in
+others. For example, Linear scaling allows negative values but Logarithmic
+scaling does not. At the moment, if you try to switch to Logarithmic scaling
+without ensuring that the current min and max are positive, this will die
+telling you that negative values are not allowed.
+
+For more details about scaling, see L<PDL::Graphics::Prima::Scaling>.
+
+=head2 label
+
+Gets or sets the axis' label. You can remove the label by passing an empty
+string or by explicitly passing an undefined value. Adding a label will cause
+the viewing rectangle to shrink so that your widget can accomodate the label
+dimensions.
+
+=head1 NOTIFICATIONS
+
+Axis widgets provide a handful of notifications that are useful for handling
+user or other interaction.
+
+=head2 ChangeBounds
+
+This event is fired immediately after the bounds are changed, whether the
+change is due to the user's mouse interaction or by a setter call of L</min>,
+L</max>, or L</minmax>.
+
+=head2 ChangeScaling
+
+This event is fired immediately after the axis' scaling type is changed
+(i.e. from linear to logarithmic).
+
+=head2 ChangeLabel
+
+This event is fired immediately after setting, changing, or removing the
+axis' label.
+
+=head1 METHODS
+
+=head2 reals_to_relatives, relatives_to_reals
+
+=for sig
+
+ Signature: $axis->reals_to_relatives($data, [$min, $max])
+
+Converts real values (i.e. numbers in the set of reals, as opposed to the set
+of complex numbers, or integers) to their relative pixel positions within the
+plot window, where by relative, I mean the result is a number between 0 and 1.
+This takes the scaling (logarithmic, linear, etc) into account. The min and
+the max are optional and the axis's min and max values will be used if a min
+and max are not supplied.
+
+Actually, it can be less than 0 or greater than 1. If you have a real number
+that is less than the plot's minimum value, it will have a negative relative
+value, and if you have a real number that is greater than the plot's maximum
+value, it will have a relative number greater than 1. This is probably better
+understood through a few examples.
+
+Suppose your graph has a min/max of 0 and 100. For linear scaling, a value
+of 50 would have a relative position of 0.5, a value of 10 would have a relative
+position of 0.1, 200 would have a relative position of 2, and -10 would have a
+relative position of -0.1.
+
+If you do not provide a min or a max value, the axis's current min and max
+are used by default.
+
+=head2 pixels_to_relatives, relatives_to_pixels
+
+Converts relative plot positions to their on-widget pixel locations. The
+widget's pixel origin is taken to be zero at the lower left corner of the
+widget, so this both rescales the numbers and includes the appropriate offset.
+
+=head2 reals_to_pixels, pixels_to_reals
+
+A convenience function to convert real values directly to on-widget pixel
+locations. This simply combines the previous two documented functions.
+
+=head2 draw
+
+Draws the axis, including the bounding box, ticks, and tick labels
+
+=head2 update_edges
+
+Updates the cached edge data and initiates a recomputation
+of the autoscaling, if appropriate. This is usually triggered by a window
+resize, a new or modified dataset, or a label change, and it does not change
+
+This function's semantics (or even its presence) is likely to
+change in the future, so do not depend on its behavior unless you are willing
+to keep on top of updates to this library.
+
+=head2 recalculate_edge_requirements
+
+Calculates the edge requirements to draw tick labels based on the current
+min/max. This B<does not> initiate an autoscaling recalculation, precisely
+because it is meant to be used B<within> that calculation. An identical
+calculation is performed during drawing operations (though that may change
+in the future).
 
 =head1 TODO
 
