@@ -433,7 +433,7 @@ sub sample_evenly {
 sub is_valid_extremum {
 	my ($class, $extremum) = @_;
 	no warnings 'numeric';
-	if ($extremum < 0) {
+	if ($extremum <= 0) {
 		# no negative values:
 		$@ = 'must be positive for logarithmic scaling';
 		return 0;
