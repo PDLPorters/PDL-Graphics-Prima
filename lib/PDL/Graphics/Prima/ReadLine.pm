@@ -6,8 +6,6 @@ use Carp;
 my $is_setup = 0;
 
 sub is_happy_with {
-	# Stop-gap until I figure out better readline support for Windows
-	return 0 if $^O =~ /Win/ or $^O =~ /cygwin/;
 	my ($class, $readline_obj) = @_;
 	return eval{ $readline_obj->can('event_loop')
 		and not $readline_obj->tkRunning };
@@ -34,18 +32,32 @@ sub setup {
 	require Prima::Application;
 	Prima::Application->import;
 	
-	# This io watcher will (eventually) watch whatever the readline is
-	# monitoring. That will be established later in the call to event_loop.
-	# Die'ing is a simple way to exit the "go" method invoked during the
-	# event loop
+	# Except on Windows, this io watcher will (eventually) watch whatever the
+	# readline is monitoring. That will be established later in the call to
+	# event_loop. Die'ing is a simple way to exit the "go" method invoked
+	# during the event loop
 	my $prima_io_watcher = Prima::File->new(
 		onRead => sub { die 'user pressed a key' },
 	);
+	# On Windows, use this timer instead
+	my $fh;
+	Prima::Timer->new(
+		timeout => 30,
+		onTick => sub {
+			die 'user pressed a key' if Term::ReadKey::ReadKey(-1);#PeekKey();
+		}
+	)->start if $^O =~ /Win/;
+	
+#	setup_readkey();
 	
 	$readline_obj->event_loop( sub {
 			local $@;
 			# Run the event loop. If a key is pressed, the io watcher's
 			# callback will get called, throwing an exception.
+#if (PeekKey()) {
+#print "PeekKey is already true\n" if PeekKey();
+#print "OldReadKey returns ", OldReadKey(-1), "\n";
+#}
 			eval { $::application->go };
 			# Rethrow the exception if it's not one that we threw
 			die unless $@ =~ /user pressed a key/;
@@ -53,8 +65,8 @@ sub setup {
 		sub {
 			# Register the event loop, which means associating the io
 			# watcher with the specific io handle the readline wants
-			my $fh = shift;
-			$prima_io_watcher->file($fh);
+			$fh = shift;
+			$prima_io_watcher->file($fh) unless $^O =~ /Win32/;
 		},
 	);
 	$is_setup = 1;
@@ -62,6 +74,41 @@ sub setup {
 
 # Status method
 sub is_setup { $is_setup }
+
+1;
+__END__
+# My own version of ReadKey that lets me peek using PeakKey. This is ONLY
+# used on Windows, though I suppose it could work on other OSes too. I feel
+# rather dirty monkey-patching Term::ReadKey like this, but I really need to be
+# able to peek without obliterating the keystroke from the ReadKey buffer. :-(
+sub OldReadKey;
+sub ReadKey;
+sub PeekKey;
+sub setup_readkey {
+	print "PDL::Graphics::Prima::ReadLine patching Term::ReadKey\n";
+	require Term::ReadKey;
+	*OldReadKey = \&Term::ReadKey::ReadKey;
+	no warnings 'redefine';
+	*Term::ReadKey::ReadKey = \&ReadKey;
+}
+my $last_key;
+my $counter = 1;
+sub PeekKey {
+print "$counter time peeking at key\n" if $counter % 100 == 0;
+$counter++;
+	return $last_key if defined $last_key;
+	return $last_key = OldReadKey(-1);
+}
+sub ReadKey {
+print "Called new ReadKey\n";
+	if (defined $last_key) {
+		my $to_return = $last_key;
+		$last_key = undef;
+		return $to_return;
+	}
+	return OldReadKey(@_);
+}
+
 
 1;
 
