@@ -7,7 +7,7 @@ use PDL::Graphics::Prima::Limits;
 # Here's a package to handle the axes for me:
 package PDL::Graphics::Prima::Axis;
 
-our $VERSION = 0.15;   # update with update-version.pl
+our $VERSION = 0.15_01;# update with update-version.pl
 
 use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Scaling;

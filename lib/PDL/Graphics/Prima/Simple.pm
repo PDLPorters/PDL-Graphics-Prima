@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Carp 'croak';
 
-our $VERSION = 0.15;   # update with update-version.pl
+our $VERSION = 0.15_01;# update with update-version.pl
 
 use PDL::Graphics::Prima;
 
