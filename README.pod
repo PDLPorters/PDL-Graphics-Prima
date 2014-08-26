@@ -15,9 +15,7 @@ like panning and zooming are built right into the widget.
 
 For more information, see the documentation for L<PDL::Graphics::Prima>. If
 you're new, you should check out the documentation for
-L<PDL::Graphics::Prima::Simple>. Also, I gave a talk at the 2012 edition of
-YAPC::NA (in Madison, WI) that you can find here:
-L<http://www.youtube.com/watch?v=IE-vnnRWiOg&feature=plcp>.
+L<PDL::Graphics::Prima::Simple>.
 
 =head1 INSTALLATION
 
@@ -91,8 +89,10 @@ Trustees at the University of Illinois.
 Portions of this distribution's code are copyright (c) 2011-2013 Northwestern
 University.
 
-Portions of this distribution's documentation are copyright (c) 2011-2013 David
-Mertens.
+Portions of this distribution's code are copyright (c) 2013-2014 Dickinson
+College.
+
+This distribution's documentation are copyright (c) 2011-2014 David Mertens.
 
 This distribution is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

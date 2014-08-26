@@ -4,7 +4,8 @@ use warnings;
 ############################################################################
                        package PDL::Graphics::Prima;
 ############################################################################
-our $VERSION = 0.13_02;
+our $VERSION = 0.15_01;# do not delete these spaces; run update-version.pl
+                       # if you change this
 
 # Add automatic support for PDL terminal interactivity
 use PDL::Graphics::Prima::ReadLine;
@@ -614,7 +615,7 @@ sub get_image {
 	) or die "Can't create an image!\n";
 	$image->begin_paint or die "Can't draw on image";
 	$image->clear;
-	$self->draw_plot($image);
+	$self->paint_with_widgets($image);
 	$image->end_paint;
 	return $image;
 }
@@ -676,14 +677,7 @@ sub save_to_postscript {
 			}
 		};
 	
-	if ($ENV{USE_PRIMA_SUBCANVAS}) {
-		print "Using subcanvas\n";
-		$self->paint_with_widgets($ps);
-	}
-	else {
-		$self->draw_plot($ps);
-	}
-	
+	$self->paint_with_widgets($ps);
 	$ps->end_doc;
 }
 
@@ -1940,14 +1934,16 @@ plots
 Unless otherwise stated, all contributions in code and documentation are
 copyright (c) their respective authors, all rights reserved.
 
-Portions of this module's code are copyright (c) 2011 The Board of Trustees at
-the University of Illinois.
+Portions of this module's code are copyright (c) 2011 The Board of
+Trustees at the University of Illinois.
 
 Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-Portions of this module's documentation are copyright (c) 2011-2013 David
-Mertens.
+Portions of this module's code are copyright (c) 2013-2014 Dickinson
+College.
+
+This module's documentation is copyright (c) 2011-2014 David Mertens.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

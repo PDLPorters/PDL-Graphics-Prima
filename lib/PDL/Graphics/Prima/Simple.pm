@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use Carp 'croak';
 
+our $VERSION = 0.15_01;# update with update-version.pl
+
 use PDL::Graphics::Prima;
 
 =head1 NAME
@@ -2019,14 +2021,16 @@ plots
 Unless otherwise stated, all contributions in code and documentation are
 copyright (c) their respective authors, all rights reserved.
 
-Portions of this module's code are copyright (c) 2011 The Board of Trustees at
-the University of Illinois.
+Portions of this module's code are copyright (c) 2011 The Board of
+Trustees at the University of Illinois.
 
 Portions of this module's code are copyright (c) 2011-2013 Northwestern
 University.
 
-Portions of this module's documentation are copyright (c) 2011-2013 David
-Mertens.
+Portions of this module's code are copyright (c) 2013-2014 Dickinson
+College.
+
+This module's documentation is copyright (c) 2011-2014 David Mertens.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
