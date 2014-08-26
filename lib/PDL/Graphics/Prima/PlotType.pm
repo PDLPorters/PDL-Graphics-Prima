@@ -2283,7 +2283,7 @@ sub draw {
 
 package PDL::Graphics::Prima::PlotType;
 
-our $VERSION = 0.15_01;# update with update-version.pl
+our $VERSION = 0.16;   # update with update-version.pl
 
 use Carp 'croak';
 
