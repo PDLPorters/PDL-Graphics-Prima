@@ -3,7 +3,7 @@ use warnings;
 
 package PDL::Graphics::Prima::Limits;
 
-our $VERSION = 0.16;   # update with update-version.pl
+our $VERSION = 0.17;   # update with update-version.pl
 
 # Defines the lm (limits) package in a way that CPAN won't index it
 package

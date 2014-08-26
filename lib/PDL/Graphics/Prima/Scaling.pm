@@ -3,7 +3,7 @@ use warnings;
 
 package PDL::Graphics::Prima::Scaling;
 
-our $VERSION = 0.16;   # update with update-version.pl
+our $VERSION = 0.17;   # update with update-version.pl
 
 package
 sc;

@@ -82,7 +82,7 @@ package PDL::Graphics::Prima::DataSet;
 use Carp;
 use Scalar::Util;
 
-our $VERSION = 0.16;   # update with update-version.pl
+our $VERSION = 0.17;   # update with update-version.pl
 
 =item widget
 
