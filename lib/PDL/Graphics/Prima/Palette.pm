@@ -74,7 +74,7 @@ All Palette classes know how to make new copies of themselves... ?
 package PDL::Graphics::Prima::Palette;
 use Carp;
 
-our $VERSION = 0.14;   # update with update-version.pl
+our $VERSION = 0.15;   # update with update-version.pl
 
 =head2 new
 
