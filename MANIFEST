@@ -1,6 +1,7 @@
 MANIFEST
 Build.PL
 README.pod
+Changes
 lib/PDL/Graphics/Prima.pm
 lib/PDL/Graphics/Prima/Axis.pm
 lib/PDL/Graphics/Prima/DataSet.pm
