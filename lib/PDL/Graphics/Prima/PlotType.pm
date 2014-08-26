@@ -1249,12 +1249,12 @@ sub initialize {
 
 sub y_bars_present {
 	my $self = shift;
-	return exists($self->{upper_bars}) or exists($self->{lower_bars});
+	return exists($self->{upper_bars}) || exists($self->{lower_bars});
 }
 
 sub x_bars_present {
 	my $self = shift;
-	return exists($self->{left_bars}) or exists($self->{right_bars});
+	return exists($self->{left_bars}) || exists($self->{right_bars});
 }
 
 # The collation code:
@@ -2283,7 +2283,7 @@ sub draw {
 
 package PDL::Graphics::Prima::PlotType;
 
-our $VERSION = 0.16;   # update with update-version.pl
+our $VERSION = 0.17;   # update with update-version.pl
 
 use Carp 'croak';
 

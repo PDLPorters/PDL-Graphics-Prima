@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Carp;
 
-our $VERSION = 0.16;   # update with update-version.pl
+our $VERSION = 0.17;   # update with update-version.pl
 
 my $is_setup = 0;
 
