@@ -1,6 +1,10 @@
 use strict;
 use warnings;
 
+package PDL::Graphics::Prima::Scaling;
+
+our $VERSION = 0.14;   # update with update-version.pl
+
 package
 sc;
 use constant Linear => 'PDL::Graphics::Prima::Scaling::Linear';

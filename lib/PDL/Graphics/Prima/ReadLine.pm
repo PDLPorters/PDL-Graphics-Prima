@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use Carp;
 
+our $VERSION = 0.14;   # update with update-version.pl
+
 my $is_setup = 0;
 
 sub is_happy_with {

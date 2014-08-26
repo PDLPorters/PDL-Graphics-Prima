@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use Carp 'croak';
 
+our $VERSION = 0.14;   # update with update-version.pl
+
 use PDL::Graphics::Prima;
 
 =head1 NAME

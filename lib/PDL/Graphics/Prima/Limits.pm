@@ -1,6 +1,10 @@
 use strict;
 use warnings;
 
+package PDL::Graphics::Prima::Limits;
+
+our $VERSION = 0.14;   # update with update-version.pl
+
 # Defines the lm (limits) package in a way that CPAN won't index it
 package
 lm;

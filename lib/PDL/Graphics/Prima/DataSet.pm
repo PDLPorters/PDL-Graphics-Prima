@@ -82,6 +82,8 @@ package PDL::Graphics::Prima::DataSet;
 use Carp;
 use Scalar::Util;
 
+our $VERSION = 0.14;   # update with update-version.pl
+
 =item widget
 
 The widget associated with the dataset.
