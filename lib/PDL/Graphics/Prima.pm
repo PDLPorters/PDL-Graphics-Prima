@@ -4,7 +4,7 @@ use warnings;
 ############################################################################
                        package PDL::Graphics::Prima;
 ############################################################################
-our $VERSION = 0.13_02;
+our $VERSION = 0.14;
 
 # Add automatic support for PDL terminal interactivity
 use PDL::Graphics::Prima::ReadLine;
