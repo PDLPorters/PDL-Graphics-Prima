@@ -614,7 +614,7 @@ sub get_image {
 	) or die "Can't create an image!\n";
 	$image->begin_paint or die "Can't draw on image";
 	$image->clear;
-	$self->draw_plot($image);
+	$self->paint_with_widgets($image);
 	$image->end_paint;
 	return $image;
 }
@@ -676,14 +676,7 @@ sub save_to_postscript {
 			}
 		};
 	
-	if ($ENV{USE_PRIMA_SUBCANVAS}) {
-		print "Using subcanvas\n";
-		$self->paint_with_widgets($ps);
-	}
-	else {
-		$self->draw_plot($ps);
-	}
-	
+	$self->paint_with_widgets($ps);
 	$ps->end_doc;
 }
 
