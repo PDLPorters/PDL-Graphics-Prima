@@ -502,15 +502,15 @@ sub draw {
 			if $canvas->isa('Prima::PS::Drawable');
 
 		# Draw the minor tick marks:
-		$canvas->pdl_lines($ticks_pixels, $top_bottom, $ticks_pixels, $top_bottom + $tick_size
-				, lineWidth => 2);
+		$canvas->pdl_lines($ticks_pixels, $top_bottom,
+			$ticks_pixels, $top_bottom + $tick_size);
 		# Draw the major tick marks:
-		$canvas->pdl_lines($Ticks_pixels, $top_bottom, $Ticks_pixels, $top_bottom + $Tick_size
-				, lineWidth => 2);
+		$canvas->pdl_lines($Ticks_pixels, $top_bottom,
+			$Ticks_pixels, $top_bottom + $Tick_size);
 		# Draw lines on the top/bottom, drawing wider so that the edges are
 		# correctly handled by the clipping
-		$canvas->pdl_lines($left_right->at(0,0)-3, $top_bottom, $left_right->at(0,1)+1, $top_bottom
-				, lineWidth => 2);
+		$canvas->pdl_lines($left_right->at(0,0)-3, $top_bottom,
+			$left_right->at(0,1)+1, $top_bottom);
 		
 		# Figure out the top of the axis labels:
 		my $label_top = $clip_bottom - $em_height/4;
@@ -553,14 +553,14 @@ sub draw {
 		$canvas->clipRect(0, $clip_bottom, $canvas->width, $clip_top);
 		
 		# draw the minor tick marks:
-		$canvas->pdl_lines($left_right, $ticks_pixels, $left_right + $tick_size, $ticks_pixels
-				, lineWidth => 2);
+		$canvas->pdl_lines($left_right, $ticks_pixels,
+			$left_right + $tick_size, $ticks_pixels);
 		# draw the major tick marks:
-		$canvas->pdl_lines($left_right, $Ticks_pixels, $left_right + $Tick_size, $Ticks_pixels
-				, lineWidth => 2);
+		$canvas->pdl_lines($left_right, $Ticks_pixels,
+			$left_right + $Tick_size, $Ticks_pixels);
 		# Draw lines on the left/right:
-		$canvas->pdl_lines($left_right, $top_bottom->at(0,0), $left_right, $top_bottom->at(0,1)
-				, lineWidth => 2);
+		$canvas->pdl_lines($left_right, $top_bottom->at(0,0),
+			$left_right, $top_bottom->at(0,1));
 		
 		# Figure out the right edge of the axis labels:
 		my $label_right = $clip_left - $em_height/4;
