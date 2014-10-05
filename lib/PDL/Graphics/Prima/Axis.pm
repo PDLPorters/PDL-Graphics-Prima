@@ -13,7 +13,7 @@ use PDL::Graphics::Prima::Limits;
 use PDL::Graphics::Prima::Scaling;
 use Carp;
 
-use PDL;
+use PDL::Lite;
 use Prima;
 our @ISA = qw(Prima::Component);
 
@@ -486,11 +486,11 @@ sub draw {
 	# working here - make this prettier
 	my ($canv_width, $canv_height) = $canvas->size;
 	my $tick_length = 8 * $ratio; #0.8 * sqrt($canv_width < $canv_height ? $canv_height : $canv_width);
-	my $Tick_size = pdl($tick_length, -$tick_length)->transpose;
+	my $Tick_size = PDL->new($tick_length, -$tick_length)->transpose;
 	my $tick_size = $Tick_size / 2;
 	
-	my $top_bottom = pdl($clip_bottom, $clip_top)->transpose;
-	my $left_right = pdl($clip_left, $clip_right)->transpose;
+	my $top_bottom = PDL->new($clip_bottom, $clip_top)->transpose;
+	my $left_right = PDL->new($clip_left, $clip_right)->transpose;
 	
 	if ($axis->name =~ /^x/) {
 		# Ensure the tick marks are exactly clipped:
