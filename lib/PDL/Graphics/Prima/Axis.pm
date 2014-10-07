@@ -485,7 +485,7 @@ sub draw {
 	# some such. In the meantime, just draw it on the edges:
 	# working here - make this prettier
 	my ($canv_width, $canv_height) = $canvas->size;
-	my $tick_length = 8 * $ratio; #0.8 * sqrt($canv_width < $canv_height ? $canv_height : $canv_width);
+	my $tick_length = 8 * $ratio;
 	my $Tick_size = PDL->new($tick_length, -$tick_length)->transpose;
 	my $tick_size = $Tick_size / 2;
 	
