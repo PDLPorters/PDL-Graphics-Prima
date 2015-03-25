@@ -437,22 +437,19 @@ sub get_Ticks_and_ticks {
 	my ($em_width, $em_height) = $axis->em_dims;
 	my ($padded_min, $padded_max);
 	
-	if ($axis->name =~ /^x/) {
-		$padded_min = $axis->pixels_to_reals(
-			$axis->reals_to_pixels(scalar ($axis->min), $ratio) - $em_width,
-			$ratio);
-		$padded_max = $axis->pixels_to_reals(
-			$axis->reals_to_pixels(scalar ($axis->max), $ratio) + $em_width,
-			$ratio);
-	}
-	else {
-		$padded_min = $axis->pixels_to_reals(
-			$axis->reals_to_pixels(scalar ($axis->min), $ratio) - $em_height/2,
-			$ratio);
-		$padded_max = $axis->pixels_to_reals(
-			$axis->reals_to_pixels(scalar ($axis->max), $ratio) + $em_height/2,
-			$ratio);
-	}
+	my $padding = $axis->name =~ /^x/ ? $em_width : $em_height/2;
+	warn("Zero padding in get_Ticks_and_ticks") if $padding == 0;
+	
+	$padded_min = $axis->pixels_to_reals(
+		$axis->reals_to_pixels(scalar ($axis->min), $ratio) - $padding,
+		$ratio);
+	$padded_max = $axis->pixels_to_reals(
+		$axis->reals_to_pixels(scalar ($axis->max), $ratio) + $padding,
+		$ratio);
+	
+	# Indicate trouble if the min and max are the same
+	die("Padded axis min/max for " . $axis->name . " are the same")
+		if $padded_min == $padded_max;
 	
 	# Get the locations for the major and minor ticks:
 	my ($Ticks, $ticks) = $axis->{scaling}->compute_ticks($padded_min, $padded_max);
