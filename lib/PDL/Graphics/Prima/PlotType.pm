@@ -229,14 +229,14 @@ sub draw {
 }
 
 ####################################################
-# PDL::Graphics::Prima::PlotType::Pair::Trendlines #
+# PDL::Graphics::Prima::PlotType::Pair::TrendLines #
 ####################################################
 
-=item ppair::Trendlines
+=item ppair::TrendLines
 
 =for ref
 
- ppair::Trendlines( [thread_like => STRING,] [weights => PDL,]
+ ppair::TrendLines( [thread_like => STRING,] [weights => PDL,]
                  [along_dim => INTEGER,] options )
 
 Draws linear fits to the x/y data as lines. This is a descendent of
