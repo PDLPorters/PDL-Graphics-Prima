@@ -147,6 +147,7 @@ sub update_edges {
 	# bad values or something), we will get undef. We need to be careful to not
 	# be thrown off by that possible return value.
 	if (defined $min and defined $max) {
+		# XXX handle degenerate case XXX
 		$self->{minValue} = $min if $self->{minAuto};
 		$self->{maxValue} = $max if $self->{maxAuto};
 	}
@@ -196,6 +197,7 @@ sub _min {
 			unless ($self->{scaling}->is_valid_extremum($new_value));
 		# Check for degeneracy
 		if ($self->_max == $new_value) {
+			# XXX What does this actually do? Does this have side-effects I do not see?
 			my ($min, $max) = $self->owner->compute_min_max_for($self->name);
 		}
 		else {
