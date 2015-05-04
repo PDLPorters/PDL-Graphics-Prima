@@ -1503,7 +1503,7 @@ sub get_prima_color_data {
 ##############################################################################
 #                                    Func                                    #
 ##############################################################################
-
+=back
 =head2 Func
 
 PDL::Graphics::Prima provides a special pair dataset that takes a function
