@@ -2237,7 +2237,7 @@ sub draw {
 	my $x = $self->compute_position($self->{x}, $self->widget->x, $ratio);
 	my $y = $self->compute_position($self->{y}, $self->widget->y, $ratio);
 	return if PDL::Core::topdl($x)->isbad->all
-		or PDL::Core::topdl($x)->isbad->all;
+		or PDL::Core::topdl($y)->isbad->all;
 	
 	# Back up the clip rectangle
 	my @clip_rect = $canvas->clipRect;
