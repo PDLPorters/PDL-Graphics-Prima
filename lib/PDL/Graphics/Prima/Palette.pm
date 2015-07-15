@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use PDL::Drawing::Prima::Utils;
 
+# For further reading: http://cadik.posvete.cz/color_to_gray_evaluation/
+
 =head1 NAME
 
 PDL::Graphics::Prima::Palette - a set of palettes for the Prima graph widget
