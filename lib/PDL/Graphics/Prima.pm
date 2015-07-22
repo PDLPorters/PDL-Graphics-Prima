@@ -868,6 +868,12 @@ sub on_mousewheel {
 	my $rel_x = $self->x->pixels_to_relatives($x);
 	my $rel_y = $self->y->pixels_to_relatives($y);
 	
+	# Zoom algebra. If I zoom in by 20%, how much should I zoom out by?
+	# For zoom-in I have
+	# z = o - o/5 = 4/5 * o
+	# For zoom-out, I invert
+	# 5/4 * z = o
+	
 	# if the mouse is over the data or the x-axis, zoom in the x-direction,
 	# preserving the position of the mouse's x-value:
 	if ($rel_x > 0 and $rel_x < 1) {
@@ -878,8 +884,8 @@ sub on_mousewheel {
 			$rel_max -= (1 - $rel_x) / 5;
 		}
 		else {
-			$rel_min -= $rel_x/5;
-			$rel_max += (1 - $rel_x) / 5;
+			$rel_min -= $rel_x/4;
+			$rel_max += (1 - $rel_x) / 4;
 		}
 		
 		# Compute the new min/max values from the axis scaling:
@@ -896,8 +902,8 @@ sub on_mousewheel {
 			$rel_max -= (1 - $rel_y) / 5;
 		}
 		else {
-			$rel_min -= $rel_y/5;
-			$rel_max += (1 - $rel_y) / 5;
+			$rel_min -= $rel_y/4;
+			$rel_max += (1 - $rel_y) / 4;
 		}
 		
 		# Compute the new min/max values from the axis scaling:

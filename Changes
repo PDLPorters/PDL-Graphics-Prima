@@ -2,6 +2,15 @@ Put changes under the appropriate header. Headers can include API CHANGES,
 DIFFERENT BEHAVIOR, BUG FIXES, DEPENDENCIES, ENHANCEMENTS, NEW FEATURES, and
 OTHER. Entries should be in chronological order, i.e. oldest at the top
 
+0.17 YYYY-MM-DD
+
+  [DIFFERENT BEHAVIOR]
+  
+  - Change zoom-out factor so that a zoom-in/zoom-out pair takes us back to
+    to starting zoom level.
+
+
+
 0.16 2014-08-25
 
   - Fixed Changes file to conform to the spec
