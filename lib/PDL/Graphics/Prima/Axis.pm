@@ -377,7 +377,18 @@ sub repaint_parent {
 	# immediately
 	$::application->yield if defined $PERLDL::TERM;
 }
-*on_changebounds = \&repaint_parent;
+sub on_changebounds {
+	my $axis = shift;
+	$axis->owner->notify('Paint');
+	
+	# If running in the PDL shell and not due to a mouse drag, clear the
+	# event queue so this hits immediately. If this change is due to a
+	# mouse drag (evidenced by the parent tracking mouse coordinates),
+	# then clearing the queue causes the plot to accelerate away. Guard
+	# against that.
+	$::application->yield if defined $PERLDL::TERM
+		and not exists $axis->owner->{mouse_down_rel};
+}
 *on_changescaling = \&repaint_parent;
 sub on_changelabel {
 	my $self = shift;

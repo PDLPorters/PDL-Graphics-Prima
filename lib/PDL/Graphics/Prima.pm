@@ -980,11 +980,7 @@ sub on_mousemove {
 			my $new_min = $self->x->relatives_to_reals(-$dx);
 			my $new_max = $self->x->relatives_to_reals(1 - $dx);
 			
-			# Call the non-notifying version. The notifying version causes an
-			# immediate redraw that causes the plot to accelerate away in
-			# perldl.
-			$self->x->_min($new_min);
-			$self->x->_max($new_max);
+			$self->x->minmax($new_min, $new_max);
 		}
 		# If the initial click was within the y-boundaries, then the y-values
 		# should be adjusted:
@@ -994,11 +990,7 @@ sub on_mousemove {
 			my $new_min = $self->y->relatives_to_reals(-$dy);
 			my $new_max = $self->y->relatives_to_reals(1 - $dy);
 			
-			# Call the non-notifying version. The notifying version causes an
-			# immediate redraw that causes the plot to accelerate away in
-			# perldl.
-			$self->y->_min($new_min);
-			$self->y->_max($new_max);
+			$self->y->minmax($new_min, $new_max);
 		}
 	}
 	
