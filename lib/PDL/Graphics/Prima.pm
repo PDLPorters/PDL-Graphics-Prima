@@ -1111,6 +1111,7 @@ sub insert_minmax_input {
 		place => { x => 110, y => $y_pos, height => 30, width => 280, anchor => 'sw' },
 		height => 30,
 		text => ($is_auto ? "$init_val (Auto)" : $init_val),
+		backColor => cl::White,
 		onEnter => sub {
 			if ($is_auto) {
 				$_[0]->text(scalar($axis->$method));
@@ -1176,6 +1177,7 @@ sub insert_label_input {
 		text => $label_text,
 		place => { x => 110, y => 40, height => 30, width => 380, anchor => 'sw' },
 		height => 30,
+		backColor => cl::White,
 		onKeyUp => sub {
 			my $new_label = shift->text;
 			if ($new_label ne $label_text) {
@@ -1286,6 +1288,7 @@ sub set_properties_dialog {
 			width => -10,
 			anchor => 'sw',
 		},
+		backColor => cl::White,
 		onKeyUp => sub {
 			my $new_title = shift->text;
 			if ($new_title ne $title_text) {
