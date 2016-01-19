@@ -1095,7 +1095,7 @@ sub insert_minmax_input {
 	
 	# Attach an event listener to the axis min/max methods to keep is_auto
 	# up-to-date, and ensure that the input line is accurate
-	my $notification_idx = $axis->add_notification(ChangeBounds => sub {
+	$axis->add_notification(ChangeBounds => sub {
 		# get the new min or max
 		(my $curr_val, $is_auto) = $axis->$method;
 		
@@ -1161,8 +1161,6 @@ sub insert_minmax_input {
 		onClick => sub { $axis->$method(lm::Auto) },
 	);
 	$auto_button->enabled(!$is_auto);
-	
-	return $notification_idx;
 }
 
 sub insert_label_input {
@@ -1219,7 +1217,7 @@ sub insert_scaling_radios {
 	);
 	$log_radio->enabled(0) unless $init_max > 0 && $init_min > 0;
 	
-	my $bounds_notification = $axis->add_notification(ChangeBounds => sub {
+	$axis->add_notification(ChangeBounds => sub {
 		# Can't go negative if log scaling is enabled, so negative means
 		# we must have linear scaling. As such, only enable/disable the
 		# log radio based on negative signs, don't change the radios
@@ -1235,7 +1233,7 @@ sub insert_scaling_radios {
 			$update_radios = 1;
 		}
 	});
-	my $scaling_notification = $axis->add_notification(ChangeScaling => sub {
+	$axis->add_notification(ChangeScaling => sub {
 		return unless $update_radios;
 		if ($axis->scaling eq sc::Linear) {
 			$update_radios = 0;
@@ -1248,8 +1246,6 @@ sub insert_scaling_radios {
 			$update_radios = 1;
 		}
 	});
-	
-	return ($bounds_notification, $scaling_notification);
 }
 
 # Builds a modal window to set plotting properties
@@ -1258,6 +1254,7 @@ sub set_properties_dialog {
 	
 	# If one already exists, bring it back to the front
 	if (exists $self->{prop_window}) {
+		$self->{prop_window}->show;
 		$self->{prop_window}->select;
 		$self->{prop_window}->bring_to_front;
 		return;
@@ -1298,8 +1295,6 @@ sub set_properties_dialog {
 		},
 	);
 	
-	my (@x_notifications, @y_notifications);
-	
 	# x axis input
 	$prop_win->insert(Widget =>
 		pack => { side => 'top', fill => 'x' },
@@ -1310,10 +1305,10 @@ sub set_properties_dialog {
 		height => 160,
 		text => 'X Axis',
 	);
-	push @x_notifications, insert_minmax_input($x_box, 'min', $self->x, 110);
-	push @x_notifications, insert_minmax_input($x_box, 'max', $self->x, 75);
+	insert_minmax_input($x_box, 'min', $self->x, 110);
+	insert_minmax_input($x_box, 'max', $self->x, 75);
 	insert_label_input($x_box, $self->x);
-	push @x_notifications, insert_scaling_radios($x_box, $self->x);
+	insert_scaling_radios($x_box, $self->x);
 	
 	# y axis input
 	$prop_win->insert(Widget =>
@@ -1325,10 +1320,10 @@ sub set_properties_dialog {
 		height => 160,
 		text => 'Y Axis',
 	);
-	push @y_notifications, insert_minmax_input($y_box, 'min', $self->y, 110);
-	push @y_notifications, insert_minmax_input($y_box, 'max', $self->y, 75);
+	insert_minmax_input($y_box, 'min', $self->y, 110);
+	insert_minmax_input($y_box, 'max', $self->y, 75);
 	insert_label_input($y_box, $self->y);
-	push @y_notifications, insert_scaling_radios($y_box, $self->y);
+	insert_scaling_radios($y_box, $self->y);
 	
 	# Close button
 	$prop_win->insert(Widget =>
@@ -1344,9 +1339,9 @@ sub set_properties_dialog {
 	$prop_win->height(10 + 50 + 10 + 160 + 10 + 160 + 10 + 30);
 	
 	$prop_win->onClose(sub {
-		$self->x->remove_notification($_) foreach (@x_notifications);
-		$self->y->remove_notification($_) foreach (@y_notifications);
-		delete $self->{prop_window};
+		# Do not actually close, but rather simply hide this window
+		$prop_win->clear_event;
+		$prop_win->hide;
 		# Bring the figure back to the foreground
 		$self->select;
 		$self->bring_to_front;
