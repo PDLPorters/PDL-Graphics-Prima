@@ -6,6 +6,7 @@ use Carp 'croak';
 our $VERSION = 0.17;   # update with update-version.pl
 
 use PDL::Graphics::Prima;
+use Prima::IniFile;
 
 =head1 NAME
 
@@ -1737,6 +1738,18 @@ written) L<PDL::Graphics::Prima::InteractiveTut>.
 
 =cut
 
+# Load default settings from the prima-simple.ini file
+our %default_plot_args;
+if (-f 'prima-simple.ini') {
+	my $ini = Prima::IniFile->create('prima-simple.ini');
+	for my $section_name ($ini->sections) {
+		my $sec = $ini->section($section_name);
+		for my $key (keys %$sec) {
+			$default_plot_args{$key} = $sec->{$key};
+		}
+	}
+}
+
 # A function that allows for quick one-off plots by packing a plot widget
 # into a window. In void context and no readline support, it builds and
 # executes the window. In void context and readline support it returns
@@ -1755,7 +1768,7 @@ sub default_plot {
 	# Make sure they sent key/value pairs:
 	croak("Arguments to plot must be in key => value pairs")
 		unless @_ % 2 == 0;
-	my %args = @_;
+	my %args = (%default_plot_args, @_);
 	
 	# Create a new window and pack the plot into said window
 	unless (defined $::application) {

@@ -113,6 +113,10 @@ sub init {
 	$self->_titleSpace($profile{titleSpace});
 	$self->_titleFont(%{$profile{titleFont}});
 	
+	# Set the default save-as data
+	$self->default_save_dir($profile{default_save_dir});
+	$self->default_save_format($profile{default_save_format});
+	
 	# Create the x- and y-axis objects, overriding the owner and axis name
 	# properties if they are set in the profile.
 	for ('x', 'y') {
@@ -603,6 +607,72 @@ sub dataSets {
 	#$self->notify('ChangeData');
 }
 
+######################################
+# Usage        : my $dir = $plot->default_save_dir   # get
+#              : $plot->default_save_dir('some/dir') # set
+#              : $plot->default_save_dir(undef)      # clear
+# Purpose      : Gets or sets the starting directory for the plot
+#              : save-as dialog(s)
+# Arguments    : $self
+#              : optional new directory to set; optional undef to clear
+# Returns      : In get mode, the current dir
+#              : in set mode, the new dir
+#              : in clear mode, the old dir
+# Side Effects : none
+# Throws       : no exceptions
+# Comments     : none
+# See Also     : default_save_format, save_to_file
+sub default_save_dir {
+	return $_[0]->{default_save_dir} if @_ == 1;
+	my ($self, $new_dir) = @_;
+	if (defined $new_dir) {
+		$self->{default_save_dir} = $new_dir;
+	}
+	else {
+		delete $self->{default_save_dir};
+	}
+}
+
+######################################
+# Usage        : my $format = $plot->default_save_format # get
+#              : $plot->default_save_format('png')       # set
+#              : $plot->default_save_format(undef)       # clear
+# Purpose      : Gets or sets the default file format for save-as dialogs
+# Arguments    : $self
+#              : optional new format to set; optional undef to clear
+#              :   new format can be a regex reference
+# Returns      : In get mode, the current format
+#              : in set mode, the new format
+#              : in clear mode, the old format
+# Side Effects : none
+# Throws       : no exceptions
+# Comments     : none
+# See Also     : default_save_dir, save_to_file
+sub default_save_format {
+	return $_[0]->{default_save_format} if @_ == 1;
+	my ($self, $new_format) = @_;
+	if (defined $new_format) {
+		# See if we can find the new format in the list of codecs
+		for my $codec (@{Prima::Image->codecs}) {
+			for my $ext (@{$codec->{fileExtensions}}) {
+				if ($ext eq $new_format) {
+					$self->{default_save_fileShortType} = $codec->{fileShortType};
+					return $self->{default_save_format} = $new_format;
+				}
+			}
+		}
+		# Couldn't find it; warn and do not change anything
+		print "Could not find an image codec with file extension '$new_format'\n";
+		print "Available extensions include:\n";
+		print "  $_\n" foreach map @{$_->{fileExtensions}}, @{Prima::Image->codecs};
+		return;
+	}
+	else {
+		delete $self->{default_save_fileShortType};
+		delete $self->{default_save_format};
+	}
+}
+
 sub get_image {
 	my $self = shift;
 	
@@ -635,6 +705,9 @@ sub save_to_postscript {
 				['Encapsulated Postscript files' => '*.eps'],
 				['All files' => '*'],
 			],
+			$self->{default_save_dir}
+				? (directory => $self->{default_save_dir})
+				: (),
 		);
 		# Return if they cancel out:
 		return unless $save_dialog->execute;
@@ -689,9 +762,29 @@ sub save_to_file {
 	# Get the image
 	my $image = $self->get_image;
 	
-	# If they didn't specify a filename, run a dialog to get it:
+	# If they didn't specify a filename, run a dialog to get it. Use
+	# the specified configuration, if given
 	unless ($filename) {
-		my $dlg = Prima::ImageSaveDialog-> create;
+		my %args;
+		$args{directory} = $self->{default_save_dir}
+			if exists $self->{default_save_dir};
+		my $dlg = Prima::ImageSaveDialog-> create(%args);
+		
+		if ($self->{default_save_format}) {
+			my $found;
+			my $i = 0;
+			my @types = $dlg->filter;
+			for (my $i = 0; $i < @types; $i++) {
+				if ($types[$i][0] =~ /$self->{default_save_fileShortType}/) {
+					$found++;
+					$dlg->filterIndex($i);
+					last;
+				}
+			}
+			# Should have already gotten a warning about this...
+			warn "Preferred image format [$self->{default_save_format}] is not available\n"
+				if not $found;
+		}
 	
 		$dlg->save($image);
 		return;
