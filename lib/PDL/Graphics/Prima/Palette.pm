@@ -195,9 +195,13 @@ sub new {
 sub apply {
 	my ($self, $data) = @_;
 	
-	# Get the data and scale it from zero to one, taking care to correctly
-	# handle collections of identical values:
+	# Figure out the min and max.
 	my ($min, $max) = $data->minmax;
+	$min = $self->{min} if exists $self->{min};
+	$max = $self->{max} if exists $self->{max};
+	
+	# Scale the data from zero to one, taking care to correctly
+	# handle collections of identical values:
 	my $scaled_data = $min == $max ? $data->zeroes
 						: (($data->double - $min) / ($max - $min));
 	$scaled_data **= $self->{gamma};
@@ -346,7 +350,10 @@ Maps data in ascending order from the start to the stop values in hue, saturatio
 and value. You can specify the initial and final hue, saturation, and value
 in one of two ways: (1) a pair of three-element arrayrefs/piddles with the
 initial and final hsv values, or (3) a set of key/value pairs describing the initial
-and final hue, saturation and value.
+and final hue, saturation and value. You can also specify data min and max. Any data
+that falls below the min or above the max will be represented with the closest min
+or max color. This is particularly helpful when you need to coordinate the min and
+max of multiple palettes.
 
 For example, this creates a palette that runs from red (H=360) to blue
 (H=240):
