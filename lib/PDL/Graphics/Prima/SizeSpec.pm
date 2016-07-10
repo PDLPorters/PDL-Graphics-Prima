@@ -184,7 +184,41 @@ sub new {
 }
 
 use overload '""' => sub { $_[0]->{spec_string} },
-	'0+' => \&size;
+	'0+' => \&size,
+	'+' => \&add,
+	'-' => \&subtract,
+	'*' => \&multiply,
+	'/' => \&divide,
+	'<=>' => \&compare,
+	fallback => 1;
+
+sub add {
+	my ($self, $other, $swap) = @_;
+	return $self->size + $other;
+}
+
+sub subtract {
+	my ($self, $other, $swap) = @_;
+	return $other - $self->size if $swap;
+	return $self->size - $other;
+}
+
+sub multiply {
+	my ($self, $other, $swap) = @_;
+	return $self->size * $other;
+}
+
+sub divide {
+	my ($self, $other, $swap) = @_;
+	return $other / $self->size if $swap;
+	return $self->size / $other;
+}
+
+sub compare {
+	my ($self, $other, $swap) = @_;
+	return $other <=> $self->size if $swap;
+	return $self->size <=> $other;
+}
 
 sub size {
 	my $self = shift;
