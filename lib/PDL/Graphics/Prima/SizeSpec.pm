@@ -261,7 +261,6 @@ sub parse {
 	return $self->parse_hashref($spec);
 }
 
-my $number_re = qr//;
 sub parse_string {
 	my ($self, $spec) = @_;
 	my $orig_spec = $spec;
