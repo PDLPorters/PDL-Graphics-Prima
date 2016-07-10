@@ -379,7 +379,7 @@ sub size_spec_pctwidth {
 # line is based on the font's size
 sub size_spec_line {
 	my ($self, $amount) = @_;
-	return sub { return $amount * $self->{widget}->font->size };
+	return sub { return $amount * $self->{widget}->font->height };
 }
 
 1;
