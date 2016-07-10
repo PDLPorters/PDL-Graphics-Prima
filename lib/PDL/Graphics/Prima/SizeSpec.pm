@@ -253,6 +253,8 @@ sub new {
 
 sub parse {
 	my ($self, $spec) = @_;
+	return $spec if ref($spec)
+		and eval { $spec->isa('PDL::Graphics::Prima::SizeSpec') };
 	
 	# If it's a string spec,
 	return $self->parse_string($spec) unless ref($spec);
