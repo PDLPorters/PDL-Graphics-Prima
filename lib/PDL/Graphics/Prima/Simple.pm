@@ -1768,16 +1768,7 @@ written) L<PDL::Graphics::Prima::InteractiveTut>.
 =cut
 
 # Load default settings from the prima-simple.ini file
-our %default_plot_args;
-if (-f 'prima-simple.ini') {
-	my $ini = Prima::IniFile->create('prima-simple.ini');
-	for my $section_name ($ini->sections) {
-		my $sec = $ini->section($section_name);
-		for my $key (keys %$sec) {
-			$default_plot_args{$key} = $sec->{$key};
-		}
-	}
-}
+our %default_plot_args = do 'prima-simple.ini' if -f 'prima-simple.ini';
 
 # A function that allows for quick one-off plots by packing a plot widget
 # into a window. In void context and no readline support, it builds and
@@ -1861,7 +1852,8 @@ else {
 		# they won't be able to exit the loop!
 		print "No open plots\n" and return if $N_windows == 0;
 		# Print a notice explaining what's going on:
-		print "Twiddling plot; close window or press q or Q to resume\n";
+		print "Twiddling plot; close window or press q or Q to resume\n"
+			unless $default_plot_args{quiet};
 		
 		# We will use Prima's nice exception handling to exit the go()
 		# method. In order to prevent undue error propogation, localize
