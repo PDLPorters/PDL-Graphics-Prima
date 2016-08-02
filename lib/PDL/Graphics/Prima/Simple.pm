@@ -641,24 +641,46 @@ For the one-argument form, you would type this:
 
 =cut
 
-sub _get_pairwise_data {
-	# If one arg, and it's a piddle, return a sequence and that piddle as x/y
-	if (@_ == 1 and eval { $_[0]->isa('PDL') } ) {
-		return (PDL->sequence($_[0]->dim(0)), $_[0]);
-	}
-	# If two args, and both are piddles, return them as x/y
-	elsif (@_ == 2 and eval{$_[0]->isa('PDL') and $_[1]->isa('PDL')} ) {
-		return @_;
-	}
-	
-	# Neither of the above conditions applied: determine the function name, croak
+sub piddleish {
+	my $arg = shift;
+	return if not defined $arg;
+	return (
+		(eval { $arg->isa('PDL') })
+		or (ref($arg) and ref($arg) eq 'ARRAY')
+		or Scalar::Util::looks_like_number($arg)
+	);
+}
+
+sub _get_x_y_and_args {
 	my $function_name = (caller(1))[3];
 	$function_name =~ s/.*:://;
-	croak("$function_name expects either one piddle (y-data) or two piddles (x- and y-data)");
+	my $croak_string = "$function_name expects either one piddle "
+		. "(y-data) or two piddles (x- and y-data), optionally followed "
+		. "by key/value pairs";
+	
+	croak($croak_string) if @_ == 0;
+	
+	# First argument *must* be a piddleish thing; pop off second arg
+	# as well if it is piddleish.
+	croak($croak_string) if not piddleish($_[0]);
+	my @data_args = (PDL::Core::topdl(shift @_));
+	push @data_args, PDL::Core::topdl(shift @_) 
+		if piddleish($_[0]);
+	# At this point we should only have key value pairs, i.e. an even
+	# number of elememnts
+	croak($croak_string) if @_ % 2 == 1;
+	
+	# If only one piddleish argument, then it is y-values; compute a
+	# sequence for the x-values
+	unshift @data_args, PDL->sequence($data_args[0]->dim(0))
+		if @data_args == 1;
+	
+	return @data_args, @_;
 }
 
 sub line_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Lines));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y, plotType => ppair::Lines), @args);
 	goto &plot;
 }
 
@@ -680,7 +702,8 @@ Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument forms include:
 =cut
 
 sub circle_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Blobs));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y, plotType => ppair::Blobs), @args);
 	goto &plot;
 }
 
@@ -708,8 +731,9 @@ form include:
 =cut
 
 sub triangle_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_)
-		, plotType => ppair::Triangles(filled => 1)));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y,
+		plotType => ppair::Triangles(filled => 1)), @args);
 	goto &plot;
 }
 
@@ -736,8 +760,9 @@ Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 =cut
 
 sub square_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_)
-		, plotType => ppair::Squares(filled => 1)));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y,
+		plotType => ppair::Squares(filled => 1)), @args);
 	goto &plot;
 }
 
@@ -764,7 +789,8 @@ Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 =cut
 
 sub diamond_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_)));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y), @args);
 	goto &plot;
 }
 
@@ -787,7 +813,8 @@ form include:
 =cut
 
 sub cross_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Crosses));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y, plotType => ppair::Crosses), @args);
 	goto &plot;
 }
 
@@ -810,7 +837,8 @@ Equivalent L<plot|/"PLOT FUNCTION"> commands for the two-argument form include:
 =cut
 
 sub X_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_), plotType => ppair::Xs));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y, plotType => ppair::Xs), @args);
 	goto &plot;
 }
 
@@ -838,8 +866,9 @@ form include:
 =cut
 
 sub asterisk_plot {
-	@_ = (-data => ds::Pair(_get_pairwise_data(@_)
-		, plotType => ppair::Asterisks(N_points => 5)));
+	my ($x, $y, @args) = _get_x_y_and_args(@_);
+	@_ = (-data => ds::Pair($x, $y,
+		plotType => ppair::Asterisks(N_points => 5)), @args);
 	goto &plot;
 }
 
