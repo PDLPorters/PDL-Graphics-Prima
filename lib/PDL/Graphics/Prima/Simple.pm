@@ -415,7 +415,7 @@ Or, you may have an image of data that you want to view.
  use PDL;
  use PDL::Graphics::Prima::Simple;
  
- # Generate 100 samples with mean 0 and standard deviation 1
+ # Generate an image of the distance of each pixel from image center.
  my $image = rvals(100, 100)
  matrix_plot($image);
 
@@ -458,7 +458,7 @@ for a constructor with an enormous name:
  # Long form
  my $ds = PDL::Graphics::Prima::DataSet::Pair->new(x => $x, y => $y);
 
-If you actually run that example, you will notice that the sine cureve is
+If you actually run that example, you will notice that the sine curve is
 plotted as a line, just as before, but the cosine curve is plotted with a
 collection of unconnected diamonds. If you want to plot the cosine curve
 with a line, you need to specify the line plot type:
@@ -1135,8 +1135,8 @@ sub imag_plot {
 The C<plot> function is the real workhorse of this module. Not only does it
 provide the functionality behind all of the above simple functions, but it
 also lets you plot multiple L<DataSet|PDL::Graphics::Prima::DataSet/>s, specify
-axis labels and a plot title, direct the axis scaling (linear or logarithmic), and set many other properties
-of the plot.
+axis labels and a plot title, direct the axis scaling (linear or logarithmic), 
+and set many other properties of the plot.
 
 Arguments that you pass to this function are almost identical to the arguments
 that you would use to create a Plot widget, so it serves as an excellent sandbox
@@ -1346,7 +1346,7 @@ a L<Func DataSet|PDL::Graphics::Prima::DataSet/Func>.
 
 The Grid DataSet is what you would use to visualize matrices or images. It
 takes a single piddle which represents a matrix of data,
-followed by key/value pairs the specify how you want the data plotted. In
+followed by key/value pairs that specify how you want the data plotted. In
 particular, there are many ways to specify the grid centers or boundaries.
 
  -terrain => ds::Grid($landscape, ...options...)
