@@ -1358,8 +1358,12 @@ sub guess_scaling_for {
 	croak("Cannot determine scaling with only one point!")
 		if $data->dim(0) == 1;
 	
-	# Assume linear if there are only two points of data:
-	return ('linear', $data(1) - $data(0)) if $data->dim(0) == 2;
+	# Assume linear if there are only two points of data, or if any of
+	# the data are zero. Logarithmically spaced bins cannot have a
+	# center of zero!
+	return ('linear', $data(1) - $data(0))
+		if $data->dim(0) == 2 or any($data == 0);
+	# XXX use averaging approach below if any data == 0?
 	
 	# Now we can really say something about linear vs logarithmic scaling:
 	my $lin_spaces = $data(1:-1) - $data(0:-2);
