@@ -2,13 +2,49 @@ Put changes under the appropriate header. Headers can include API CHANGES,
 DIFFERENT BEHAVIOR, BUG FIXES, DEPENDENCIES, ENHANCEMENTS, NEW FEATURES, and
 OTHER. Entries should be in chronological order, i.e. oldest at the top
 
-0.17 YYYY-MM-DD
+0.18 YYYY-MM-DD
 
+  [API CHANGES]
+  
+  - The Simple interface now accepts additional arguments that can be used to
+    configure all elements of the plot command.
+  
+  - New plot widget keys default_save_dir and default_save_format. When a user
+    right-clicks and chooses to save the figure, these settings will be used as
+    the starting points rather than the defaults of the current directory and
+    .bmp format.
+  
   [DIFFERENT BEHAVIOR]
   
   - Change zoom-out factor so that a zoom-in/zoom-out pair takes us back to
     to starting zoom level.
+  
+  [ENHANCEMENTS]
+  
+  - Palettes have always determined the mapping from values to color using the
+    minimum and maximum values of the data. They now give you the option of
+    specifying explicit minimum and maximum values
+  
+  [NEW FEATURES]
+  
+  - New module PDL::Graphics::Prima::SizeSpec facilitates expressing, parsing,
+    and computing pixel equivalents for sophisticated combinations of distances
+    in terms of multiple, meaningful units of measure.
+  
+  - PDL::Graphics::Prima::Simple now looks for a prima-simple.ini file for
+    default settings for simple plots.
+  
 
+0.17 2014-08-25
+
+  [BUG FIXES]
+  
+  - Fixed minor bug in logic for determining if error bars are specified.
+    Previously I had returned two checks combined with "or", but the return
+    keyword has higher precedence than the "or" boolean operator! So now it
+    uses ||. The upshot was that if only lower error bars were specified, the
+    library determined that no error bars were present.
+  
 
 
 0.16 2014-08-25
