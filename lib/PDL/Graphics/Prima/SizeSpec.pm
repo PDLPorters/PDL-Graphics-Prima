@@ -9,23 +9,24 @@ PDL::Graphics::Prima::SizeSpec - a module for handling size specifications
 
  use PDL::Graphics::Prima::SizeSpec;
  
- 
- # If you already had a size specification you could ...
- # ... get the number of pixels
- print "That amounts to ", $size_spec->size, " pixels\n";
- # ... stringify in a way that can be parsed again:
- print "The original spec was $size_spec\n";
- # ... use the spec in numeric evaluations
- print "Too big\n" if $size_spec > 100;
- 
- 
- # size specifications are created by SizeSpec parsers:
+ # Create a SizeSpec parser for your window/widget
  my $parser = PDL::Graphics::Prima::SizeSpec::Parser->new($my_window);
- # which can parse a size from a string spec ...
- my $size = $parser->parse('2em + 5px + 10%width - 5%height');
- # ... or from a hashref
- my $size = $parser->parse({em => 2, px => 5,
-     pctwidth => 10, '%height' => -5});
+ 
+ # Create a dynamic size-computing object from a string:
+ my $size = $parser->parse('10%width + 2em - 5px');
+
+ # Get the size in pixels using the size method:
+ print "That amounts to ", $size->size, " pixels\n";
+ 
+ # stringification is mostly round-tripable:
+ print "The original spec was $size\n";
+ 
+ # use the spec directly in numeric evaluations
+ print "Too big\n" if $size > 100;
+ 
+ # Instead of a string, you can provide a hashref to the parser
+ my $size = $parser->parse({em => 2, px => -5,
+     pctwidth => 10});
  
  
  ### Create more sophisticated parsers by subclassing ###
@@ -55,9 +56,16 @@ of things using lots of different units. C<PDL::Graphics::Prima::SizeSpec>
 is my attempt at providing a similar sort of capability for Prima
 widgets.
 
-Size-spec objects are little more than thin wrappers around a collection
-of closures. Once you've used a parser to obtain a size-spec object, you
-can easily obtain the number of pixels associated with the size-spec by
+The primary purpose of a SizeSpec object is to compute pixel distances for you.
+However, the SizeSpec object is dynamic insofar as it responds to changes in
+the associated widget. If you have a SizeSpec that depends upon the height or
+width of the widget, and the widget gets resized, then the SizeSpec's numeric
+value will change in response. Likewise if your SizeSpec depends upon the
+em-width and you change your widget's font.
+
+In practice, SizeSpec objects are little more than thin wrappers around a
+collection of closures. Once you've used a parser to obtain a SizeSpec object,
+you can easily obtain the number of pixels associated with the SizeSpec by
 evaluating it in numerical context, or by calling the C<size> method:
 
  my $margin = $margin_spec->size;
@@ -69,12 +77,12 @@ can inquire as to whether a given unit is used:
      ...
  }
 
-You do not build size-specs directly. Instead, size-specs are built by
-size-spec parsers. The parser's job is to validate the input and
+You do not build SizeSpecs directly with a call to C<new>. Instead, SizeSpecs
+are built by SizeSpec parsers. The parser's job is to validate the input and
 construct closures that efficiently map the specified units to pixel
-values. These closures are at the heart of the size-spec objects.
-Parsers also produce the string representation of the size-spec that is
-used when the size-spec is stringified.
+values. These closures are at the heart of the SizeSpec objects.
+Parsers also produce the string representation of the SizeSpec that is
+used when the SizeSpec is stringified.
 
 Parse objects provide only a single user-level method: C<parse>. This
 method accepts either a string containing an arithmetic combination of
@@ -82,19 +90,19 @@ units (i.e. C<'5em - 2px'>) or a hashref of unit/value pairs. The string
 form is usually more convenient for simple specifications, but you can
 do clever things with the hashref form. For example, the value
 associated with the hashref can be an object that overloads addition,
-such as a PDL. In that case, the final size given by the size-spec will
+such as a PDL. In that case, the final size given by the SizeSpec will
 itself be a PDL, not a scalar.
 
-A size-spec's stringification is usually round-tripable, except when you
+A SizeSpec's stringification is usually round-tripable, except when you
 parse a hashref that includes objects. The stringification is meant to
 be human readable and simply stringifies the object itself, thus
 discarding class information. (I have gone to the pains of handling large
 PDL objects in a sensible way: PDLs with more than 10 elements are
 stringified to C<'[PDL]'>.)
 
-Both size-specs and size-spec parsers assume they are working with a
+Both SizeSpecs and SizeSpec parsers assume they are working with a
 single widget, specified as the first argument to the parser's
-constructor. If you want to use an identical size-spec string on two
+constructor. If you want to use an identical SizeSpec string on two
 different widgets, you need to build a separate parser for each widget.
 
 The base parser class knows how to handle the following units:
@@ -131,8 +139,8 @@ The general way of adding new units or overriding the interpretation of
 known units is to subclass the parser, discussed in L</SUBCLASSING>. If
 you just want to create a single parser object with special unit
 handling, you can specify a key/subref pair in the parser constructor
-call. The key must be a size-spec unit name, described under
-L</SUBCLASSING>, and the method must be identical to a size-spec unit
+call. The key must be a SizeSpec unit name, described under
+L</SUBCLASSING>, and the method must be identical to a SizeSpec unit
 method. In short, the associated subref should accept the parser object
 and the multiple of the unit as arguments, and return a closure that
 takes no arguments and returns a size in pixels for the associated
@@ -170,7 +178,7 @@ creating a subclass of C<PDL::Graphics::Prima::SizeSpec::Parser>.
             package PDL::Graphics::Prima::SizeSpec;
 ########################################################################
 # Bare-bones object that merely evaluates an already-parsed size spec
-# and knows how to stringify and numberify itself. The real magic hapens
+# and knows how to stringify and numerify itself. The real magic happens
 # in the ::Parser package defined below.
 
 sub new {
@@ -394,7 +402,7 @@ new units by providing methods with the prefix C<size_spec_>.
 
 =head2 NAMING UNITS
 
-You are free to use any unit names you want, so long as it can be used
+You are free to use any unit name you want so long as it can be used
 as a function name with the prefix C<size_spec_>. For example, you may
 want to have a unit called C<day_of_week>. In that case, you would have
 a method called C<size_spec_day_of_week>:
@@ -409,12 +417,12 @@ a method called C<size_spec_day_of_week>:
 C<PDL::Graphics::Prima::SizeSpec::Parser> also knows how to handle units
 that include the percent sign, C<%>. For a unit such as C<%colwidth>,
 you would have a method called C<size_spec_pctcolwidth>. Note that the
-amount given is not divided by 100 for you. This is why the C<colwidth>
-example in the L</SYNOPSIS> divides the amount by 100.
+amount given is not divided by 100 for you, as demonstrated in the C<colwidth>
+example in the L</SYNOPSIS>.
 
 One final unit name of importance is the unitless unit. The normal
 interpretation of unitless numbers is as pixels. However,
-L<PDL::Graphics::Prima> uses size-spec parsers for which raw numbers
+L<PDL::Graphics::Prima> uses SizeSpec parsers for which raw numbers
 correspond to x- or y-locations on the plot. If you need to overload
 the unitless unit, you would use the method name C<size_spec_unitless>.
 
