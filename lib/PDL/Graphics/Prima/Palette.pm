@@ -113,41 +113,6 @@ sub apply {
 	return $self->{apply}->($data);
 }
 
-=head2 plotType
-
-Every Palette knows the specific data and plot type to which it belongs.
-The first time that a Palette is used in a drawing operation, it will become
-associated with that specific plotType object, which is in turn associated
-with that specific dataSet and widget. Thereafter, you can retrieve the
-plotType object using this accessor, but you cannot change it.
-If you want to use the same Palette with a different plotType, you can
-create a copy of your palette using the L</copy> method.
-
-=cut
-
-sub plotType {
-	my $self = shift;
-	
-	# See if they're requesting the plotType, return it if we have one, and
-	# croak if we don't:
-	if (@_ == 0) {
-		return $self->{plotType} if exists $self->{plotType};
-		croak("Requested palette's plot type, but it does not have one");
-	}
-	
-	# If they are setting the plotType, croak if it has already been set,
-	# since this is a write-once property
-	if (exists $self->{plotType}) {
-		croak("You can only set a palette's plot type once");
-	}
-	
-	# Otherwise, they're setting the plotType. Set it and weaken the
-	# reference so we don't have a memory leak
-	$self->{plotType} = $_[0];
-	use Scalar::Util;
-	Scalar::Util::weaken($self->{plotType});
-}
-
 =head2 copy
 
 You can make a copy of a Palette that is identical to your current pallete
