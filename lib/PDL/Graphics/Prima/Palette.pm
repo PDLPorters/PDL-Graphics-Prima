@@ -99,6 +99,15 @@ sub new {
 	return bless $self, $class;
 }
 
+=head2 scaling
+
+Every palette knows its scaling. At the time of writing that's either linear
+or logarithmic. The default scaling is linear.
+
+=cut
+
+sub scaling { return shift->{scaling} || sc::Linear }
+
 =head2 apply
 
 Every palette knows how to apply itself to its data. The apply function
@@ -168,7 +177,7 @@ sub apply {
 	# Scale the data from zero to one, taking care to correctly
 	# handle collections of identical values:
 	my $scaled_data = $min == $max ? $data->zeroes
-						: (($data->double - $min) / ($max - $min));
+					: $self->scaling->transform($min, $max, $data->double);
 	$scaled_data **= $self->{gamma};
 	
 	# Compute the associated hue, saturation, and vaue:

@@ -23,7 +23,11 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   
   - Palettes have always determined the mapping from values to color using the
     minimum and maximum values of the data. They now give you the option of
-    specifying explicit minimum and maximum values
+    specifying explicit minimum and maximum values.
+  
+  - Palettes now accept a scaling parameter that can be any valid scaling type.
+    Palettes always used to do linear, so basically this means it is now easy
+    to get logarithmic color palettes.
   
   [NEW FEATURES]
   
