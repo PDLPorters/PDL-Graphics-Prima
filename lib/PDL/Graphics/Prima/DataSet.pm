@@ -312,6 +312,62 @@ sub change_data {
 	$self->widget->notify('ChangeData', $self);
 }
 
+=item compute_color_map_extrema
+
+Multiple datasets and plot types can use the plot-wide color map. In that case,
+the color map needs to figure out the minimum and maximum values from the data.
+All datasets must run through their collection of plotTypes and ask each one for
+its color map extrema. PlotTypes should either return an empty list (indicating
+they are not using the plot-wide color map) or the lowest minimum value and the
+largest maximum value needed to render their data.
+
+=cut
+
+sub compute_color_map_extrema {
+	my $self = shift;
+	# If we have an explicit palette, then we're not using the system palette
+	return if $self->has_custom_color_map;
+	# Iterate through all plot types
+	my @minmax;
+	for my $plotType (@{$self->{plotTypes}}) {
+		my @curr_minmax = $plotType->compute_color_map_extrema;
+		if (@curr_minmax) {
+			if (@minmax) {
+				$minmax[0] = $curr_minmax[0] if $minmax[0] > $curr_minmax[0];
+				$minmax[1] = $curr_minmax[1] if $minmax[1] < $curr_minmax[1];
+			}
+			else {
+				@minmax = @curr_minmax;
+			}
+		}
+	}
+	return @minmax;
+}
+
+=item has_custom_color_map
+
+Returns true if the dataset has its own color map, false otherwise.
+
+=cut
+
+sub has_custom_color_map {
+	my $self = shift;
+	return 1 if $self->{color_map};
+}
+
+=item color_map
+
+Returns the color map of either the dataset or, if the dataset does not have a
+custom color map, the plot-wide color map.
+
+=cut
+
+sub color_map {
+	my $self = shift;
+	return $self->{color_map} // $self->widget->color_map;
+}
+
+
 =back
 
 =cut

@@ -250,7 +250,7 @@ use Carp;
 sub new {
 	my ($class, $widget, %args) = @_;
 	croak('You must provide a widget to PDL::Graphics::Prima::SizeSpec::Parser')
-		if not defined $widget or not eval { $widget->isa('Prima::Widget') };
+		if not defined $widget or not eval { $widget->isa('Prima::Drawable') };
 	my $self = bless { %args, widget => $widget}, $class;
 	
 	# Avoid memory leaks

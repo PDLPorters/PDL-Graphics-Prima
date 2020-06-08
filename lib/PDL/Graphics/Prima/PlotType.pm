@@ -1635,13 +1635,11 @@ sub initialize {
 	my $self = shift;
 	$self->SUPER::initialize(@_);
 	
-	# make sure we have a basic palette:
-	unless (exists $self->{palette}) {
-		$self->{palette} = pal::WhiteToBlack;
-	}
-	# XXX any reason we check for definedness? Any reason we don't croak if
-	# the palette exists but is not defined? working here
-	$self->{palette}->plotType($self) if defined $self->{palette};
+	$self->{color_map} = delete $self->{palette} if $self->{palette};
+	
+	# make sure that any explicitly indicated palette is a real palette
+	croak("Color map not a PDL::Graphics::Prima::Palette")
+		if $self->{color_map} and not eval {$self->{color_map}->isa("PDL::Graphics::Prima::Palette")};
 }
 
 # Collation and drawing are handled by the raster role, but require the
@@ -1650,9 +1648,28 @@ sub initialize {
  = \&PDL::Graphics::Prima::PlotType::Role::Raster::compute_collated_min_max_for;
 *draw = \&PDL::Graphics::Prima::PlotType::Role::Raster::draw;
 
+sub has_custom_color_map {
+	my $self = shift;
+	return 1 if $self->{color_map};
+	return $self->dataset->has_custom_color_map;
+}
+
+sub color_map {
+	my $self = shift;
+	return $self->{color_map} if exists $self->{color_map};
+	return $self->dataset->color_map;
+}
+
+sub compute_color_map_extrema {
+	my $self = shift;
+	return if $self->has_custom_color_map;
+	return $self->dataset->get_data->minmax;
+}
+
 sub get_colored_data {
 	my $self = shift;
-	return $self->{palette}->apply($self->dataset->get_data);
+	my $color_map = $self->color_map;
+	return $color_map->apply($self->dataset->get_data);
 }
 
 ##############################################################################
@@ -2543,6 +2560,18 @@ have properly converted the points you are trying to plot.
 #		. 'report this bug to the author');
 #}
 
+
+=head2 compute_color_map_extrema
+
+Multiple datasets and plot types can use the plot-wide palette. In that case,
+the palette needs to figure out the minimum and maximum values from the data.
+If your plot type is not going to use the plot-wide palette, then it should
+return an empty list. Otherwise it should return the minimum and maximum values
+of the data.
+
+=cut
+
+sub compute_color_map_extrema {}
 
 ############################################
 # PDL::Graphics::Prima::PlotType::CallBack #

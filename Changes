@@ -4,6 +4,19 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
 
 0.18 YYYY-MM-DD
 
+  [MAJOR CHANGES]
+  
+  - New capability: color map support. PDL::Graphics::Prima has been able to
+    use color to visualize data, especially heat maps, for  quite some time.
+    However, apart from printing information to the terminal, there was no way
+    to know what quantities the different colors represented. This meant that
+    heat maps and other uses of palettes were, at best, only good for relative
+    comparisons or meticulously crafted plots that depicted the color scaling
+    on their own. The new changes make it possible (and fairly easy) to render
+    and quantitatively label a color bar. This is made possible by a significant
+    extension to the capabilities of Palettes.  Note that because Prima itself
+    uses the term "Palette" in its gradient API, these are called color maps.
+  
   [API CHANGES]
   
   - The Simple interface now accepts additional arguments that can be used to
@@ -14,10 +27,18 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     the starting points rather than the defaults of the current directory and
     .bmp format.
   
+  - Although plotTypes that have historically expected a palette (ppair::Matrix)
+    will continue to accept them under that keyword, it is now officially
+    discouraged. The preferred keyword is color_map.
+  
   [DIFFERENT BEHAVIOR]
   
   - Change zoom-out factor so that a zoom-in/zoom-out pair takes us back to
     to starting zoom level.
+  
+  - When using a Grid datatype, if no palette is explicitly specified, the grid
+    activates the new plot-wide color map. Activating the color map causes it to
+    be rendered, which can significantly alter the appearance of the plot.
   
   [ENHANCEMENTS]
   
@@ -28,6 +49,21 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   - Palettes now accept a scaling parameter that can be any valid scaling type.
     Palettes always used to do linear, so basically this means it is now easy
     to get logarithmic color palettes.
+  
+  - Palettes now take a whole range of new (optional) arguments related to
+    rendering. Only the plot-wide palette---called the color map---is rendered
+    in the new changes, though it may be possible and useful to render a palette
+    in a different context. In that case it should be possible to use all of
+    these to tweak that rendering.
+  
+  - For the above enhancements, note that Palettes that implement their
+    functionality via a custom "apply" method do not have access to the palette
+    object, and so do now have access to any of these new parameters.
+  
+  - It is possible to specify the color map for a dataset or the plot as a whole
+    via the color_map key. It is possible to specify a color map at each level;
+    the level closest to the data is the one that is used. Also, only the plot's
+    color map is rendered.
   
   [NEW FEATURES]
   

@@ -75,6 +75,9 @@ sub profile_default {
 		
 		backColor => cl::White,
 		
+		# default color map
+		color_map => pal::BlackToWhite,
+		
 		# replot duration in milliseconds
 		replotDuration => 30,
 		# Blank profiles for the axes:
@@ -170,6 +173,11 @@ sub init {
 		# working here - catch errors?
 		$self->dataSets->{$1} = $value;
 	}
+	
+	# set up the color map after having initialized the data
+	my $cm = $self->{color_map} = $profile{color_map};
+	$cm->widget($self);
+	$self->compute_color_map_extrema;
 	
 	# Turn the axis autoscaling back on:
 	$self->{x}->{initializing} = 0;
@@ -399,6 +407,10 @@ sub get_edge_requirements {
 	
 	$requirement[3] += $self->titleSpace
 		if defined $self->{title} and $self->{title} ne '';
+	
+	# Add room for the color map. For now the color map will only live on the
+	# right of the figure, but that will eventually be configurable.
+	$requirement[2] += $self->color_map->get_width if $self->is_drawing_color_map;
 	
 	return @requirement;
 }
@@ -836,8 +848,13 @@ sub on_replot {
 	$self->{timer}->start;
 }
 
-# for now, this is a replica of the above:
-*on_changedata = \&on_changetitle;
+# Just like changetitle, but we also need to check for changes to the color
+# map's extrema
+sub on_changedata {
+	my $self = shift;
+	$self->compute_color_map_extrema;
+	$self->on_changetitle;
+}
 
 #################
 # Notifications #
@@ -881,6 +898,58 @@ sub on_paint {
 	# Otherwise, clear the canvas and invoke our plot drawing routine on ourself
 	$self->clear;
 	$self->draw_plot($self);
+}
+
+sub is_drawing_color_map { shift->{is_drawing_color_map} }
+sub color_map {
+	my $self = shift;
+	
+	# When called as getter, return the map
+	return $self->{color_map} if @_ == 0;
+	
+	# Set a new color map
+	my $new_map = shift;
+	
+	# undef is not an option: must be a Palette
+	croak("new color map must be a descendant of PDL::Graphics::Prima::Palette")
+		unless eval {$new_map->isa('PDL::Graphics::Prima::Palette')};
+	
+	# tie the map to this widget
+	$self->{color_map} = $new_map;
+	$new_map->widget($self);
+	
+	# recompute the color map extrema and repaint
+	$self->compute_color_map_extrema;
+	$self->on_changetitle;
+}
+
+sub compute_color_map_extrema {
+	my $self = shift;
+	
+	# Iterate through all datasets
+	my @minmax;
+	for my $dataset (values %{$self->dataSets}) {
+		next if $dataset->isa('Prima::Plot');
+		my @curr_minmax = $dataset->compute_color_map_extrema;
+		if (@curr_minmax) {
+			if (@minmax) {
+				$minmax[0] = $curr_minmax[0] if $minmax[0] > $curr_minmax[0];
+				$minmax[1] = $curr_minmax[1] if $minmax[1] < $curr_minmax[1];
+			}
+			else {
+				@minmax = @curr_minmax;
+			}
+		}
+	}
+	
+	# Store the min/max in the color map. If @minmax is empty, this will
+	# effectively clear the color map's autoscaling minmax, which is what we
+	# want.
+	$self->color_map->set_autoscaling_minmax(@minmax);
+	
+	# A non-empty minmax array indicates that at least one PlotType will utilize
+	# the color map, and therefore it should be drawn.
+	$self->{is_drawing_color_map} = (0 < @minmax);
 }
 
 # This is the actual functionality for drawing on the canvas. This was once part
@@ -946,10 +1015,15 @@ sub draw_plot {
 		# Reset the font characteristics:
 		$canvas->font($backup_font);
 	}
+	
+	# draw the color map
+	$self->color_map->draw($canvas, $clip_left, $clip_bottom, $clip_right,
+		$clip_top, $ratio) if $self->is_drawing_color_map;
 }
 
 # For mousewheel events, we zoom in or out. However, if they're over the axes,
 # only zoom in or out for that axis.
+# XXX add mouse-wheel capabilities for the color map
 sub on_mousewheel {
 	return unless $_[0]->enabled;
 	my ($self, $mods, $x, $y, $dir) = @_;
