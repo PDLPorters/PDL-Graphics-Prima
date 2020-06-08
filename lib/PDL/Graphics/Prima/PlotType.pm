@@ -1691,7 +1691,7 @@ brilliance hits me). As it is automatically used as the default plot type by
 L<ds::Image/PDL::Graphics::Prima::DataSet/ds::Image>, and as it does not
 have any configuration that cannot be specified in the data set, you
 probably can ignore this.
-
+=over
 =item pimage::Basic
 
 The most basic image plot type simply draws the imge with the palette
@@ -1733,7 +1733,7 @@ sub get_colored_data {
 ###############################################################################
 #                         Annotation-based Plot Types                         #
 ###############################################################################
-
+=back
 =head2 Annotation Plot Types
 
 Annotation plot types have a number of distinct features compared with other
@@ -1958,7 +1958,7 @@ There are a number of annotation plot-types:
 #####################################################
 # PDL::Graphics::Prima::PlotType::Annotation::Region #
 #####################################################
-
+=over
 =item pnote::Region
 
 =for ref

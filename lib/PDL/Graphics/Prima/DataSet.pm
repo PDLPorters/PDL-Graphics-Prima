@@ -186,8 +186,8 @@ sub compute_collated_min_max_for {
 
 This is the universal constructor that is called by the short-name constructors
 introduced below. This handles the uniform packaging of plotTypes (for
-example, allowing the user to say C<plotType => ppair::Diamonds> instead of
-the more verbose C<plotTypes => [ppair::Diamonds]>). In general, you (the
+example, allowing the user to say C<< plotType => ppair::Diamonds >> instead of
+the more verbose C<< plotTypes => [ppair::Diamonds] >>). In general, you (the
 user) will not need to invoke this constructor directly.
 
 =cut
@@ -1087,7 +1087,7 @@ is C<pgrid::Color>.
 This is the least well thought-out dataSet. As such, it may change in the
 future. All such changes will, hopefully, be backwards compatible.
 
-At the moment, there is only one way to visualize grid data: C<pseq::Matrix>.
+At the moment, there is only one way to visualize grid data: C<pgrid::Matrix>.
 Although I can conceive of a contour plot, it has yet to be implemented. As
 such, it is hard to specify the dimension requirements for dataset-wide
 properties. There are a few dataset-wide properties discussed in the
@@ -1563,7 +1563,7 @@ sub get_prima_color_data {
 ##############################################################################
 #                                    Func                                    #
 ##############################################################################
-
+=back
 =head2 Func
 
 PDL::Graphics::Prima provides a special pair dataset that takes a function

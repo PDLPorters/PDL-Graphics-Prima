@@ -1848,7 +1848,7 @@ that you add will be validated as you add them.
 
 =head1 METHODS
 
-PDL::Graphics::Prima provides a number of methods. Most of these focuse on
+PDL::Graphics::Prima provides a number of methods. Most of these focus on
 generating images of the plot.
 
 =head2 get_image
