@@ -56,6 +56,11 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     in a different context. In that case it should be possible to use all of
     these to tweak that rendering.
   
+  - Palettes now have a property for specifying a color to use if they
+    encounter bad data. Ideally this color should fall somewhere outside of
+    the palette's range. The default value, brown, was chosen specifically for
+    this reason.
+  
   - For the above enhancements, note that Palettes that implement their
     functionality via a custom "apply" method do not have access to the palette
     object, and so do now have access to any of these new parameters.

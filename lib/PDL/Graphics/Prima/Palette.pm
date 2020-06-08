@@ -143,7 +143,9 @@ used in the scaling. This is useful when multiple datasets are using the same
 palette and you want consistency in the color scaling. If you do not set these
 you will get automatic scaling, but if you want to change them from a fixed
 number back to autoscaling, you can use the C<lm::Auto> value that is also used
-to tell the x- and y-axes to resume autoscaling.
+to tell the x- and y-axes to resume autoscaling. The last key of interest is the
+C<badval_color> key, which provides a Prima color to use when the system
+encounters bad data. The default value is C<cl::Brown>.
 
 Note that any colors that fall outside of explicitly specified minimum and
 maximum values have no guarantees about their rendering. Eventually it would be
@@ -275,6 +277,8 @@ sub scaling { return shift->{scaling} || sc::Linear }
 
 Every palette knows how to apply itself to its data. The apply function
 returns a piddle of Prima color values given a piddle of scalar values.
+After calling the pallete's C<apply> subref, all points that were previously
+C<bad> in the given data are marked with the C<badval_color>.
 
 =cut
 
@@ -282,7 +286,10 @@ returns a piddle of Prima color values given a piddle of scalar values.
 # palette invokes the subroutine reference supplied in the apply key:
 sub apply {
 	my ($self, $data) = @_;
-	return $self->{apply}->($data);
+	my $colors_to_return = $self->{apply}->($data);
+	$colors_to_return->where($data->isbad) .= $self->{badval_color};
+	$colors_to_return->badflag(0);
+	return $colors_to_return;
 }
 
 =head2 copy
@@ -547,10 +554,8 @@ sub apply {
 	# Figure out the min and max.
 	my ($min, $max) = $self->minmax($data);
 	
-	# Scale the data from zero to one, taking care to correctly
-	# handle collections of identical values:
-	my $scaled_data = $min == $max ? $data->zeroes
-					: $self->scaling->transform($min, $max, $data->double);
+	# Scale the data from zero to one
+	my $scaled_data = $self->scaling->transform($min, $max, $data);
 	$scaled_data **= $self->{gamma};
 	
 	# Compute the associated hue, saturation, and vaue:
@@ -563,7 +568,12 @@ sub apply {
 	
 	# changed $h->cat($s, $v) to PDL->pdl($h, $s, $v) because it's robust
 	# against empty piddles.
-	return PDL->pdl($h, $s, $v)->mv(-1,0)->hsv_to_rgb->rgb_to_color;
+	my $colors = PDL->pdl($h, $s, $v)->mv(-1,0)->hsv_to_rgb->rgb_to_color;
+	# handle bad value coloring
+	$colors->where($data->isbad) .= $self->{badval_color};
+	$colors->badflag(0);
+	# All set!
+	return $colors;
 }
 
 =head1 Special Palettes

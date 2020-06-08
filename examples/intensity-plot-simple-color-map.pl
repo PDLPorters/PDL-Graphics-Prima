@@ -19,6 +19,11 @@ for (1..500) {
 use PDL::Image2D;
 my $to_plot = $values->box2d($size/10, $size/10, 1);
 
+# Set some of it to bad
+$to_plot(int(rand($size)):int(rand($size)), int(rand($size)):int(rand($size)))
+	.= pdl 'bad';
+$to_plot->badflag(1);
+
 plot(
 	-random => ds::Grid($values,
 		bounds => [0,1, 1,2],
