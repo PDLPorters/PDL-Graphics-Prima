@@ -391,6 +391,10 @@ sub get_pixel_extent_for {
 # example, the title requests exclusive space (a height of titleSpace),
 # which is added to that shared max shared space requested by both of the
 # axes. The return values should be left, bottom, right, top
+#
+# XXX make this accept a canvas argument in case we want the margins for Drawables
+# other than the plot widget (which happens whenever we generate figures, for
+# example)
 sub get_edge_requirements {
 	my $self = shift;
 	my @x_req = $self->x->get_edge_requirements;
@@ -410,7 +414,8 @@ sub get_edge_requirements {
 	
 	# Add room for the color map. For now the color map will only live on the
 	# right of the figure, but that will eventually be configurable.
-	$requirement[2] += $self->color_map->get_width if $self->is_drawing_color_map;
+	$requirement[2] += $self->color_map->get_width($self)
+		if $self->is_drawing_color_map;
 	
 	return @requirement;
 }

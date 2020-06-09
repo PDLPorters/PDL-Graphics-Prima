@@ -223,10 +223,10 @@ sub new {
 	# Create the palette object
 	bless $self, $class;
 	
-	# Avoid memory leaks
+	# Avoid memory leaks and cache the default size specs
 	if ($self->{widget}) {
 		Scalar::Util::weaken($self->{widget});
-		$self->setup_size_specs;
+		$self->{default_size_specs} = $self->generate_size_specs_for_canvas($self->{widget});
 	}
 	
 	return $self;
@@ -245,23 +245,50 @@ sub widget {
 	# new widget. Add the ref, avoid memory leaks, and update the size specs
 	$self->{widget} = $new_widget;
 	Scalar::Util::weaken($self->{widget});
-	$self->setup_size_specs;
+	$self->{default_size_specs} = $self->generate_size_specs_for_canvas($new_widget);
 }
 
-# Initializes all size specs, if the palette has an associated widget
-sub setup_size_specs {
-	my $self = shift;
+=head2 generate_size_specs_for_canvas
+
+This method takes a single canvas as an argument and generates a hashref
+containing SizeSpec objects for all of the size specs for the Palette. But if
+you need access to those size specs, you probably don't want to use this. Use
+C<size_specs_for_canvas> instead, which should be a little faster than this
+because it caches for the common case of SizeSpecs for the palette's plot widget.
+
+=cut
+
+# Function that always generates the size specs hashref. Y
+sub generate_size_specs_for_canvas {
+	my ($self, $canvas) = @_;
 	
 	# Build a typical size-spec parser
-	my $parser = PDL::Graphics::Prima::SizeSpec::Parser->new($self->widget);
+	my $parser = PDL::Graphics::Prima::SizeSpec::Parser->new($canvas);
 	
-	# Construct the various size specs
+	# Construct the various size specs, stashing them in the hash
+	my %size_specs;
 	for my $length ($self->width_property_names, $self->height_property_names) {
-		# In the event that we are rebuilding these for use with a new widget,
-		# we explicitly stringify the old size spec before sending it to the
-		# parser
-		$self->{$length} = $parser->parse(''.$self->{$length});
+		$size_specs{$length} = $parser->parse($self->{$length});
 	}
+	return \%size_specs;
+}
+
+=head2 size_specs_for_canvas
+
+This method takes a single canvas as an argument and returns a hashref
+containing SizeSpec objects for all of the size specs for the Palette. Unlike
+C<generate_size_specs_for_canvas>, this uses cached SizeSpecs for the plot
+widget and so is usually faster.
+
+=cut
+
+# Initializes all size specs, if the palette has an associated widget
+sub size_specs_for_canvas {
+	my ($self, $canvas) = @_;
+	# If we're working with our widget then return the pre-computed specs
+	return $self->{default_size_specs} if $canvas == $self->{widget};
+	# Otherwise generate new specs on the fly
+	return $self->generate_size_specs_for_canvas($canvas);
 }
 
 =head2 scaling
@@ -325,10 +352,9 @@ sub draw {
 	my ($self, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top
 		, $ratio) = @_;
 	
-	# Set the widget. Back up the current widget so we can restore it when this
-	# is over.
-	my $backup_widget = $self->widget;
-	$self->widget($canvas);
+	# Get the size specs
+	my $sizes = $self->size_specs_for_canvas($canvas);
+	
 	# Get an em height, which we use to specifying the draw_text command
 	my $em_points = $canvas->get_text_box('M');
 	my $em_height = $em_points->[1] - $em_points->[3];
@@ -336,10 +362,10 @@ sub draw {
 	# We'll work our way in from the right, starting with the labels and
 	# finishing with the color bar. For pretty much all of this, we'll need
 	# the height of the color bar
-	my $bottom = 0 + $self->{bottom_margin};
-	my $top = $canvas->height - $self->{top_margin};
+	my $bottom = 0 + $sizes->{bottom_margin};
+	my $top = $canvas->height - $sizes->{top_margin};
 	# Move top down even more if there is a label
-	$top -= $canvas->font->height + $self->{label_padding} if $self->{label};
+	$top -= $canvas->font->height + $sizes->{label_padding} if $self->{label};
 	my $bar_height = $top - $bottom;
 	
 	# We also need the palette's min/max. Note that our minmax method handles
@@ -349,10 +375,10 @@ sub draw {
 	### Draw the ticks and labels
 	# Figure out the x-position at which we will draw the labels, as well as
 	# the horizontal start and stop points for the tick marks.
-	my $tick_label_width = $self->get_tick_label_width;
-	my $label_left = $canvas->width - $self->{outer_margin} - $tick_label_width;
-	my $tick_right = $label_left - $self->{tick_label_padding};
-	my $tick_left = $tick_right - $self->{tick_size};
+	my $tick_label_width = $self->get_tick_label_width($canvas);
+	my $label_left = $canvas->width - $sizes->{outer_margin} - $tick_label_width;
+	my $tick_right = $label_left - $sizes->{tick_label_padding};
+	my $tick_left = $tick_right - $sizes->{tick_size};
 	
 	# use the scaling to get the actual ticks
 	for my $Tick ($self->get_label_Ticks->list) {
@@ -371,8 +397,8 @@ sub draw {
 	
 	### Draw the color bar.
 	# It's position is a known width away from the clip right.
-	my $bar_right = $tick_left - $self->{tick_padding};
-	my $bar_left = $bar_right - $self->{bar_width};
+	my $bar_right = $tick_left - $sizes->{tick_padding};
+	my $bar_left = $bar_right - $sizes->{bar_width};
 	# for a smooth gradient, we need to draw rectangles from the bottom to the
 	# top, one per pixel. Use the scaling to generate the associated values,
 	# then run those values through the palette's apply method.
@@ -390,17 +416,13 @@ sub draw {
 	if ($self->{label}) {
 		### Finish with the color map label at the top, if it exists
 		# Compute a few of the label positions
-		my $label_bottom = $top + $self->{label_padding};
-		my $label_right = $canvas->width - $self->{outer_margin};
+		my $label_bottom = $top + $sizes->{label_padding};
+		my $label_right = $canvas->width - $sizes->{outer_margin};
 		# Draw the label
 		$canvas->draw_text($self->{label}, $bar_left, $label_bottom, $label_right,
 			$label_bottom + 2 * $em_height,
 			dt::Center | dt::Bottom | dt::NoWordWrap | dt::UseExternalLeading);
 	}
-	
-	# Restore the widget so that all other calls work correctly.
-	# XXX maybe there is a better way to handle this?
-	$self->widget($backup_widget);
 }
 
 =head2 set_autoscaling_minmax
@@ -460,7 +482,9 @@ sub minmax {
 =head2 get_tick_label_width
 
 Computes the width needed to draw all the palette tick labels. This dynamically
-generates the list of labels and computes the width of the widest one.
+generates the list of labels and computes the width of the widest one. Takes an
+optional argument for the canvas upon which to draw, but defaults to the current
+widget if none is given.
 
 Because this needs to compute text widths, this can only be called on a palette
 that has been attached to a widget.
@@ -476,13 +500,13 @@ sub get_label_Ticks {
 
 sub get_tick_label_width {
 	my $self = shift;
-	my $widget = $self->widget
-		or croak("palette must be tied to a plot (widget) to compute its width");
+	my $canvas = shift || $self->widget
+		or croak("palette must be tied to a plot or given a Drawable to compute its width");
 	
 	# determine the text width of the ticks
 	my $width = 0;
 	for my $Tick ($self->get_label_Ticks->list) {
-		my $points = $widget->get_text_box($Tick);
+		my $points = $canvas->get_text_box($Tick);
 		$width = $points->[4] if $points->[4] > $width;
 	}
 	
@@ -499,13 +523,17 @@ data values have been articulated.
 
 sub get_width {
 	my $self = shift;
+	my $canvas = shift || $self->widget;
 	
 	# First get the label width
-	my $width = $self->get_tick_label_width;
+	my $width = $self->get_tick_label_width($canvas);
+	
+	# Add up all the size specs for width
+	my $size_specs = $self->size_specs_for_canvas($canvas);
 	
 	# Add this to all the other widths
 	for my $width_property_name ($self->width_property_names) {
-		$width += $self->{$width_property_name};
+		$width += $size_specs->{$width_property_name};
 	}
 	return $width;
 }
