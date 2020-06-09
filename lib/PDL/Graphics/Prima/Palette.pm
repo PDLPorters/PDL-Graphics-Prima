@@ -233,7 +233,7 @@ sub new {
 }
 
 # Getter/setter for the widget. If we change the widget, then regenerate all of
-# the size specs
+# the size specs.
 sub widget {
 	my $self = shift;
 	return $self->{widget} unless @_;
@@ -344,7 +344,9 @@ sub draw {
 	my ($self, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top
 		, $ratio) = @_;
 	
-	# Set the widget
+	# Set the widget. Back up the current widget so we can restore it when this
+	# is over.
+	my $backup_widget = $self->widget;
 	$self->widget($canvas);
 	# Get an em height, which we use to specifying the draw_text command
 	my $em_points = $canvas->get_text_box('M');
@@ -404,15 +406,20 @@ sub draw {
 	$canvas->rectangle($bar_left, $bottom, $bar_right, $top)
 		if $self->boxed;
 	
-	return unless $self->{label};
-	### Finish with the color map label at the top, if it exists
-	# Compute a few of the label positions
-	my $label_bottom = $top + $self->{label_padding};
-	my $label_right = $canvas->width - $self->{outer_margin};
-	# Draw the label
-	$canvas->draw_text($self->{label}, $bar_left, $label_bottom, $label_right,
-		$label_bottom + 2 * $em_height, 
-		dt::Center | dt::Bottom | dt::NoWordWrap | dt::UseExternalLeading);
+	if ($self->{label}) {
+		### Finish with the color map label at the top, if it exists
+		# Compute a few of the label positions
+		my $label_bottom = $top + $self->{label_padding};
+		my $label_right = $canvas->width - $self->{outer_margin};
+		# Draw the label
+		$canvas->draw_text($self->{label}, $bar_left, $label_bottom, $label_right,
+			$label_bottom + 2 * $em_height,
+			dt::Center | dt::Bottom | dt::NoWordWrap | dt::UseExternalLeading);
+	}
+	
+	# Restore the widget so that all other calls work correctly.
+	# XXX maybe there is a better way to handle this?
+	$self->widget($backup_widget);
 }
 
 =head2 set_autoscaling_minmax
