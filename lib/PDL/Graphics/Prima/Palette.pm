@@ -292,25 +292,6 @@ sub apply {
 	return $colors_to_return;
 }
 
-=head2 copy
-
-You can make a copy of a Palette that is identical to your current pallete
-except that it does not have an associated plotType. This way, if you put a
-lot of effort into making a palette, you can easily reuse that palette with
-minimal effort.
-
-Note that this mechanism does not perform a deep copy, and any nested data
-structures will be copied by reference to the new palette object.
-
-=cut
-
-sub copy {
-	my $self = shift;
-	my $new_guy = { %$self };
-	delete $new_guy->{plotType};
-	return $new_guy;
-}
-
 =head2 boxed
 
 Getter/setter for the boxed property. If this is a color map, setting this will

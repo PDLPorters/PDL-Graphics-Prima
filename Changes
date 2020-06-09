@@ -31,6 +31,10 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
     will continue to accept them under that keyword, it is now officially
     discouraged. The preferred keyword is color_map.
   
+  - Palettes no longer have the copy method. Having removed their association
+    with a given plotType, this seems to be unnecessary capability, and
+    extending it with the newer features seemed fraught with potential errors.
+  
   [DIFFERENT BEHAVIOR]
   
   - Change zoom-out factor so that a zoom-in/zoom-out pair takes us back to
