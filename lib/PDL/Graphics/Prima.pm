@@ -2095,7 +2095,7 @@ Specifies different kinds of scaling, including linear and logarithmic
 Defines a number of useful functions for generating simple and not-so-simple
 plots
 
-=item L<PDL::Graphics::Prima::SizeSpec|PDL::Graphics::Prima::SizeSpec|/>
+=item L<PDL::Graphics::Prima::SizeSpec|PDL::Graphics::Prima::SizeSpec/>
 
 Compute pixel distances from meaningful units
 
