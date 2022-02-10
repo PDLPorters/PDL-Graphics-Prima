@@ -22,8 +22,8 @@ sub import {
 ############################################################################
 
 # Prima
-use Prima qw(noX11 Application ImageDialog MsgBox Utils Buttons InputLine
-			Label);
+use Prima qw(noX11 Application Dialog::ImageDialog MsgBox Utils Buttons
+	InputLine Label);
 use base 'Prima::Widget';
 
 # Error reporting
@@ -708,7 +708,7 @@ sub get_image {
 }
 
 use Prima::PS::Drawable;
-use Prima::FileDialog;
+use Prima::Dialog::FileDialog;
 use Prima::Drawable::Subcanvas;
 
 sub save_to_postscript {
@@ -716,7 +716,7 @@ sub save_to_postscript {
 	my ($self, $filename) = @_;
 	
 	unless ($filename) {
-		my $save_dialog = Prima::SaveDialog-> new(
+		my $save_dialog = Prima::Dialog::SaveDialog-> new(
 			defaultExt => 'eps',
 			filter => [
 				['Encapsulated Postscript files' => '*.eps'],
@@ -785,7 +785,7 @@ sub save_to_file {
 		my %args;
 		$args{directory} = $self->{default_save_dir}
 			if exists $self->{default_save_dir};
-		my $dlg = Prima::ImageSaveDialog-> create(%args);
+		my $dlg = Prima::Dialog::ImageSaveDialog-> create(%args);
 		
 		if ($self->{default_save_format}) {
 			my $found;
