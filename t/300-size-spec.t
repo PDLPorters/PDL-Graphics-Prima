@@ -1,9 +1,14 @@
 use strict;
 use warnings;
 
+### Mock parent for @ISA
+package Prima::Drawable;
+
 #####################################
 package Prima::Widget;  # mock class
 #####################################
+
+our @ISA = ('Prima::Drawable');
 
 sub new { return bless {} }
 sub height { 10 }
