@@ -1426,7 +1426,7 @@ sub guess_scaling_for {
 	my $lin_space = $lin_spaces->average;
 	my $lin_score = (($lin_spaces - $lin_space)**2)->sum / $lin_spaces->nelem;
 	
-	my $log_spaces = $data(1:-1) / $data(0:-2);
+	my $log_spaces = $data->slice('1:-1') / $data(0:-2);
 	my $log_space = $log_spaces->average;
 	my $log_score = (($log_spaces - $log_space)**2)->sum / $log_spaces->nelem;
 	
