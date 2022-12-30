@@ -707,7 +707,7 @@ sub get_image {
 	return $image;
 }
 
-use Prima::PS::Drawable;
+use Prima::PS::Printer;
 use Prima::Dialog::FileDialog;
 use Prima::Drawable::Subcanvas;
 
@@ -720,6 +720,7 @@ sub save_to_postscript {
 			defaultExt => 'eps',
 			filter => [
 				['Encapsulated Postscript files' => '*.eps'],
+				['Portable Document Format files' => '*.pdf'],
 				['All files' => '*'],
 			],
 			$self->{default_save_dir}
@@ -730,8 +731,6 @@ sub save_to_postscript {
 		return unless $save_dialog->execute;
 		# Otherwise get the filename:
 		$filename = $save_dialog->fileName;
-		# Provide a default extension
-		$filename .= '.eps' unless $filename =~ /\.eps$/;
 	}
 	unlink $filename if -f $filename;
 	
@@ -741,12 +740,12 @@ sub save_to_postscript {
 	my $scaling_ratio = 72.27 / 100;
 	my $width = $self->width * $scaling_ratio;
 	my $height = $self->height * $scaling_ratio;
+
+
 	# Create the postscript canvas and plot to it:
-	my $ps = Prima::PS::Drawable-> create( onSpool => sub {
-			open my $fh, ">>", $filename;
-			print $fh $_[1];
-			close $fh;
-		},
+	my $class = ( $filename =~ /\.pdf$/) ? 'Prima::PS::PDF::File' : 'Prima::PS::File';
+	my $ps = $class->new(
+		file => $filename,
 		pageSize => [$width, $height],
 		pageMargins => [0, 0, 0, 0],
 		isEPS => 1,
@@ -1221,10 +1220,10 @@ sub on_mouseup {
 							},
 						)->start;
 					}],
-					['Save As ~Postscript...' => sub {
+					['Save As ~Postscript/PDF...' => sub {
 						$self->save_to_postscript;
 					}],
-					['~Save As...' => sub {
+					['~Save As Image...' => sub {
 						Prima::Timer->create(
 							timeout => 250,
 							onTick => sub {
@@ -1862,10 +1861,10 @@ Returns a L<Prima::Image> of the plot with same dimensions as the plot widget.
 
 =head2 save_to_postscript
 
-Saves the plot with current axis limits to an encapsulated postscript figure.
-This method takes an optional filename argument. If no filename is specified,
-it pops-up a dialog box to ask the user where and under what name they want
-to save the postscript figure.
+Saves the plot with current axis limits to an encapsulated postscript figure or
+to a PDF file. This method takes an optional filename argument. If no filename
+is specified, it pops-up a dialog box to ask the user where and under what name
+they want to save the figure.
 
 This functionality will likely be merged into save_to_file, though this
 method will remain for backwards compatibility.
