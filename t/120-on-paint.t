@@ -95,7 +95,7 @@ is_image($test_draw_plot, $image_easy,
 		diag('  Saving expected result to test_expected, and bad result to test_draw_plot.bmp');
 	};
 
-my $test_seperate_font_setup = my $test_draw_plot = Prima::Image->new(
+my $test_seperate_font_setup = $test_draw_plot = Prima::Image->new(
 	width => $width,
 	height => $height,
 );
