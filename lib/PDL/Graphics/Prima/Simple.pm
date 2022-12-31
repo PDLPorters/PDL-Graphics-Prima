@@ -1850,6 +1850,17 @@ if (PDL::Graphics::Prima::ReadLine->is_setup) {
 # Otherwise, make it run the event loop:
 else {
 	*twiddle = sub {
+		# twiddling should be a no-op if the plot function is not default_plot,
+		# which is the case for App::Prima::REPL
+		return if refaddr(\&plot) != refaddr(\&default_plot);
+
+		# No event looping if we don't have any open windows. Otherwise,
+		# they won't be able to exit the loop!
+		print "No open plots\n" and return if $N_windows == 0;
+		# Print a notice explaining what's going on:
+		print "Twiddling plot; close window or press q or Q to resume\n"
+			unless $default_plot_args{quiet};
+
 		twiddling(1);
 		$::application->go;
 	};
