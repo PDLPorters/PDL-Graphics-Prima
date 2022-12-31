@@ -22,16 +22,16 @@ my $build = Module::Build->new(
 	meta_merge => {
 		resources => {
 			repository
-				=> 'http://github.com/run4flat/PDL-Graphics-Prima',
+				=> 'http://github.com/PDLPorters/PDL-Graphics-Prima',
 #				=> {
-#					web => 'http://github.com/run4flat/PDL-Graphics-Prima',
-#					url => 'git://github.com/run4flat/PDL-Graphics-Prima.git',
+#					web => 'http://github.com/PDLPorters/PDL-Graphics-Prima',
+#					url => 'git://github.com/PDLPorters/PDL-Graphics-Prima.git',
 #					type => 'git',
 #				},
 			bugtracker
-				=> 'http://github.com/run4flat/PDL-Graphics-Prima/issues',
+				=> 'http://github.com/PDLPorters/PDL-Graphics-Prima/issues',
 #				=> {
-#					web => 'http://github.com/run4flat/PDL-Graphics-Prima/issues',
+#					web => 'http://github.com/PDLPorters/PDL-Graphics-Prima/issues',
 #				},
 		},
 	},

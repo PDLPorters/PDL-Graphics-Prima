@@ -1990,7 +1990,7 @@ how to sign-up, see L<http://pdl.perl.org/?page=mailing-lists>.
 =item Github
 
 The best place to report problems that you are sure are problems is at
-L<http://github.com/run4flat/PDL-Graphics-Prima/issues>.
+L<http://github.com/PDLPorters/PDL-Graphics-Prima/issues>.
 
 =back
 
