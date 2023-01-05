@@ -235,14 +235,8 @@ sub setup_gui {
 		# Modify link clicking so that it opens the help window instead
 		# of following the link.
 		onLink => sub {
-			my ($self, $link) = @_;
-			# $link is a reference to the link that should be opened; deref
-			$::application->open_help($$link);
-			# Store the help window so we can close it on exit later
-			$gui->{help_window} = $::application->get_active_window;
-			# Bring the help window to the fore
-			$::application->get_active_window->bring_to_front
-				if $::application->get_active_window;
+			my ($self, $handler, $url, $btn, $mod) = @_;
+			$handler-> open_podview($url, $btn, $mod);
 			# Clear the event so that it doesn't follow the link in this
 			# renderer
 			$self->clear_event;
