@@ -1650,6 +1650,10 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
      },
  );
 
+=for podview <img src="PDL/Graphics/Prima/pod/exp.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/dk/PDL-Graphics-Prima/pod-images/lib/PDL/Graphics/Prima/pod/exp.png">
+
 =head1 WIDGET SYNOPSIS
 
  use PDL;
