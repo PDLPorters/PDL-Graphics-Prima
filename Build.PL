@@ -36,4 +36,5 @@ my $build = Module::Build->new(
 	},
 );
 
+$build->add_build_element('png');
 $build->create_build_script;
