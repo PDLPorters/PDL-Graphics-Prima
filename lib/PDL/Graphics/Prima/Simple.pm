@@ -15,6 +15,10 @@ PDL::Graphics::Prima
 
 =head1 SYNOPSIS
 
+=for podview <img src="PDL/Graphics/Prima/pod/lineplot.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/lineplot.png">
+
  use PDL::Graphics::Prima::Simple;
  use PDL;
  

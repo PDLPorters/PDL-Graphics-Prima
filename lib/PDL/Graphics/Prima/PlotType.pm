@@ -16,7 +16,11 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
  use PDL::Graphics::Prima::Simple -sequential;
  my $x = sequence(100)/10;
  my $y = sin($x);
- 
+
+=for podview <img src="PDL/Graphics/Prima/pod/lines-diamonds.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/lines-diamonds.png">
+
  # A lines+diamonds plot
  plot(
      -data => ds::Pair(
@@ -28,7 +32,11 @@ PDL::Graphics::Prima::PlotType - a collection of plot types
          ],
      ),
  );
- 
+
+=for podview <img src="PDL/Graphics/Prima/pod/dandelions.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/dandelions.png">
+
  # Dandelions:
  $x = random(10);
  $y = random(10) + 0.5;

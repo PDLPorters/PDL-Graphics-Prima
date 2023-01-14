@@ -1579,6 +1579,10 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
 
 =head1 SIMPLE SYNOPSIS
 
+=for podview <img src="PDL/Graphics/Prima/pod/lineplot.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/lineplot.png">
+
  use PDL::Graphics::Prima::Simple;
  use PDL;
  
@@ -1652,7 +1656,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
 
 =for podview <img src="PDL/Graphics/Prima/pod/exp.png">
 
-=for html <p><img src="https://raw.githubusercontent.com/dk/PDL-Graphics-Prima/pod-images/lib/PDL/Graphics/Prima/pod/exp.png">
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/exp.png">
 
 =head1 WIDGET SYNOPSIS
 

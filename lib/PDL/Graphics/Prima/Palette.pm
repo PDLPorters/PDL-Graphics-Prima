@@ -11,6 +11,10 @@ PDL::Graphics::Prima::Palette - a set of palettes for the Prima graph widget
 
 =head1 DESCRIPTION
 
+=for podview <img src="PDL/Graphics/Prima/pod/palette.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/palette.png">
+
 Suppose you want to use color to convey some meaningful value. For example,
 you want the color to represent the topography of a landscape, darker is
 lower, lighter is higher. In that case, you need a mapping from a height to
@@ -27,13 +31,7 @@ L<pal::BlackToHSV|/pal::BlackToHSV>, but what's the fun in that?
      apply => sub {
          my $data = shift;
          my ($min, $max) = $data->minmax;
-         
-         # Build the rgb piddle
-         my $rgb = zeroes(3, $data->dims);
-         $rgb->slice("0") .= (($data->double - $min) / ($max - $min)) * 255;
-         
-         # Convert to Prima colors
-         return $rgb->rgb_to_color;
+         return floor((($data - $min) / ($max - $min)) * 255) * 0x10000;
      }
  );
 
@@ -50,8 +48,10 @@ And, you can provide the palette to customize how
 L<pgrid::Matrix|PDL::Graphics::Prima::PlotType/pgrid::Matrix>
 colorizes its data:
 
+ my $x = sequence(100)/10 + 0.1;
+ my $y = $x->sin + $x->grandom / 10;
  plot(
-     -data => ds::Grid( $matrix,
+     -data => ds::Grid( $y,
          plotType => pgrid::Matrix(palette => $palette),
          bounds => [0, 0, 1, 1],
      )

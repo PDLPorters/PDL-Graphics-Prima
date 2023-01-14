@@ -12,32 +12,67 @@ PDL::Graphics::Prima::DataSet - the way we think about data
 
 =head1 SYNOPSIS
 
- -distribution => ds::Dist(
-     $data, plotType => ppair::Lines,
+ use PDL;
+ use PDL::Graphics::Prima::Simple;
+
+ my $x = sequence(100)/10 + 0.1;
+ my $y = $x->sin + $x->grandom / 10;
+
+=for podview <img src="PDL/Graphics/Prima/pod/ds-dist.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/ds-dist.png">
+
+ plot( -distribution => ds::Dist(
+     $y, plotType => ppair::Lines,
      binning => bt::Linear,
- ),
- -lines => ds::Pair(
+ ));
+
+=for podview <img src="PDL/Graphics/Prima/pod/ds-pair.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/ds-pair.png">
+
+ plot( -lines => ds::Pair(
      $x, $y, plotTypes => [ppair::Lines, ppair::Diamonds]
- ),
- -contour => ds::Grid(
-     $matrix,
+ ));
+
+=for podview <img src="PDL/Graphics/Prima/pod/ds-grid.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/ds-grid.png">
+
+ plot( -contour => ds::Grid(
+     $x,
+     bounds => [0,0,10,10],
      # Specify your bounds in one of these three ways
-     bounds => [$left, $bottom, $right, $top],
-     y_edges => $ys, x_edges => $xs, 
-     x_bounds => [$left, $right], y_bounds => [$bottom, $top],
+     # bounds => [$left, $bottom, $right, $top],
+     # y_edges => $ys, x_edges => $xs, 
+     # x_bounds => [$left, $right], y_bounds => [$bottom, $top],
      # Unnecessary if you want the default palette
-     plotType => pgrid::Matrix(palette => $palette),
- ),
- -image => ds::Image(
-     $image, format => 'string',
-     ... ds::Grid bounder options ...
+     plotType => pgrid::Matrix(palette => pal::RainbowSV(1.0, 0.8)),
+ ));
+
+=for podview <img src="PDL/Graphics/Prima/pod/ds-image.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/ds-image.png">
+
+ plot( -image => ds::Image(
+     rvals(3, 256*2),
+     format => 'string',
+     # ... ds::Grid bounder options ...
+     bounds => [0,0,10,10],
      # Unnecessary at the moment
      plotType => pimage::Basic,
- ),
- -function => ds::Func(
-     $func_ref, xmin => $left, xmax => $right, N_points => 200,
- ),
- 
+ ));
+
+=for podview <img src="PDL/Graphics/Prima/pod/ds-func.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/ds-func.png">
+
+ plot( -function => ds::Func( \&PDL::sin,
+     color => cl::LightRed,
+     xmin => 0, xmax => 1,
+     N_points => 200,
+ ));
+
 
 =head1 DESCRIPTION
 
