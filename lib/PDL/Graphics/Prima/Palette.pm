@@ -158,7 +158,7 @@ still needs to be worked out
 sub defaults {
 	return (
 		label              => '',       # displayed over the palette box
-		
+
 		# Horizontal placement
 		outer_margin       => '1em',    # between outer edge and palette box
 		tick_label_padding => '0.5em',  # space between labels and tick marks
@@ -179,7 +179,7 @@ sub defaults {
 		#   top/bottom of bar with top/bottom of plot
 		# * make it possible to label the palette on the side instead of on the
 		#   top
-		
+
 		# Vertical placement
 		top_margin    => '1em',    # between figure's top edge and top of label
 		                           #   text or top of color bar
@@ -188,7 +188,7 @@ sub defaults {
 		                           #   only applied if label is non-empty
 		bottom_margin => '1.5em',  # between bottom of color bar figure's bottom
 		                           #   edge
-		
+
 		# min and max set to autoscale
 		min  => lm::Auto,
 		max  => lm::Auto,
@@ -209,7 +209,7 @@ sub new {
 	my $class = shift;
 	croak("${class}::new expects arguments in key=>value pairs")
 		unless @_ % 2 == 0;
-	
+
 	my $self = {
 		$class->defaults,
 		@_,
@@ -219,16 +219,16 @@ sub new {
 			unless exists $self->{apply} and ref($self->{apply})
 				and ref($self->{apply}) eq 'CODE';
 	}
-	
+
 	# Create the palette object
 	bless $self, $class;
-	
+
 	# Avoid memory leaks and cache the default size specs
 	if ($self->{widget}) {
 		Scalar::Util::weaken($self->{widget});
 		$self->{default_size_specs} = $self->generate_size_specs_for_canvas($self->{widget});
 	}
-	
+
 	return $self;
 }
 
@@ -261,10 +261,10 @@ because it caches for the common case of SizeSpecs for the palette's plot widget
 # Function that always generates the size specs hashref. Y
 sub generate_size_specs_for_canvas {
 	my ($self, $canvas) = @_;
-	
+
 	# Build a typical size-spec parser
 	my $parser = PDL::Graphics::Prima::SizeSpec::Parser->new($canvas);
-	
+
 	# Construct the various size specs, stashing them in the hash
 	my %size_specs;
 	for my $length ($self->width_property_names, $self->height_property_names) {
@@ -351,14 +351,14 @@ Draws the palette on the associated widget.
 sub draw {
 	my ($self, $canvas, $clip_left, $clip_bottom, $clip_right, $clip_top
 		, $ratio) = @_;
-	
+
 	# Get the size specs
 	my $sizes = $self->size_specs_for_canvas($canvas);
-	
+
 	# Get an em height, which we use to specifying the draw_text command
 	my $em_points = $canvas->get_text_box('M');
 	my $em_height = $em_points->[1] - $em_points->[3];
-	
+
 	# We'll work our way in from the right, starting with the labels and
 	# finishing with the color bar. For pretty much all of this, we'll need
 	# the height of the color bar
@@ -367,11 +367,11 @@ sub draw {
 	# Move top down even more if there is a label
 	$top -= $canvas->font->height + $sizes->{label_padding} if $self->{label};
 	my $bar_height = $top - $bottom;
-	
+
 	# We also need the palette's min/max. Note that our minmax method handles
 	# degeneracy for us, thankfully.
 	my ($min, $max) = $self->minmax;
-	
+
 	### Draw the ticks and labels
 	# Figure out the x-position at which we will draw the labels, as well as
 	# the horizontal start and stop points for the tick marks.
@@ -379,7 +379,7 @@ sub draw {
 	my $label_left = $canvas->width - $sizes->{outer_margin} - $tick_label_width;
 	my $tick_right = $label_left - $sizes->{tick_label_padding};
 	my $tick_left = $tick_right - $sizes->{tick_size};
-	
+
 	# use the scaling to get the actual ticks
 	for my $Tick ($self->get_label_Ticks->list) {
 		# Render each tick. To get there, perform the inverse transform on the
@@ -394,7 +394,7 @@ sub draw {
 			$label_left + $tick_label_width, $y + $em_height,
 			dt::Left | dt::VCenter | dt::NoWordWrap | dt::UseExternalLeading);
 	}
-	
+
 	### Draw the color bar.
 	# It's position is a known width away from the clip right.
 	my $bar_right = $tick_left - $sizes->{tick_padding};
@@ -412,7 +412,7 @@ sub draw {
 		colors => $gradient_colors);
 	$canvas->rectangle($bar_left, $bottom, $bar_right, $top)
 		if $self->boxed;
-	
+
 	if ($self->{label}) {
 		### Finish with the color map label at the top, if it exists
 		# Compute a few of the label positions
@@ -469,7 +469,7 @@ sub minmax {
 		@minmax = $data->minmax if @minmax == 0 and defined $data;
 		croak("Requested palette minmax but none specified, autoscaling minmax not set, and no data given")
 			if @minmax == 0;
-		
+
 		$min = $minmax[0] if $min == lm::Auto;
 		$max = $minmax[1] if $max == lm::Auto;
 	}
@@ -502,14 +502,14 @@ sub get_tick_label_width {
 	my $self = shift;
 	my $canvas = shift || $self->widget
 		or croak("palette must be tied to a plot or given a Drawable to compute its width");
-	
+
 	# determine the text width of the ticks
 	my $width = 0;
 	for my $Tick ($self->get_label_Ticks->list) {
 		my $points = $canvas->get_text_box($Tick);
 		$width = $points->[4] if $points->[4] > $width;
 	}
-	
+
 	return $width;
 }
 
@@ -524,13 +524,13 @@ data values have been articulated.
 sub get_width {
 	my $self = shift;
 	my $canvas = shift || $self->widget;
-	
+
 	# First get the label width
 	my $width = $self->get_tick_label_width($canvas);
-	
+
 	# Add up all the size specs for width
 	my $size_specs = $self->size_specs_for_canvas($canvas);
-	
+
 	# Add this to all the other widths
 	for my $width_property_name ($self->width_property_names) {
 		$width += $size_specs->{$width_property_name};
@@ -547,7 +547,7 @@ sub new {
 	my $class = shift;
 	croak("${class}::new expects key=>value pairs")
 		unless @_ % 2 == 0;
-	
+
 	# Default to a rainbow spectrum:
 	my $self = $class->SUPER::new(
 		h_start => 0,
@@ -560,20 +560,20 @@ sub new {
 		@_
 	);
 	croak("${class}::new expects positive gamma values") if $self->{gamma} <= 0;
-	
+
 	return $self;
 }
 
 sub apply {
 	my ($self, $data) = @_;
-	
+
 	# Figure out the min and max.
 	my ($min, $max) = $self->minmax($data);
-	
+
 	# Scale the data from zero to one
 	my $scaled_data = $self->scaling->transform($min, $max, $data);
 	$scaled_data **= $self->{gamma};
-	
+
 	# Compute the associated hue, saturation, and vaue:
 	my $h = $scaled_data * ($self->{h_stop} - $self->{h_start})
 		+ $self->{h_start};
@@ -581,7 +581,7 @@ sub apply {
 		+ $self->{s_start};
 	my $v = $scaled_data * ($self->{v_stop} - $self->{v_start})
 		+ $self->{v_start};
-	
+
 	# changed $h->cat($s, $v) to PDL->pdl($h, $s, $v) because it's robust
 	# against empty piddles.
 	my $colors = PDL->pdl($h, $s, $v)->mv(-1,0)->hsv_to_rgb->rgb_to_color;
@@ -786,16 +786,16 @@ use Scalar::Util qw(blessed);
 sub pal::HSVrange {
 	croak("pal::HSVrange called with odd number of arguments")
 		if @_ % 2 == 1;
-	
+
 	# replace piddles in either of the fist two args with arrayrefs
 	$_[0] = [$_[0]->dog] if blessed($_[0]) and $_[0]->isa('PDL');
 	$_[1] = [$_[1]->dog] if blessed($_[1]) and $_[1]->isa('PDL');
-	
+
 	# Did they provide two array refs?
 	if (ref($_[0]) and ref($_[0]) eq ref([])) {
 		my $from = shift;
 		my $to = shift;
-		
+
 		# Check that $to is also an array ref, and that the dims are correct
 		ref($to) and ref($to) eq ref([])
 			or croak('If the first argument to pal::HSVrange is an array ref'
@@ -812,7 +812,7 @@ sub pal::HSVrange {
 			s_stop  => $to->[1],
 			v_stop  => $to->[2],
 	}
-	
+
 	return PDL::Graphics::Prima::Palette::HSVrange->new(@_);
 }
 

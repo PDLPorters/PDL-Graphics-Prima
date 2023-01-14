@@ -1585,14 +1585,14 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
 
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
- 
+
+
  # --( Super simple line and symbol plots )--
- 
+
  # Generate some data - a sine curve
  my $x = sequence(100) / 20 + 1;
  my $y = sin($x);
- 
+
  # Draw x/y pairs. Default x-value are sequential:
  line_plot($y);        line_plot($x, $y);
  circle_plot($y);      circle_plot($x, $y);
@@ -1602,39 +1602,39 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  X_plot($y);           X_plot($x, $y);
  cross_plot($y);       cross_plot($x, $y);
  asterisk_plot($y);    asterisk_plot($x, $y);
- 
+
  # Sketch the sine function for x initially from 0 to 10:
  func_plot(0 => 10, \&PDL::sin);
- 
- 
+
+
  # --( Super simple histogram )--
- 
+
  # PDL hist method returns x/y data
  hist_plot($y->hist);
  my ($bin_centers, $heights) = $y->hist;
  hist_plot($bin_centers, $heights);
  # Even simpler, if of limited use:
  hist_plot($heights);
- 
- 
+
+
  # --( Super simple matrix plots )--
- 
+
  # Generate some data - a wavy pattern
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
- 
+
  # Generate a grayscale image:
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
- 
+
  # Set the x and y coordinates for the image boundaries
  #            left, right,  bottom, top
  matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
  imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
- 
- 
+
+
  # --( More complex plots )--
- 
+
  # Use the more general 'plot' function for
  # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
@@ -1646,7 +1646,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
          colors   => $colors,
          plotType => ppair::Squares(filled => 1),
      ),
-     
+
      x => 'Time',
      y => {
          label   => 'Sine',
@@ -1663,21 +1663,21 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  use PDL;
  use Prima qw(Application);
  use PDL::Graphics::Prima;
- 
+
  my $t_data = sequence(6) / 0.5 + 1;
  my $y_data = exp($t_data);
- 
+
  my $wDisplay = Prima::MainWindow->create(
      text  => 'Graph Test',
      size  => [300, 300],
  );
- 
+
  $wDisplay->insert('Plot',
      -function => ds::Func(\&PDL::exp, color => cl::Blue),
      -data => ds::Pair($t_data, $y_data, color => cl::Red),
      pack => { fill => 'both', expand => 1},
  );
- 
+
  run Prima;
 
 =head1 IF YOU ARE NEW
@@ -1894,10 +1894,10 @@ For example:
  $plot->dataSets->{new_data} = ds::Pair(
      $x, $y, plotType => ppair::Squares
  );
- 
+
  # Remove a DataSet
  delete $plot->dataSets->{model};
- 
+
  # Clear the DataSets
  %{$plot->dataSets} = ();
 
@@ -1977,16 +1977,16 @@ want to do this: first if you are creating many raster images from plots and
 want to avoid memory re-allocations, and second if you have in image with some
 annotations on it already. (Beware the first reason: it is likely a premature
 optimization.) To draw the plot on an already-formed image, you can use the
-L<draw_image|PDL::Graphics::Prima/draw_image> method like so:
+C<paint_with_widgets> method like so:
 
  $some_image->begin_paint;
  $some_image->clear;
  ... other painting here ...
- $plot->draw_image($some_image);
+ $plot->paint_with_widgets($some_image);
  ... more painting ...
  $some_image->end_paint;
 
-The L<draw_image|PDL::Graphics::Prima/draw_image> method is the preferred way to
+The C<paint_with_widgets> method is the preferred way to
 draw a plot onto a pre-existing image. It gives you a bit more control on how
 the painting is invoked: for example, it does not clear the canvas for you. But
 with the increased control comes increased manual manipulation: you need to set
@@ -2004,7 +2004,7 @@ into a canvas. In that case, you should be able to say this:
  $::application->yield;
 
 Painting on an image by invoking the L<Paint Event|Prima::Widget/Paint> is
-similar to the L<draw_image|PDL::Graphics::Prima/draw_image> method, but it
+similar to the C<paint_with_widgets> method, but it
 also ensures that your image is in a paint-enabled state, clears the canvas,
 and returns the image in a paint-disabled state if that's how it started.
 This is usually what you want and expect when invoking the Paint event on a

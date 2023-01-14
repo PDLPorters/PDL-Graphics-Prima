@@ -650,13 +650,13 @@ PDL::Graphics::Prima::Axis - class for axis handling
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Specify details for an axis during plot construction:
  my $x = sequence(100)/10 + 0.1;
  my $y = $x->sin + $x->grandom / 10;
  my $plot = plot(
      -data => ds::Pair($x, $y),
-     
+
      # Details for x-axis:
      x => {
          # Scaling can be either sc::Log or sc::Linear (the default)
@@ -678,7 +678,7 @@ PDL::Graphics::Prima::Axis - class for axis handling
          },
      },
  );
- 
+
  # Get the x-max and inquire if it's autoscaling:
  my ($x_min, $is_auto) = $plot->x->min;
  # Set the current y-min to -5:
@@ -687,18 +687,18 @@ PDL::Graphics::Prima::Axis - class for axis handling
  $plot->x->min(lm::Auto);
  # Stop autoscaling, use the current max (deprecated):
  $plot->x->max($plot->x->max);
- 
+
  # Note: All changes to min/max values
  # fire the ChangeBounds notification
- 
+
  # Get the x-label:
  my $x_label = $plot->x->label;
  # Set the x-label:
  $plot->x->label('new_label');
- 
+
  # Note: All changes to the label
  # fire the ChangeLabel notification
- 
+
  # Conversion among real, relative, and pixel positions,
  # useful for plotType drawing operations
  my $x_rels = $plot->x->reals_to_relatives($x);
@@ -707,7 +707,7 @@ PDL::Graphics::Prima::Axis - class for axis handling
  $x_rels = $plot->x->pixels_to_relatives($x_pixels);
  $x_pixels = $plot->x->reals_to_pixels($xs);
  $xs = $plot->x->pixels_to_reals($x_pixels);
- 
+
  # Get the current scaling object/class:
  my $x_scaling = $plot->x->scaling;
  # Set the current scaling object/class:
@@ -756,9 +756,9 @@ and you will get a two-element list if you call it as a getter. For example:
 
  my $piddle = get_data;
  $graph_widget->x->minmax($piddle->minmax);
- 
+
  # ...
- 
+
  print "The x min/max values are ", join(', ', $graph_widget->x->minmax), "\n";
 
 Note that if you are setting both the min and the max to autoscaling, 
@@ -796,8 +796,8 @@ user or other interaction.
 =head2 ChangeBounds
 
 This event is fired immediately after the bounds are changed, whether the
-change is due to the user's mouse interaction or by a setter call of L</min>,
-L</max>, or L</minmax>.
+change is due to the user's mouse interaction or by a setter call of C<min>,
+C<max>, or L</minmax>.
 
 =head2 ChangeScaling
 

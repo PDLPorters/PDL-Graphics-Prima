@@ -94,7 +94,7 @@ histogram.
 
 So, we have two fundamental ways to represent data, but many possible
 data sets. For pairwise representations, we have L<ds::Pair|/Pair>, the
-basic pairwise DataSet. L<ds::Dist|/Dist> is a derived DataSet which
+basic pairwise DataSet. L<ds::Dist|/Distribution> is a derived DataSet which
 includes a binning specification that bins the distribution into bin centers
 (x) and heights (y) to get a pairwise representation. L<ds::Func|/Func>
 is another derived DataSet that generates evenly sampled data based on the
@@ -1599,6 +1599,7 @@ sub get_prima_color_data {
 #                                    Func                                    #
 ##############################################################################
 =back
+
 =head2 Func
 
 PDL::Graphics::Prima provides a special pair dataset that takes a function
@@ -1635,7 +1636,7 @@ a reference to a subroutine, or an anonymous sub. For example,
  # Reference to a subroutine,
  # PDL's exponential function:
  ds::Func (\&PDL::exp)
- 
+
  # Using an anonymous subroutine:
  ds::Func ( sub {
      my $xs = shift;

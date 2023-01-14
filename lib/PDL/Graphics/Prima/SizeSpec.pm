@@ -8,41 +8,41 @@ PDL::Graphics::Prima::SizeSpec - a module for handling size specifications
 =head1 SYNOPSIS
 
  use PDL::Graphics::Prima::SizeSpec;
- 
+
  # Create a SizeSpec parser for your window/widget
  my $parser = PDL::Graphics::Prima::SizeSpec::Parser->new($my_window);
- 
+
  # Create a dynamic size-computing object from a string:
  my $size = $parser->parse('10%width + 2em - 5px');
 
  # Get the size in pixels using the size method:
  print "That amounts to ", $size->size, " pixels\n";
- 
+
  # stringification is mostly round-tripable:
  print "The original spec was $size\n";
- 
+
  # use the spec directly in numeric evaluations
  print "Too big\n" if $size > 100;
- 
+
  # Instead of a string, you can provide a hashref to the parser
  my $size = $parser->parse({em => 2, px => -5,
      pctwidth => 10});
- 
- 
+
+
  ### Create more sophisticated parsers by subclassing ###
  package My::Parser;
  our @ISA = qw(PDL::Graphics::Prima::SizeSpec::Parser);
- 
+
  sub size_spec_pctcolwidth {
      my ($self, $percent) = @_;
-     
+
      # Return a closure that takes no arguments and which
      # returns pixels for a given column width percentage
      return sub {
          return $self->{widget}->column_width * $percent / 100;
      }
  }
- 
+
  # Now I can create a parser...
  my $newspaper_parser = My::Parser->new($newspaper);
  # ... and use the parser to create a size spec
@@ -252,10 +252,10 @@ sub new {
 	croak('You must provide a widget to PDL::Graphics::Prima::SizeSpec::Parser')
 		if not defined $widget or not eval { $widget->isa('Prima::Drawable') };
 	my $self = bless { %args, widget => $widget}, $class;
-	
+
 	# Avoid memory leaks
 	Scalar::Util::weaken($self->{widget});
-	
+
 	return $self;
 }
 
@@ -263,7 +263,7 @@ sub parse {
 	my ($self, $spec) = @_;
 	return $spec if ref($spec)
 		and eval { $spec->isa('PDL::Graphics::Prima::SizeSpec') };
-	
+
 	# If it's a string spec,
 	return $self->parse_string($spec) unless ref($spec);
 	return $self->parse_hashref($spec);
@@ -272,10 +272,10 @@ sub parse {
 sub parse_string {
 	my ($self, $spec) = @_;
 	my $orig_spec = $spec;
-	
+
 	# Build a collection of self-closed subrefs to evaluate
 	my (@subrefs, %used_units);
-	
+
 	while ($spec) {
 		# Strip leading white space
 		$spec =~ s/^\s+//;
@@ -284,7 +284,7 @@ sub parse_string {
 		# remove white space between subtraction and the forthcoming
 		# unit; turn into negative number
 		$spec =~ s/^-\s+/-/;
-		
+
 		# Pull out the number and suffix, and look for a subref
 		if ($spec =~ s/^(-?\d+(\.\d*)?)\s*(%?\w+)?//) {
 			my ($amount, $unit) = ($1, $3);
@@ -305,7 +305,7 @@ sub get_closure_for {
 	my ($self, $unit, $amount) = @_;
 	(my $method = $unit) =~ s/^%/pct/;
 	$method = 'size_spec_' . $method;
-	
+
 	# is this a per-parser method?
 	if (exists $self->{$method} and ref($self->{$method}) eq ref(sub {})) {
 		 return $self->{$method}->($amount);
@@ -326,10 +326,10 @@ sub parse_hashref {
 	for my $unit (sort keys %$spec) {
 		my $amount = $spec->{$unit};
 		$used_units{$unit} = 1;
-		
+
 		# Build the list of subrefs
 		push @subrefs, $self->get_closure_for($unit, $amount);
-		
+
 		# Add this to the spec string. Piddles with more than 10 elements
 		# are merely described by their class.
 		if (Scalar::Util::bless($amount) and eval {$amount->isa('PDL')}
@@ -344,7 +344,7 @@ sub parse_hashref {
 		$unit =~ s/^pct/%/;
 		$spec_string .= $unit unless $unit eq 'RAW';
 	}
-	
+
 	return PDL::Graphics::Prima::SizeSpec->new($spec_string, \%used_units, @subrefs);
 }
 
