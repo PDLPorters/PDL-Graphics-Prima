@@ -367,8 +367,12 @@ L<the Synopsis for PDL::Graphics::Prima::Simple|PDL::Graphics::Prima::Simple/SYN
  $distribution = grandom(100);
  hist_plot($distribution);
 
+Sequence
+
  $x = sequence(100)/10;
  cross_plot($x, $x->sin);
+
+Image
 
  $image = rvals(100, 100);
  matrix_plot($image);

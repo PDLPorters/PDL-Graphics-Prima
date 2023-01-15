@@ -15,9 +15,9 @@ sub is_happy_with {
 
 sub setup {
 	my ($class, $readline_obj) = @_;
-	
+
 	return if $is_setup;
-	
+
 	# Make sure we have a readline object that knows how to work with the
 	# event loop:
 	if (not $class->is_happy_with($readline_obj)) {
@@ -26,14 +26,14 @@ sub setup {
 		croak("PDL::Graphics::Prima::ReadLine expects a readline object that knows how to event_loop.\n"
 				. "This is provided in Term::ReadLine v1.09 or newer");
 	}
-	
+
 	# We must call the import method for this to work, even though we don't need
 	# need any functions imported. The reason is that Prima sets up the
 	# application object during the import if it hasn't already been set up (by
 	# a previous call to Prima::Application::import).
 	require Prima::Application;
 	Prima::Application->import;
-	
+
 	# Except on Windows, this io watcher will (eventually) watch whatever the
 	# readline is monitoring. That will be established later in the call to
 	# event_loop. Die'ing is a simple way to exit the "go" method invoked
@@ -49,9 +49,9 @@ sub setup {
 			die 'user pressed a key' if Term::ReadKey::ReadKey(-1);#PeekKey();
 		}
 	)->start if $^O =~ /Win/;
-	
+
 #	setup_readkey();
-	
+
 	$readline_obj->event_loop( sub {
 			local $@;
 			# Run the event loop. If a key is pressed, the io watcher's
@@ -127,17 +127,17 @@ together
  # associate's the PDL Shell's readline object if it
  # exists:
  use PDL::Graphics::Prima;
- 
+
  # Did it set up the readline event loop callback?
  print "Set up Prima/ReadLine interaction\n"
      if PDL::Graphics::Prima::ReadLine->is_setup;
- 
+
  # If you are not in the PDL shell, you can supply
  # your own ReadLine object.
  if (PDL::Graphics::Prima::ReadLine->is_happy_with($my_readline) {
      PDL::Graphics::Prima::ReadLine->setup($my_readline);
  }
- 
+
  # If you don't validate first, setup() may croak.
  # In other words, instead of this:
  if (PDL::Graphics::Prima::ReadLine->is_happy_with($my_readline) {

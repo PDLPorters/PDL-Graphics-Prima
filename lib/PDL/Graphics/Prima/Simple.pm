@@ -15,16 +15,20 @@ PDL::Graphics::Prima
 
 =head1 SYNOPSIS
 
+=for podview <img src="PDL/Graphics/Prima/pod/lineplot.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/lineplot.png">
+
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
- 
+
+
  # --( Super simple line and symbol plots )--
- 
+
  # Generate some data - a sine curve
  my $x = sequence(100) / 20;
  my $y = sin($x);
- 
+
  # Draw x/y pairs. Default x-value are sequential:
  line_plot($y);        line_plot($x, $y);
  circle_plot($y);      circle_plot($x, $y);
@@ -34,37 +38,37 @@ PDL::Graphics::Prima
  X_plot($y);           X_plot($x, $y);
  cross_plot($y);       cross_plot($x, $y);
  asterisk_plot($y);    asterisk_plot($x, $y);
- 
+
  # Sketch the sine function for x initially from 0 to 10:
  func_plot(0 => 10, \&PDL::sin);
- 
- 
+
+
  # --( Super simple histogram )--
- 
+
  # Plot a distribution
  hist_plot($distribution);
  # Tweak the binning
  hist_plot($distribution, bt::Linear(normalize => 0));
- 
- 
+
+
  # --( Super simple matrix plots )--
- 
+
  # Generate some data - a wavy pattern
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
- 
+
  # Generate a grayscale image:
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
- 
+
  # Set the x and y coordinates for the image boundaries
  #            left, right,  bottom, top
  matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
  imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
- 
- 
+
+
  # --( More complex plots )--
- 
+
  # Use the more general 'plot' function for
  # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
@@ -76,19 +80,19 @@ PDL::Graphics::Prima
          , colors   => $colors,
          , plotType => ppair::Squares(filled => 1)
      ),
-     
+
      x => { label   => 'Time' },
      y => { label   => 'Sine' },
  );
- 
- 
+
+
  # --( Managing window interaction )--
- 
+
  # In scripts and older Term::ReadLine, if you press
  # the letter 'q' when viewing a plot, you can
  # re-invoke interaction with:
  twiddle;
- 
+
  # query auto-twiddling
  my $is_auto_twiddline = auto_twiddle;
  # Turn auto-twiddling on or off
@@ -289,17 +293,17 @@ L<specifically choose when to view the plot|Prima::Window/execute> like so:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Non-blocking
  auto_twiddle(0);
- 
+
  # Build the plot
  my $x = sequence(100)/10;
  my $plot = line_plot($x, $x->sin);
- 
+
  # Add a title
  $plot->title('The sine wave');
- 
+
  # Display the plot
  twiddle();
 
@@ -322,17 +326,17 @@ L<labels|PDL::Graphics::Prima::Axis/label>:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Build the plot
  auto_twiddle(0);
  my $x = sequence(100)/10;
  my $plot = line_plot($x, $x->sin);
- 
+
  # Add a title and axis labels
  $plot->title('The Harmonic Oscillator');
  $plot->x->label('time (s)');
  $plot->y->label('displacement (cm)');
- 
+
  # Display the plot
  twiddle();
 
@@ -404,7 +408,7 @@ you would want to use a histogram:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Generate 100 samples with mean 0 and standard deviation 1
  my $distribution = grandom(100);
  hist_plot($distribution);
@@ -413,7 +417,7 @@ Or, you may have an image of data that you want to view.
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Generate an image of the distance of each pixel from image center.
  my $image = rvals(100, 100)
  matrix_plot($image);
@@ -430,15 +434,15 @@ slightly different x-range:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Build the plot
  my $x = sequence(100)/10;
  my ($window, $plot) = line_plot($x, $x->sin);
- 
+
  # Add a new dataset
  my $x2 = sequence(100)/10 + 1;
  $plot->dataSets{'cosine'} = ds::Pair($x2, $x2->cos);
- 
+
  # Display the plot
  $window->execute;
 
@@ -507,7 +511,7 @@ y-label:
 
  use PDL;
  use PDL::Graphics::Prima::Simple;
- 
+
  # Build the plot
  my $x = sequence(100)/10;
  plot(
@@ -515,7 +519,7 @@ y-label:
      -data => ds::Pair($x, $x->sin,
          plotType => ppair::Lines
      ),
-     
+
      # Set the title and axis labels
      title => 'The Harmonic Oscillator',
      x     => { label => 'time (s)' },
@@ -559,9 +563,9 @@ like this:
 
  my $was_auto_twiddling = auto_twiddle;
  auto_twiddle(0);
- 
+
  # ... plotting operations ...
- 
+
  # All done; restore previous autotwiddling
  # state and let the use interact:
  auto_twiddle($was_auto_twiddling);
@@ -605,12 +609,12 @@ compare three sets of data that have the exact same x-values:
 
  my $x = sequence(100)/10;
  my $y = sequence(3)->transpose + sin($x);
- 
+
  # Add mild linear trends to the first and second:
  use PDL::NiceSlice;
  $y(:, 0) += $x/5;
  $y(:, 1) -= $x/6;
- 
+
  line_plot($x, $y);
 
 The x-values do not need to be sorted. For example, this plots a sine wave sine
@@ -655,9 +659,9 @@ sub _get_x_y_and_args {
 	my $croak_string = "$function_name expects either one piddle "
 		. "(y-data) or two piddles (x- and y-data), optionally followed "
 		. "by key/value pairs";
-	
+
 	croak($croak_string) if @_ == 0;
-	
+
 	# First argument *must* be a piddleish thing; pop off second arg
 	# as well if it is piddleish.
 	croak($croak_string) if not piddleish($_[0]);
@@ -667,12 +671,12 @@ sub _get_x_y_and_args {
 	# At this point we should only have key value pairs, i.e. an even
 	# number of elememnts
 	croak($croak_string) if @_ % 2 == 1;
-	
+
 	# If only one piddleish argument, then it is y-values; compute a
 	# sequence for the x-values
 	unshift @data_args, PDL->sequence($data_args[0]->dim(0))
 		if @data_args == 1;
-	
+
 	return @data_args, @_;
 }
 
@@ -888,7 +892,7 @@ y-points to be plotted. Here are some examples:
  func_plot (1, 5, \&PDL::exp);
  # this time with higher resolution:
  func_plot (1, 5, \&PDL::exp, 1000);
- 
+
  # Plot a rescaled tangent function:
  func_plot (1, 5, sub {
      my $xs = shift;
@@ -1080,7 +1084,7 @@ sub matrix_plot {
 		croak("matrix_plot expects an image, optionally preceeded by its x- and y-limits:\n"
 			. "matrix_plot ([x0, xf], [y0, yf], \$image)")
 	}
-	
+
 	@_ = (-image => ds::Grid(
 		$matrix,
 		x_bounds => $x,
@@ -1144,7 +1148,7 @@ sub imag_plot {
 		croak("imag_plot expects an image, optionally preceeded by its x- and y-limits:\n"
 			. "imag_plot ([x0, xf], [y0, yf], \$image)")
 	}
-	
+
 	@_ = (-image => ds::Grid(
 		$matrix,
 		x_bounds => $x,
@@ -1297,8 +1301,8 @@ summarized below:
                      baseline
  ppair::Histogram  - histograms with specifiable baseline and top padding
  ppair::ErrorBars  - error bars with specified x/y errors and cap sizes
- 
- 
+
+
  Grid plotTypes
  ==============
  pgrid::Matrix     - colored rectangles, i.e. images
@@ -1414,7 +1418,7 @@ with code like so:
              ppair::Squares(filled => 1),
          ],
      ),
-     
+
      # The model:
      -model => ds::Func(
          \&my_model,
@@ -1479,10 +1483,10 @@ one DataSet, and it has only two plotTypes:
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = sin($x);
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1504,11 +1508,11 @@ properties for the plotTypes:
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = sin($x);
  my $colors = pal::Rainbow->apply($y);
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1533,12 +1537,12 @@ plotTypes---Lines then Blobs.
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = sin($x);
  my $colors = pal::Rainbow->apply($y);
  my $radius = 1 + $x->random*4;
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1565,12 +1569,12 @@ of the Blobs plotType because it's a bit more flexible:
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = sin($x);
  my $colors = pal::Rainbow->apply($y);
  my $radius = 1 + $x->random*4;
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1603,7 +1607,7 @@ only using one Blobs plotType instead of two.
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = sin($x);
  my $rainbow_colors = pal::Rainbow->apply($y);
@@ -1611,7 +1615,7 @@ only using one Blobs plotType instead of two.
  my $colors = cat($whites, $rainbow_colors);
  my $inner_radius = 1 + $x->random*4;
  my $radius = cat($inner_radius + 1, $inner_radius);
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1641,11 +1645,11 @@ ErrorBars plotType and the use of function-based data sets.
  use strict;
  use warnings;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = $x/2 - 3 + $x->grandom*3;
  my $y_err = 2*$x->grandom->abs + 1;
- 
+
  # Calculate the slope and intercept:
  my $S = sum(1/$y_err);
  my $S_x = sum($x/$y_err);
@@ -1654,10 +1658,10 @@ ErrorBars plotType and the use of function-based data sets.
  my $S_xy = sum($x*$y/$y_err);
  my $slope = ($S_xy * $S - $S_x * $S_y) / ($S_xx * $S - $S_x * $S_x);
  my $y0 = ($S_xy - $slope * $S_xx) / $S_x;
- 
- 
+
+
  use PDL::Graphics::Prima::Simple;
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1683,13 +1687,13 @@ end of the data.
  use strict;
  use warnings;
  use PDL;
- 
+
  my $x = sequence(100)/10;
  my $y = $x/2 - 3 + $x->grandom*3;
  my $y_err = 2*$x->grandom->abs + 1;
- 
+
  use PDL::Graphics::Prima::Simple;
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1722,13 +1726,13 @@ interesting:
  use warnings;
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
+
  # Turn on autoflush:
  $|++;
- 
+
  my $x = sequence(100)/10 + 1;
  my $y = sin($x);
- 
+
  plot(
      -data => ds::Pair(
          $x,
@@ -1787,7 +1791,7 @@ sub default_plot {
 	croak("Arguments to plot must be in key => value pairs")
 		unless @_ % 2 == 0;
 	my %args = (%default_plot_args, @_);
-	
+
 	# Create a new window and pack the plot into said window
 	unless (defined $::application) {
 		require Prima::Application;
@@ -1821,7 +1825,7 @@ sub default_plot {
 	});
 	# make sure it shows up on top.
 	$window->bring_to_front;
-	
+
 	# Twiddle, then return. Note that twiddling (defined below) may be a
 	# no-op for configurations where the application loop is already running.
 	twiddle() if $auto_twiddling;
@@ -1845,19 +1849,19 @@ else {
 		# twiddling should be a no-op if the plot function is not default_plot,
 		# which is the case for App::Prima::REPL
 		return if refaddr(\&plot) != refaddr(\&default_plot);
-		
+
 		# No event looping if we don't have any open windows. Otherwise,
 		# they won't be able to exit the loop!
 		print "No open plots\n" and return if $N_windows == 0;
 		# Print a notice explaining what's going on:
 		print "Twiddling plot; close window or press q or Q to resume\n"
 			unless $default_plot_args{quiet};
-		
+
 		# We will use Prima's nice exception handling to exit the go()
 		# method. In order to prevent undue error propogation, localize
 		# the error message:
 		local $@;
-		
+
 		$is_twiddling = 1;
 		# Start the timer that will check for the exit condition. There
 		# are a number of ways in which the loop will want to exit; placing
@@ -1905,10 +1909,10 @@ element anonymous array:
 
  # default to 800 x 800 window:
  use PDL::Graphics::Prima::Simple [800, 800];
- 
+
  # default to 800 wide by 600 tall, import nothing:
  use PDL::Graphics::Prima::Simple [800, 600], '';
- 
+
  # default to 300 wide by 450 tall, import 'plot' function:
  use PDL::Graphics::Prima::Simple [300, 450], 'plot';
 
@@ -1950,7 +1954,7 @@ sub import {
 			croak("Array references passed to PDL::Graphics::Prima::Simple indicate the\n"
 				. "desired plot window size and must contain two elements")
 				unless @$arg == 2;
-			
+
 			# Apparently we're good to go so save the sizes:
 			@default_sizes = @$arg;
 		}
@@ -1966,7 +1970,7 @@ sub import {
 			push @args, $arg;
 		}
 	}
-	
+
 	$package->export_to_level(1, $package, @args);
 }
 
