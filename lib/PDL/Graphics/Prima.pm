@@ -87,8 +87,25 @@ sub profile_default {
 		# Other important and basic settings
 		selectable => 1,
 		buffered => 1,
+
+		popupItems => default_popup_items(),
 	};
 }
+
+sub default_popup_items
+{[
+	['~Copy'           => 'copy_to_clipboard'     ],
+	['P~rint'          => 'print'                 ],
+	['~Export to'      => [
+		[ '~Image'         => 'save_to_image' ],
+		[ '~Postscript'    => 'save_to_ps'    ],
+		[ '~EPS'           => 'save_to_eps'   ],
+		[ 'P~DF'           => 'save_to_pdf'   ],
+	]],
+	['~Autoscale'      => 'autoscale'             ],
+	['~Properties'     => 'set_properties_dialog' ]
+]}
+
 
 ######################################
 # Usage        : Not used directly; this is invoked by Prima's inherited
@@ -709,51 +726,43 @@ sub get_image {
 
 use Prima::PS::Printer;
 use Prima::Dialog::FileDialog;
+use Prima::Dialog::PrintDialog;
 use Prima::Drawable::Subcanvas;
 
-sub save_to_postscript {
-	# Get the filename as an argument, or from the save-as dialog.
-	my ($self, $filename) = @_;
-	
-	unless ($filename) {
-		my $save_dialog = Prima::Dialog::SaveDialog-> new(
-			defaultExt => 'eps',
-			filter => [
-				['Encapsulated Postscript files' => '*.eps'],
-				['Portable Document Format files' => '*.pdf'],
-				['All files' => '*'],
-			],
-			$self->{default_save_dir}
-				? (directory => $self->{default_save_dir})
-				: (),
-		);
-		# Return if they cancel out:
-		return unless $save_dialog->execute;
-		# Otherwise get the filename:
-		$filename = $save_dialog->fileName;
-	}
-	unlink $filename if -f $filename;
-	
-	# Calculate width and height using the (hopefully standard) rule that
-	# 100px = 72pt = 1in. This doesn't quite work right, still. Compare the
-	# output of the pathological-sizing.pl script to the original raster window.
-	my $scaling_ratio = 72.27 / 100;
-	my $width = $self->width * $scaling_ratio;
-	my $height = $self->height * $scaling_ratio;
+sub save_to_ps
+{
+	shift->save_to_generic_ps( 'Prima::PS::File', 'ps', 'Postscript files')
+}
 
+sub save_to_eps
+{
+	shift->save_to_generic_ps( 'Prima::PS::File', 'eps', 'Encapsulated Postscript files', isEPS => 1)
+}
+
+sub save_to_pdf
+{
+	shift->save_to_generic_ps( 'Prima::PS::PDF::File', 'pdf', 'Portable Document Format files')
+}
+
+sub export_to_ps
+{
+	my ( $self, $class, $filename, %ps_opt ) = @_;
 
 	# Create the postscript canvas and plot to it:
-	my $class = ( $filename =~ /\.pdf$/) ? 'Prima::PS::PDF::File' : 'Prima::PS::File';
-	my $ps = $class->new(
-		file => $filename,
-		pageSize => [$width, $height],
-		pageMargins => [0, 0, 0, 0],
-		isEPS => 1,
-		useDeviceFontsOnly => 1,
-	);
-	$ps->resolution($self->resolution);
+	my $ps = $class->new( file => $filename);
+	$ps->pageMargins(0, 0, 0, 0);
+	$ps->resolution( $self-> resolution );
+
+	# Calculate width and height using the (hopefully standard) rule that
+	# 96px (or whatever screen dpi is ) = 72pt = 1in. This doesn't quite work right, still. Compare the
+	# output of the pathological-sizing.pl script to the original raster window.
+	$ps->pageSize( $ps-> pixel2point( $self-> size ));
+
 	$ps->font(height => $self->font->height);
-	
+	while ( my ( $k, $v ) = each %ps_opt ) {
+		$ps->$k($v);
+	}
+
 	$ps->begin_doc
 		or do {
 			my $message = "Error generating Postscript output: $@";
@@ -765,12 +774,45 @@ sub save_to_postscript {
 				croak($message);
 			}
 		};
-	
+
 	$self->paint_with_widgets($ps);
 	$ps->end_doc;
 }
 
+sub save_to_generic_ps
+{
+	# Get the filename as an argument, or from the save-as dialog.
+	my ($self, $class, $extension, $ext_description, %ps_opt) = @_;
+	
+	my $save_dialog = Prima::Dialog::SaveDialog-> new(
+		defaultExt => $extension,
+		filter => [
+			[ $ext_description => '*.' . $extension],
+			['All files' => '*'],
+		],
+		$self->{default_save_dir}
+			? (directory => $self->{default_save_dir})
+			: (),
+	);
+	# Return if they cancel out:
+	return unless $save_dialog->execute;
+	# Otherwise get the filename:
+	my $filename = $save_dialog->fileName;
+	unlink $filename if -f $filename;
+
+	$self->export_to_ps( $class, $filename, %ps_opt );
+}
+
+sub save_to_postscript {
+	# Get the filename as an argument, or from the save-as dialog.
+	my ($self, $filename) = @_;
+	return defined($filename) ?
+		$self-> export_to_ps( 'Prima::PS::File', $filename, isEPS => 1 ) :
+		$self-> save_to_eps;
+}
+
 # A routine to save the current plot to a rasterized file:
+sub save_to_image { shift->save_to_file }
 sub save_to_file {
 	# Get the filename as an argument or from a save-as dialog.
 	my ($self, $filename) = @_;
@@ -803,6 +845,7 @@ sub save_to_file {
 		}
 	
 		$dlg->save($image);
+		$dlg->destroy;
 		return;
 	}
 	
@@ -829,6 +872,31 @@ sub copy_to_clipboard {
 	$clipboard->clear;
 	$clipboard->image($image);
 	$clipboard->close;
+}
+
+sub print
+{
+	my $self = shift;
+
+	my $print_dialog = Prima::Dialog::PrintDialog-> new;
+	unless ($print_dialog-> execute) {
+		$print_dialog->destroy;
+		return;
+	}
+
+	my $ps = $print_dialog-> printer;
+
+	$ps->font(height => $self->font->height);
+
+	$ps->begin_doc or do {
+		my $msg = "$@";
+		Prima::MsgBox::message($msg, mb::Ok);
+		carp($msg);
+	};
+
+	$self->paint_with_widgets($ps);
+	$ps->end_doc;
+	$print_dialog->destroy;
 }
 
 # For a change in title, recompute the autoscaling and issue an immediate
@@ -1206,45 +1274,24 @@ sub on_mouseup {
 			$max_real = $self->y->relatives_to_reals($max_rel);
 			# Set the new min/max values:
 			$self->y->minmax($min_real, $max_real);
+			$self->clear_event;
 		}
-		# Call the popup menu if it 'looks' like a right-click:
 		elsif ($x_stop_rel == $x_start_rel and $y_stop_rel == $y_start_rel) {
-			$self->popup(Prima::Popup->new(
-				items => [
-					['~Copy' => sub {
-						Prima::Timer->create(
-							timeout => 250,
-							onTick => sub {
-								$_[0]->stop;
-								$self->copy_to_clipboard;
-							},
-						)->start;
-					}],
-					['Save As ~Postscript/PDF...' => sub {
-						$self->save_to_postscript;
-					}],
-					['~Save As Image...' => sub {
-						Prima::Timer->create(
-							timeout => 250,
-							onTick => sub {
-								$_[0]->stop;
-								$self->save_to_file;
-							},
-						)->start;
-					}],
-					['~Autoscale' => sub {
-						$self->x->minmax(lm::Auto, lm::Auto);
-						$self->y->minmax(lm::Auto, lm::Auto);
-					}],
-					['~Properties' => sub {
-						$self->set_properties_dialog;
-					}],
-				],
-			));
+			# Call the popup menu if it 'looks' like a right-click
+			# by not clearing the event
+		} else {
+			$self->clear_event;
 		}
 		# Remove the previous button record, so a zoom rectangle is not drawn:
 		delete $self->{mouse_down_rel}->{mb::Right};
 	}
+}
+
+sub autoscale
+{
+	my $self = shift;
+	$self->x->minmax(lm::Auto, lm::Auto);
+	$self->y->minmax(lm::Auto, lm::Auto);
 }
 
 use Scalar::Util qw(looks_like_number);
@@ -1532,16 +1579,20 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
 
 =head1 SIMPLE SYNOPSIS
 
+=for podview <img src="PDL/Graphics/Prima/pod/lineplot.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/lineplot.png">
+
  use PDL::Graphics::Prima::Simple;
  use PDL;
- 
- 
+
+
  # --( Super simple line and symbol plots )--
- 
+
  # Generate some data - a sine curve
  my $x = sequence(100) / 20 + 1;
  my $y = sin($x);
- 
+
  # Draw x/y pairs. Default x-value are sequential:
  line_plot($y);        line_plot($x, $y);
  circle_plot($y);      circle_plot($x, $y);
@@ -1551,39 +1602,39 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
  X_plot($y);           X_plot($x, $y);
  cross_plot($y);       cross_plot($x, $y);
  asterisk_plot($y);    asterisk_plot($x, $y);
- 
+
  # Sketch the sine function for x initially from 0 to 10:
  func_plot(0 => 10, \&PDL::sin);
- 
- 
+
+
  # --( Super simple histogram )--
- 
+
  # PDL hist method returns x/y data
  hist_plot($y->hist);
  my ($bin_centers, $heights) = $y->hist;
  hist_plot($bin_centers, $heights);
  # Even simpler, if of limited use:
  hist_plot($heights);
- 
- 
+
+
  # --( Super simple matrix plots )--
- 
+
  # Generate some data - a wavy pattern
  my $image = sin(sequence(100)/10)
              + sin(sequence(100)/20)->transpose;
- 
+
  # Generate a grayscale image:
  matrix_plot($image);  # smallest is white
  imag_plot($image);    # smallest is black
- 
+
  # Set the x and y coordinates for the image boundaries
  #            left, right,  bottom, top
  matrix_plot([ 0,     1  ], [ 0,     2 ],  $image);
  imag_plot(  [ 0,     1  ], [ 0,     2 ],  $image);
- 
- 
+
+
  # --( More complex plots )--
- 
+
  # Use the more general 'plot' function for
  # multiple DataSets and more plotting features:
  my $colors = pal::Rainbow()->apply($x);
@@ -1595,7 +1646,7 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
          colors   => $colors,
          plotType => ppair::Squares(filled => 1),
      ),
-     
+
      x => 'Time',
      y => {
          label   => 'Sine',
@@ -1603,26 +1654,30 @@ PDL::Graphics::Prima - an interactive plotting widget and library for PDL and Pr
      },
  );
 
+=for podview <img src="PDL/Graphics/Prima/pod/exp.png">
+
+=for html <p><img src="https://raw.githubusercontent.com/PDLPorters/PDL-Graphics-Prima/master/lib/PDL/Graphics/Prima/pod/exp.png">
+
 =head1 WIDGET SYNOPSIS
 
  use PDL;
  use Prima qw(Application);
  use PDL::Graphics::Prima;
- 
+
  my $t_data = sequence(6) / 0.5 + 1;
  my $y_data = exp($t_data);
- 
+
  my $wDisplay = Prima::MainWindow->create(
      text  => 'Graph Test',
      size  => [300, 300],
  );
- 
+
  $wDisplay->insert('Plot',
      -function => ds::Func(\&PDL::exp, color => cl::Blue),
      -data => ds::Pair($t_data, $y_data, color => cl::Red),
      pack => { fill => 'both', expand => 1},
  );
- 
+
  run Prima;
 
 =head1 IF YOU ARE NEW
@@ -1839,10 +1894,10 @@ For example:
  $plot->dataSets->{new_data} = ds::Pair(
      $x, $y, plotType => ppair::Squares
  );
- 
+
  # Remove a DataSet
  delete $plot->dataSets->{model};
- 
+
  # Clear the DataSets
  %{$plot->dataSets} = ();
 
@@ -1922,16 +1977,16 @@ want to do this: first if you are creating many raster images from plots and
 want to avoid memory re-allocations, and second if you have in image with some
 annotations on it already. (Beware the first reason: it is likely a premature
 optimization.) To draw the plot on an already-formed image, you can use the
-L<draw_image|PDL::Graphics::Prima/draw_image> method like so:
+C<paint_with_widgets> method like so:
 
  $some_image->begin_paint;
  $some_image->clear;
  ... other painting here ...
- $plot->draw_image($some_image);
+ $plot->paint_with_widgets($some_image);
  ... more painting ...
  $some_image->end_paint;
 
-The L<draw_image|PDL::Graphics::Prima/draw_image> method is the preferred way to
+The C<paint_with_widgets> method is the preferred way to
 draw a plot onto a pre-existing image. It gives you a bit more control on how
 the painting is invoked: for example, it does not clear the canvas for you. But
 with the increased control comes increased manual manipulation: you need to set
@@ -1949,7 +2004,7 @@ into a canvas. In that case, you should be able to say this:
  $::application->yield;
 
 Painting on an image by invoking the L<Paint Event|Prima::Widget/Paint> is
-similar to the L<draw_image|PDL::Graphics::Prima/draw_image> method, but it
+similar to the C<paint_with_widgets> method, but it
 also ensures that your image is in a paint-enabled state, clears the canvas,
 and returns the image in a paint-disabled state if that's how it started.
 This is usually what you want and expect when invoking the Paint event on a

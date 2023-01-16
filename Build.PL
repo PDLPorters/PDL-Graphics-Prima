@@ -11,8 +11,8 @@ my $build = Module::Build->new(
 		'Module::Build' => 0.28,
 	},
 	requires => {
-		perl                    => '5.12.0',
-		'PDL::Drawing::Prima'   => 0.15,
+		perl                    => '5.12.0', # Prima is minimum 5.12
+		'PDL::Drawing::Prima'	  => 0.15,
 		PDL                     => '2.4.0',
 		Prima                   => 1.67,
 		# Needed for event_loop
@@ -26,4 +26,5 @@ my $build = Module::Build->new(
 	},
 );
 
+$build->add_build_element('png');
 $build->create_build_script;

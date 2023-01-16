@@ -53,7 +53,7 @@ autoscaling:
 
  # Set the x-min to -5 for now...
  $plot->x->min(-5);
- 
+
  # Turn on autoscaling for x-min:
  $plot->x->min(lm::Auto);
 
