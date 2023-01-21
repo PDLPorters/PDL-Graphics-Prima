@@ -23,7 +23,7 @@ sub import {
 
 # Prima
 use Prima qw(noX11 Application Dialog::ImageDialog MsgBox Utils Buttons
-	InputLine Label);
+	InputLine Label Dialog::ColorDialog);
 use base 'Prima::Widget';
 
 # Error reporting
@@ -785,6 +785,7 @@ sub save_to_generic_ps
 	my ($self, $class, $extension, $ext_description, %ps_opt) = @_;
 	
 	my $save_dialog = Prima::Dialog::SaveDialog-> new(
+		system     => 1,
 		defaultExt => $extension,
 		filter => [
 			[ $ext_description => '*.' . $extension],
@@ -1299,7 +1300,7 @@ use Scalar::Util qw(looks_like_number);
 sub insert_minmax_input {
 	my ($group_box, $method, $axis, $y_pos) = @_;
 	$group_box->insert(Label =>
-		place => { x => 45, y => $y_pos, height => 25, width => 60, anchor => 'sw' },
+		place => { x => 45, y => $y_pos, height => 25, width => 60, anchor => 'sw', pad => 10 },
 		height => 30,
 		text => ucfirst($method) . ':',
 	);
@@ -1374,7 +1375,7 @@ sub insert_minmax_input {
 	
 	$auto_button = $group_box->insert(Button =>
 		text => 'Autoscale',
-		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw' },
+		place => { x => 395, y => $y_pos, height => 30, width => 100, anchor => 'sw', pad => 10 },
 		height => 30,
 		onClick => sub { $axis->$method(lm::Auto) },
 	);
@@ -1466,6 +1467,40 @@ sub insert_scaling_radios {
 	});
 }
 
+sub insert_color_widgets
+{
+	my ($box, $ref) = @_;
+
+	$box-> insert( Widget => 
+		pack      => { side => 'left', pad => 10 },
+		size      => [30, 1],
+	);
+	$box-> insert( Label => 
+		pack      => { side => 'left', pad => 10 },
+		text      => '~Color',
+		focusLink => 'Color1',
+	);
+	$box-> insert( ColorComboBox =>
+		name      => 'Color1',
+		pack      => { side => 'left', pad => 10 },
+		value     => $ref->color,
+		onChange  => sub { $ref->color( shift->value ) },
+	);
+
+	$box-> insert( Label => 
+		pack      => { side => 'left', pad => 10 },
+		text      => '~Background',
+		focusLink => 'Color2',
+	);
+
+	$box-> insert( ColorComboBox =>
+		name      => 'Color2',
+		pack      => { side => 'left', pad => 10 },
+		value     => $ref->backColor,
+		onChange  => sub { $ref->backColor( shift->value ) },
+	);
+}
+
 # Builds a modal window to set plotting properties
 sub set_properties_dialog {
 	my $self = shift;
@@ -1480,7 +1515,7 @@ sub set_properties_dialog {
 	
 	my $total_height = 0;
 	$self->{prop_window} = my $prop_win = Prima::Window->new(
-		text => 'Plot Properties', width => 500, height => 380,
+		text => 'Plot Properties', sizeMin => [520, 380],
 		visible => 0,
 	);
 	$prop_win->insert(Widget =>
@@ -1489,19 +1524,21 @@ sub set_properties_dialog {
 	);
 	
 	# Title input
+	my $fh = $prop_win->font->height;
 	my $title_box = $prop_win->insert(GroupBox =>
 		pack => { side => 'top', fill => 'x', padx => 10 },
-		height => 50,
+		height => $fh * 2 + 20,
 		text => 'Title',
 	);
 	my $title_text = $self->title || '';
 	$title_box->insert(InputLine =>
 		text => $title_text,
 		place => {
-			x => 5, y => 5,
+			x => 10, y => 10,
 			relwidth => 1,
-			width => -10,
+			width => -20,
 			anchor => 'sw',
+			height => $fh,
 		},
 		backColor => cl::White,
 		onKeyUp => sub {
@@ -1519,7 +1556,7 @@ sub set_properties_dialog {
 		height => 10,
 	);
 	my $x_box = $prop_win->insert(GroupBox =>
-		pack => { side => 'top', fill => 'x' },
+		pack => { side => 'top', fill => 'x', pad => 10 },
 		height => 160,
 		text => 'X Axis',
 	);
@@ -1534,7 +1571,7 @@ sub set_properties_dialog {
 		height => 10,
 	);
 	my $y_box = $prop_win->insert(GroupBox =>
-		pack => { side => 'top', fill => 'x' },
+		pack => { side => 'top', fill => 'x', pad => 10 },
 		height => 160,
 		text => 'Y Axis',
 	);
@@ -1542,6 +1579,13 @@ sub set_properties_dialog {
 	insert_minmax_input($y_box, 'max', $self->y, 75);
 	insert_label_input($y_box, $self->y);
 	insert_scaling_radios($y_box, $self->y);
+
+	my $color_box = $prop_win->insert( GroupBox => 
+		pack => { side => 'top', fill => 'x', pad => 10 },
+		sizeMin => [ 200, 60 ],
+		text => 'Colors',
+	);
+	insert_color_widgets($color_box, $self);
 	
 	# Close button
 	$prop_win->insert(Widget =>
@@ -1551,10 +1595,10 @@ sub set_properties_dialog {
 	my $close_button = $prop_win->insert(Button =>
 		text => 'Close',
 		onClick => sub { $prop_win->close },
-		pack => { side => 'right' }
+		pack => { side => 'right',pad => 10 }
 	);
-	
-	$prop_win->height(10 + 50 + 10 + 160 + 10 + 160 + 10 + 30);
+
+	$prop_win->packPropagate(1);
 	
 	$prop_win->onClose(sub {
 		# Do not actually close, but rather simply hide this window
