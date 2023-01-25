@@ -1784,7 +1784,7 @@ our %default_plot_args = do 'prima-simple.ini' if -f 'prima-simple.ini';
 # A function that allows for quick one-off plots:
 *plot = \&default_plot;
 our $auto_twiddling = 1;
-our $is_twiddling = 0;
+my $is_twiddling = 0;
 our $N_windows = 0;
 sub default_plot {
 	# Make sure they sent key/value pairs:
@@ -1803,7 +1803,7 @@ sub default_plot {
 		# Add a stop-twiddling listener
 		onKeyDown => sub {
 			my (undef, $key) = @_;
-			$is_twiddling = 0 if chr($key) =~ /q/i;
+			twiddling(0) if chr($key) =~ /q/i;
 		},
 		# Pair of functions to note when windows are created and destroyed
 		# for purposes of quitting twiddling when the last window is closed.
@@ -1812,7 +1812,7 @@ sub default_plot {
 		},
 		onDestroy => sub {
 			$N_windows--;
-			$is_twiddling = 0 if $N_windows == 0;
+			twiddling(0) if $N_windows == 0;
 		},
 	);
 	my $plot = $window->insert('Plot',
@@ -1821,7 +1821,7 @@ sub default_plot {
 	);
 	$plot->onKeyDown(sub {
 		my (undef, $key) = @_;
-		$is_twiddling = 0 if chr($key) =~ /q/i;
+		twiddling(0) if chr($key) =~ /q/i;
 	});
 	# make sure it shows up on top.
 	$window->bring_to_front;
@@ -1835,6 +1835,14 @@ sub default_plot {
 sub auto_twiddle {
 	$auto_twiddling = $_[0] if @_;
 	return $auto_twiddling;
+}
+
+sub twiddling
+{
+	return $is_twiddling unless @_;
+	return if ($_[0] ? 1 : 0) == $is_twiddling;
+	$is_twiddling = $_[0];
+	$::application->stop if !$is_twiddling and $::application;
 }
 
 # Make twiddling a no-op if we're in the perldl shell and have event_loop
@@ -1857,29 +1865,8 @@ else {
 		print "Twiddling plot; close window or press q or Q to resume\n"
 			unless $default_plot_args{quiet};
 
-		# We will use Prima's nice exception handling to exit the go()
-		# method. In order to prevent undue error propogation, localize
-		# the error message:
-		local $@;
-
-		$is_twiddling = 1;
-		# Start the timer that will check for the exit condition. There
-		# are a number of ways in which the loop will want to exit; placing
-		# the exit excption here centralizes the exception handling.
-		Prima::Timer->create(
-			onTick => sub {
-				if (not $is_twiddling) {
-					$_[0]->stop;
-					# die in order to exit the application loop
-					die 'done with event loop';
-				}
-			},
-			timeout => 500, # milliseconds
-		)->start;
-		# Run go() in an eval so we catch the exit exception
-		eval { $::application->go };
-		# Rethrow the error unless it was the exit exception
-		die unless $@ =~ /^done with event loop/;
+		twiddling(1);
+		$::application->go;
 	};
 }
 # Add the twiddle method to the Prima window

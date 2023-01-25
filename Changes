@@ -34,6 +34,9 @@ OTHER. Entries should be in chronological order, i.e. oldest at the top
   - Palettes no longer have the copy method. Having removed their association
     with a given plotType, this seems to be unnecessary capability, and
     extending it with the newer features seemed fraught with potential errors.
+
+  - Update to newer Prima greatly simplifies the event loop management, but breaks
+    the old loop management API. Use twiddling() call instead of $twiddling semaphore
   
   [DIFFERENT BEHAVIOR]
   
