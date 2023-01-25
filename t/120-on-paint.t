@@ -151,4 +151,6 @@ TODO: {
 		};
 }
 
+unlink qw(test_paint_event_no_font.bmp test_expected.bmp);
+
 done_testing;
