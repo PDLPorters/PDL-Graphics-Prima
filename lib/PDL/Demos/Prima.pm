@@ -437,7 +437,7 @@ L<label method on the axis objects|PDL::Graphics::Prima::Axis/label>.
 
  # Build the plot
  my $x = sequence(100)/10;
- my $plot = line_plot($x, $x->sin);
+ our $plot = line_plot($x, $x->sin);
 
  # Add the title and labels
  $plot->title('Harmonic Oscillator');
@@ -471,7 +471,7 @@ achieve this by adding a new
 L<DataSet|PDL::Graphics::Prima::DataSet> with the data you want displayed.
 
  auto_twiddle(0);
- my $plot = hist_plot(grandom(100));
+ our $plot = hist_plot(grandom(100));
 
  # Add a Gaussian curve that "fits" the data
  use PDL::Constants qw(PI);
