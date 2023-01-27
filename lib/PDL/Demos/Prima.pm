@@ -49,26 +49,32 @@ library written on top of the L<Prima> GUI toolkit.
 #   'First steps'  => $first_paragraph => $first_code,
 #     ...
 # );
-my (@demo_data, $curr_section, $curr_par, $curr_code);
+my @demo_data;
+my ($curr_section, $curr_par, $curr_code) = ('','','');
 while(my $line = <DATA>) {
 	# Only =head2s in this documentation
-	last if $line =~ /=head1/;
-	if ($line =~ /^=head2 (.*)/) {
-		$curr_section = $1;
+	if ($line =~ /=head1/) {
+		push @demo_data, [$curr_section, $curr_par, $curr_code]
+			if length $curr_par && length $curr_code;
 	}
-	elsif ($line =~ /^\n/) {
-		if (defined $curr_par and defined $curr_code) {
+
+	if ($line =~ /^\S/) {
+		if (length $curr_par && length $curr_code ) {
 			push @demo_data, [$curr_section, $curr_par, $curr_code];
-			$curr_par = $curr_code = undef;
+			$curr_par = $curr_code = '';
 		}
-	}
-	elsif (not defined $curr_par) {
-		$curr_par = $line;
-	}
-	elsif (not defined $curr_code and $line !~ /^\s/) {
-		$curr_par .= $line;
-	}
-	elsif ($line =~ /^\s/) {
+		if ( $line =~ /^=head2 (.*)/ ) {
+			$curr_section = $1;
+		} else {
+			$curr_par .= $line;
+		}
+	} elsif ( $line =~ /^\s*$/) {
+		if ( length $curr_code ) {
+			$curr_code .= $line;
+		} else {
+			$curr_par .= $line;
+		}
+	} elsif ( $line =~ /^\s/) {
 		# Accumulate code lines, stripping off the leading space
 		$line =~ s/^\s//;
 		$curr_code .= $line;
@@ -167,7 +173,7 @@ sub setup_gui {
 		enabled => 0,
 		onClick => sub {
 			$current_slide-- unless $current_slide == 0;
-			setup_slide(@{$demo_data[$current_slide]}, _slide_posn($current_slide, scalar @demo_data), $gui);
+			setup_slide(@{$demo_data[$current_slide] // ['','','']}, _slide_posn($current_slide, scalar @demo_data), $gui);
 		},
 	);
 	$gui->{run_button} = $gui->{window}->insert(Button =>
