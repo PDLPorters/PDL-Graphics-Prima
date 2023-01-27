@@ -2,7 +2,7 @@ Put changes under the appropriate header. Headers can include API CHANGES,
 DIFFERENT BEHAVIOR, BUG FIXES, DEPENDENCIES, ENHANCEMENTS, NEW FEATURES, and
 OTHER. Entries should be in chronological order, i.e. oldest at the top
 
-0.18 YYYY-MM-DD
+0.18 2023-01-23
 
   [MAJOR CHANGES]
   
