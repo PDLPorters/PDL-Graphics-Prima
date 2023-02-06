@@ -1,3 +1,10 @@
-bugs
 MANIFEST.SKIP
-test-examples.pl^MYMETA.yml$
+^\.git
+git-pre-commit-hook\.pl
+^(MY)?META\.
+^blib/
+\.bak$
+\.swp$
+^Makefile(\.bak)?$
+^pm_to_blib$
+^update-
