@@ -1,4 +1,3 @@
-Build.PL
 Changes
 examples/intensity-plot.pl
 examples/pathological-sizing.pl
@@ -37,9 +36,8 @@ lib/PDL/Graphics/Prima/pod/palette.png
 lib/PDL/Graphics/Prima/ReadLine.pm
 lib/PDL/Graphics/Prima/Scaling.pm
 lib/PDL/Graphics/Prima/Simple.pm
+Makefile.PL
 MANIFEST
-META.json
-META.yml
 README.pod
 t/00-load-main.t
 t/01-load-simple.t
