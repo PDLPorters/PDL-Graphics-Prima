@@ -22,7 +22,7 @@ WriteMakefile(
     "meta-spec" => { version => 2 },
     dynamic_config => 0,
     resources => {
-      x_IRC => 'irc://irc.perl.org/#graphql-perl',
+      x_IRC => 'irc://irc.perl.org/#pdl',
       repository => {
         type => 'git',
         url => 'git@github.com:PDLPorters/PDL-Graphics-Prima.git',
