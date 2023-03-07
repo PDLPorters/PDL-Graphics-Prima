@@ -13,7 +13,7 @@ WriteMakefile(
   PREREQ_PM => {
     'PDL::Drawing::Prima' => '0.15',
     'PDL' => '2.4.0',
-    Prima => '1.67',
+    Prima => '1.68',
   },
   TEST_REQUIRES => {
     'Test::More' => '0.88',
