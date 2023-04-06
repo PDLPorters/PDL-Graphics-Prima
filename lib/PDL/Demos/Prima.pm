@@ -550,7 +550,7 @@ x and y axis options.
 =head2 Enjoy PDL::Graphics::Prima!
 
 I hope you've enjoyed the tour, and I hope you find
-L<PDL::Graphics::Prima|PDL::Graphics::Prima/> to be a useful plotting tool!
+L<PDL::Graphics::Prima> to be a useful plotting tool!
 
  # Thanks!
 
@@ -566,3 +566,5 @@ This module is free software; you can redistribute it and/or modify it under the
 same terms as Perl itself. See L<perlartistic>.
 
 =cut
+
+1;
