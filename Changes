@@ -1,3 +1,5 @@
+- demo now only loads Prima when run, reducing perldl problems
+
 0.20 2023-03-07
 - improve handling of Win32 terminal in perldl (#50) - thanks @dk
 

@@ -2,9 +2,9 @@ package PDL::Demos::Prima;
 
 use strict;
 use warnings;
-use PDL::Graphics::Prima 0.13;
 
 sub info {('prima', 'Prima graphics')}
+sub init {('use PDL::Graphics::Prima')}
 sub demo {[actnw => q|
   # starting up the Prima GUI demo app
   |.__PACKAGE__.q|::run();
