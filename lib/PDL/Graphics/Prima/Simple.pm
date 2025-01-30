@@ -162,7 +162,7 @@ is used.
 
 Both L</matrix_plot> and L</imag_plot> take one or
 three arguments, the first two of which specify the x-bounds and the
-y-bounds, the third (or only) of which is the matrix to plot
+y-bounds, the third (or only) of which is the 2D ndarray to plot.
 
 =item plot (...)
 
@@ -1053,11 +1053,14 @@ and its equivalent L<plot|/"PLOT FUNCTION"> commands are:
      plotType => pgrid::Matrix,
  ));
 
+See L<PDL::Graphics::Prima::PlotType/pgrid::Matrix> for how to specify
+the colors, and F<examples/intensity-plot.pl> for a complete example.
+
 Specifying edges looks like this:
 
  matrix_plot ([0 => 5], [1 => 10], $matrix);
 
-and the quivalent is:
+and the equivalent is:
 
  plot(-image => ds::Grid(
      $matrix,

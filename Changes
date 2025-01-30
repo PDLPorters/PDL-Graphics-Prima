@@ -1,3 +1,5 @@
+- doc improvements (#54) - thanks @HaraldJoerg
+
 0.21 2024-04-22
 - demo now only loads Prima when run, reducing perldl problems
 
