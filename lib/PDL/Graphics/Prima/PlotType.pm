@@ -1626,7 +1626,8 @@ you should use pimage::Basic instead.
 The x- and y-bounds of your Grid are taken from the dataset x- and y-bounds,
 so look into L<PDL::Graphics::Prima::DataSet> for details.
 
-working here - expand, give an example
+The F<examples> directory in this distribution demonstrates the usage,
+e.g. in F<examples/intensity-plot.pl>.
 
 =cut
 
